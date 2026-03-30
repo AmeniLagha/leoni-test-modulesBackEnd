@@ -28,6 +28,7 @@ public class ComplianceDisplayDto {
     private String leoniPartNumber;
     private String producer;
     private String type;
+    private Integer indexValue;
 
     // Inspection
     private String sequenceTestPins;

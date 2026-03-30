@@ -223,6 +223,7 @@ public class ComplianceService {
                 .rfidNumber(c.getRfidNumber())
                 .leoniPartNumber(c.getLeoniPartNumber())
                 .producer(c.getProducer())
+                .indexValue(c.getIndexValue())
                 .type(c.getType())
                 .sequenceTestPins(c.getSequenceTestPins())
                 .codingRequest(c.getCodingRequest())
