@@ -1,0 +1,82 @@
+name: Backend CI/CD Pipeline
+# Force refresh - 2024-04-02
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4        # ← Mise à jour v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4      # ← Mise à jour v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+    
+    - name: Run tests
+      run: mvn test
+    
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4   # ← Déjà correct ✅
+      with:
+        name: backend-jar
+        path: target/*.jar
+
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4        # ← Mise à jour v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3   # ← Mise à jour v3
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3          # ← Mise à jour v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5     # ← Mise à jour v5 (optionnel mais recommandé)
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
+          ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
+    
+    - name: Image digest
+      run: echo "Image pushed successfully"
+
+  deploy:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.2.0      # ← Mise à jour version stable
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /opt/leoni-app
+          docker-compose pull backend
+          docker-compose up -d backend
+          docker system prune -f
