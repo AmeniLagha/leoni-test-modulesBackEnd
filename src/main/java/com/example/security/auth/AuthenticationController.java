@@ -1,5 +1,7 @@
 package com.example.security.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,23 +15,38 @@ import java.util.Map;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
+@Tag(name = "Authentification", description = "Gestion de l'authentification et des tokens JWT")
 @RequestMapping("api/v1/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
 private final AuthenticationService service;
 
     @PostMapping("/register")
+    @Operation(
+            summary = "Inscription",
+            description = "Permet de créer un nouveau compte utilisateur avec génération d’un token JWT"
+    )
     public ResponseEntity<AuthenticationResponse> register(
             @RequestBody RegisterRequest request
     ) {
         return ResponseEntity.ok(service.register(request));
     }
+
     @PostMapping("/authenticate")
+    @Operation(
+            summary = "Connexion",
+            description = "Authentifier un utilisateur et retourner un token JWT"
+    )
     public ResponseEntity<AuthenticationResponse> authenticate(
             @RequestBody AuthenticationRequest request
     ) {
         return ResponseEntity.ok(service.authenticate(request));
     }
+
+    @Operation(
+            summary = "Rafraîchir le token",
+            description = "Générer un nouveau token JWT à partir d’un refresh token valide"
+    )
     @PostMapping("/refresh-token")
     public void refreshToken(
             HttpServletRequest request,
@@ -37,10 +54,12 @@ private final AuthenticationService service;
     ) throws IOException {
         service.refreshToken(request, response);
     }
-    /**
-     * 🔥 NOUVEAU: Endpoint pour récupérer le token actuel de l'utilisateur connecté
-     */
+
     @GetMapping("/current-token")
+    @Operation(
+            summary = "Récupérer le token actuel",
+            description = "Retourne le token JWT de l’utilisateur connecté à partir du header Authorization"
+    )
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> getCurrentToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");

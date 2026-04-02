@@ -13,17 +13,6 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:4200")
 public class ChatbotController {
 
-   /* private final ChatbotService chatbotService;
-
-    @PostMapping("/ask")
-    public ResponseEntity<Map<String, String>> askQuestion(@RequestBody Map<String, String> request) {
-        String question = request.get("question");
-        String response = chatbotService.getChatResponse(question);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("response", response);
-        return ResponseEntity.ok(result);
-    }*/
    private final AIChatbotService aiChatbotService;
 
     @PostMapping("/ask")

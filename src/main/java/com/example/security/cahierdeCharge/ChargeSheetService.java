@@ -210,6 +210,7 @@ public class ChargeSheetService {
                                 ChargeSheetStatus.VALIDATED_ING,
                                 ChargeSheetStatus.TECH_FILLED,
                                 ChargeSheetStatus.VALIDATED_PT,
+                                ChargeSheetStatus.SENT_TO_SUPPLIER,
                                 ChargeSheetStatus.COMPLETED
                         )
                 );
@@ -221,6 +222,7 @@ public class ChargeSheetService {
                         userProject,
                         List.of(
                                 ChargeSheetStatus.VALIDATED_PT,
+                                ChargeSheetStatus.SENT_TO_SUPPLIER,
                                 ChargeSheetStatus.COMPLETED
                         )
                 );

@@ -25,38 +25,50 @@ public class UserService {
     @Value("${app.base-url}")
     private String baseUrl;
     public List<UserDto> getUserListWithPermissions() {
-        List<User> userList = repository.findAll();
-        List<UserDto> usersWithPermissions = new ArrayList<>();
+        try {
+            List<User> userList = repository.findAll();
+            List<UserDto> usersWithPermissions = new ArrayList<>();
 
-        for (User user : userList) {
-            UserDto userDto = new UserDto();
-            userDto.setId(user.getId());
-            userDto.setFirstname(user.getFirstname());
-            userDto.setLastname(user.getLastname());
-            userDto.setMatricule(user.getMatricule());
-            userDto.setProjet(user.getProjet());
-            userDto.setEmail(user.getEmail());
-            userDto.setRole(user.getRole().toString());
+            for (User user : userList) {
+                UserDto userDto = new UserDto();
+                userDto.setId(user.getId());
+                userDto.setFirstname(user.getFirstname());
+                userDto.setLastname(user.getLastname());
+                userDto.setMatricule(user.getMatricule());
+                userDto.setProjet(user.getProjet());
+                userDto.setEmail(user.getEmail());
+                userDto.setRole(user.getRole().toString());
 
-            List<String> perms = user.getAuthorities().stream()
-                    .map(auth -> auth.getAuthority())
-                    .toList();
-            userDto.setPermissions(perms);
+                List<String> perms = user.getAuthorities().stream()
+                        .map(auth -> auth.getAuthority())
+                        .toList();
+                userDto.setPermissions(perms);
 
-            usersWithPermissions.add(userDto);
+                usersWithPermissions.add(userDto);
+            }
+
+            return usersWithPermissions;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans getUserListWithPermissions: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
         }
-
-        return usersWithPermissions;
     }
     // --- Supprimer un utilisateur ---
     public boolean deleteUser(Integer id) {
-        if (!repository.existsById(id)) {
+        try {
+            if (!repository.existsById(id)) {
+                return false;
+            }
+            tokenRepository.deleteByUserId(id);
+            repository.deleteById(id);
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans deleteUser: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
-        tokenRepository.deleteByUserId(id);
-        repository.deleteById(id);
-
-        return true;
     }
     public boolean checkEmailExists(String email) {
         return repository.findByEmail(email).isPresent();
@@ -64,30 +76,36 @@ public class UserService {
 
     // --- Mettre à jour un utilisateur ---
     public UserDto updateUser(Integer id, UserDto userDto) {
-        return repository.findById(id)
-                .map(user -> {
-                    user.setFirstname(userDto.getFirstname());
-                    user.setLastname(userDto.getLastname());
-                    user.setEmail(userDto.getEmail());
-                    user.setProjet(userDto.getProjet());
-                    user.setMatricule(userDto.getMatricule());
-                    if (userDto.getRole() != null) {
-                        user.setRole(Role.valueOf(userDto.getRole()));
-                    }
-                    repository.save(user);
+        try {
+            return repository.findById(id)
+                    .map(user -> {
+                        user.setFirstname(userDto.getFirstname());
+                        user.setLastname(userDto.getLastname());
+                        user.setEmail(userDto.getEmail());
+                        user.setProjet(userDto.getProjet());
+                        user.setMatricule(userDto.getMatricule());
+                        if (userDto.getRole() != null) {
+                            user.setRole(Role.valueOf(userDto.getRole()));
+                        }
+                        repository.save(user);
 
-                    // Retourner DTO mis à jour
-                    UserDto updatedDto = new UserDto();
-                    updatedDto.setId(user.getId());
-                    updatedDto.setFirstname(user.getFirstname());
-                    updatedDto.setLastname(user.getLastname());
-                    updatedDto.setEmail(user.getEmail());
-                    updatedDto.setMatricule(user.getMatricule());
-                    updatedDto.setRole(user.getRole().name());
+                        // Retourner DTO mis à jour
+                        UserDto updatedDto = new UserDto();
+                        updatedDto.setId(user.getId());
+                        updatedDto.setFirstname(user.getFirstname());
+                        updatedDto.setLastname(user.getLastname());
+                        updatedDto.setEmail(user.getEmail());
+                        updatedDto.setMatricule(user.getMatricule());
+                        updatedDto.setRole(user.getRole().name());
 
-                    return updatedDto;
-                })
-                .orElse(null);
+                        return updatedDto;
+                    })
+                    .orElse(null);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans updateUser: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
     /**
      * Envoie un email de réinitialisation de mot de passe
@@ -170,41 +188,53 @@ public class UserService {
      */
     @Transactional
     public boolean resetPassword(String token, String newPassword) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
+        try {
+            PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
 
-        if (resetToken == null || resetToken.isUsed()) {
+            if (resetToken == null || resetToken.isUsed()) {
+                return false;
+            }
+
+            if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+                return false;
+            }
+
+            User user = resetToken.getUser();
+            user.setPassword(passwordEncoder.encode(newPassword));
+            repository.save(user);
+
+            // Marquer le token comme utilisé
+            resetToken.setUsed(true);
+            passwordResetTokenRepository.save(resetToken);
+
+            // Révoquer tous les anciens tokens JWT de l'utilisateur
+            tokenRepository.deleteByUserId(user.getId());
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans resetPassword: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
-
-        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-
-        User user = resetToken.getUser();
-        user.setPassword(passwordEncoder.encode(newPassword));
-        repository.save(user);
-
-        // Marquer le token comme utilisé
-        resetToken.setUsed(true);
-        passwordResetTokenRepository.save(resetToken);
-
-        // Révoquer tous les anciens tokens JWT de l'utilisateur
-        tokenRepository.deleteByUserId(user.getId());
-
-        return true;
     }
 
     /**
      * Vérifie si un token de réinitialisation est valide
      */
     public boolean validateResetToken(String token) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
+        try {
+            PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
 
-        if (resetToken == null || resetToken.isUsed()) {
+            if (resetToken == null || resetToken.isUsed()) {
+                return false;
+            }
+
+            return !resetToken.getExpiryDate().isBefore(LocalDateTime.now());
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans validateResetToken: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
-
-        return !resetToken.getExpiryDate().isBefore(LocalDateTime.now());
     }
 
 }

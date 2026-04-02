@@ -22,34 +22,36 @@ public class VerificationCodeService {
      */
     @Transactional
     public boolean sendVerificationCode(String email) {
-        // Vérifier que l'email existe
-        if (!userRepository.findByEmail(email).isPresent()) {
-            return false;
-        }
-
-        // Supprimer les anciens codes
-        verificationCodeRepository.deleteByEmail(email);
-
-        // Générer un code à 6 chiffres
-        String code = String.format("%06d", new Random().nextInt(999999));
-
-        // Créer le code de vérification
-        VerificationCode verificationCode = VerificationCode.builder()
-                .email(email)
-                .code(code)
-                .expiryDate(LocalDateTime.now().plusMinutes(10)) // Expire dans 10 minutes
-                .used(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        verificationCodeRepository.save(verificationCode);
-
-        // Envoyer l'email avec le code
         try {
-            SimpleMailMessage mailMessage = new SimpleMailMessage();
-            mailMessage.setTo(email);
-            mailMessage.setSubject("Code de vérification - Leoni Test Module System");
-            mailMessage.setText(String.format("""
+            // Vérifier que l'email existe
+
+            if (!userRepository.findByEmail(email).isPresent()) {
+                return false;
+            }
+
+            // Supprimer les anciens codes
+            verificationCodeRepository.deleteByEmail(email);
+
+            // Générer un code à 6 chiffres
+            String code = String.format("%06d", new Random().nextInt(999999));
+
+            // Créer le code de vérification
+            VerificationCode verificationCode = VerificationCode.builder()
+                    .email(email)
+                    .code(code)
+                    .expiryDate(LocalDateTime.now().plusMinutes(10)) // Expire dans 10 minutes
+                    .used(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            verificationCodeRepository.save(verificationCode);
+
+            // Envoyer l'email avec le code
+
+                SimpleMailMessage mailMessage = new SimpleMailMessage();
+                mailMessage.setTo(email);
+                mailMessage.setSubject("Code de vérification - Leoni Test Module System");
+                mailMessage.setText(String.format("""
                     Bonjour,
                     
                     Votre code de vérification est : %s
@@ -61,15 +63,17 @@ public class VerificationCodeService {
                     Cordialement,
                     L'équipe Leoni Test Module System
                     """, code));
-            mailMessage.setFrom("noreply@leoni.com");
-            mailSender.send(mailMessage);
+                mailMessage.setFrom("noreply@leoni.com");
+                mailSender.send(mailMessage);
 
-            System.out.println("✅ Code de vérification envoyé à " + email + " : " + code);
-            return true;
+                System.out.println("✅ Code de vérification envoyé à " + email + " : " + code);
+                return true;
         } catch (Exception e) {
-            System.err.println("❌ Erreur envoi email: " + e.getMessage());
+            System.err.println("❌ Erreur dans sendVerificationCode: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
+
     }
 
     /**
@@ -77,23 +81,29 @@ public class VerificationCodeService {
      */
     @Transactional
     public boolean verifyCode(String email, String code) {
-        VerificationCode verificationCode = verificationCodeRepository
-                .findByEmailAndCodeAndUsedFalse(email, code)
-                .orElse(null);
+        try {
+            VerificationCode verificationCode = verificationCodeRepository
+                    .findByEmailAndCodeAndUsedFalse(email, code)
+                    .orElse(null);
 
-        if (verificationCode == null) {
+            if (verificationCode == null) {
+                return false;
+            }
+
+            // Vérifier si le code n'est pas expiré
+            if (verificationCode.getExpiryDate().isBefore(LocalDateTime.now())) {
+                return false;
+            }
+
+            // Marquer le code comme utilisé
+            verificationCode.setUsed(true);
+            verificationCodeRepository.save(verificationCode);
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans verifyCode: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
-
-        // Vérifier si le code n'est pas expiré
-        if (verificationCode.getExpiryDate().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-
-        // Marquer le code comme utilisé
-        verificationCode.setUsed(true);
-        verificationCodeRepository.save(verificationCode);
-
-        return true;
     }
 }

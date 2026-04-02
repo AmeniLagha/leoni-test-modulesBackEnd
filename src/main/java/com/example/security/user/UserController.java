@@ -1,5 +1,7 @@
 package com.example.security.user;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
+@Tag(name = "Users", description = "Gestion des utilisateurs, récupération info, réinitialisation mot de passe et codes de vérification")
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
@@ -23,21 +26,15 @@ public class UserController {
     private final UserRepository repository;
     private final VerificationCodeService verificationCodeService;
     @GetMapping
+    @Operation(summary = "Lister tous les utilisateurs", description = "Récupère tous les utilisateurs avec leurs permissions")
     @PreAuthorize("hasAuthority('admin:readuser')")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         List<UserDto> usersWithPermissions = service.getUserListWithPermissions();
         return ResponseEntity.ok(usersWithPermissions);
     }
 
-    @GetMapping("/getUsers")
-    @PreAuthorize("hasAuthority('admin:readuser')")
-    public ResponseEntity<List<UserDto>> getUserListWithPermissions() {
-        List<UserDto> usersWithPermissions = service.getUserListWithPermissions();
-
-        return ResponseEntity.ok(usersWithPermissions);
-    }
-
     @GetMapping("/me")
+    @Operation(summary = "Infos utilisateur courant", description = "Récupère les informations de l'utilisateur connecté")
     public ResponseEntity<Map<String, Object>> getCurrentUser() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -67,6 +64,7 @@ public class UserController {
 
     // --- Supprimer un utilisateur ---
     @DeleteMapping("/{id}")
+    @Operation(summary = "Supprimer un utilisateur", description = "Supprime un utilisateur par ID (ADMIN uniquement)")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
 
         boolean deleted = service.deleteUser(id);
@@ -78,7 +76,7 @@ public class UserController {
 
     // --- Mettre à jour un utilisateur ---
     @PreAuthorize("hasRole('ADMIN')")
-
+    @Operation(summary = "Modifier un utilisateur", description = "Met à jour les informations d'un utilisateur par ID (ADMIN uniquement)")
     @PutMapping("/{id}")
     public ResponseEntity<UserDto> updateUser(@PathVariable Integer id, @RequestBody UserDto userDto) {
         UserDto updatedUser = service.updateUser(id, userDto);
@@ -88,6 +86,7 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
     @GetMapping("/project-emails")
+    @Operation(summary = "Emails du projet", description = "Récupère les emails des utilisateurs selon le projet et le rôle de l'utilisateur courant")
     public List<String> getProjectEmails() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
@@ -121,10 +120,10 @@ public class UserController {
 
         return emails;
     }
-    /**
-     * Endpoint pour demander la réinitialisation du mot de passe
-     */
+
+    // --- Réinitialisation mot de passe ---
     @PostMapping("/forgot-password")
+    @Operation(summary = "Demander réinitialisation mot de passe", description = "Envoie un email pour réinitialiser le mot de passe")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody PasswordResetRequestDto request) {
         Map<String, String> response = new HashMap<>();
 
@@ -146,23 +145,8 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-
-    @GetMapping("/validate-reset-token")
-    public ResponseEntity<Map<String, Boolean>> validateResetToken(@RequestParam String token) {
-        try {
-            boolean isValid = service.validateResetToken(token);
-            Map<String, Boolean> response = new HashMap<>();
-            response.put("valid", isValid);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.err.println("Erreur dans validate-reset-token: " + e.getMessage());
-            Map<String, Boolean> response = new HashMap<>();
-            response.put("valid", false);
-            return ResponseEntity.ok(response);
-        }
-    }
-
     @PostMapping("/reset-password")
+    @Operation(summary = "Réinitialiser mot de passe", description = "Réinitialise le mot de passe via un token")
     public ResponseEntity<Map<String, String>> resetPassword(@RequestBody PasswordResetDto request) {
         Map<String, String> response = new HashMap<>();
 
@@ -184,12 +168,26 @@ public class UserController {
         }
     }
     /**
+     * Vérifier si un email existe
+     */
+    @GetMapping("/check-email")
+    @Operation(summary = "Vérifier si email existe", description = "Retourne true si l'email existe dans le système")
+    public ResponseEntity<Map<String, Boolean>> checkEmailExists(@RequestParam String email) {
+        Map<String, Boolean> response = new HashMap<>();
+        boolean exists = service.checkEmailExists(email);
+        response.put("exists", exists);
+        return ResponseEntity.ok(response);
+    }
+
+    // --- Gestion code de vérification ---
+    /**
      * Envoyer un code de vérification par email
      */
     /**
      * Vérifier l'email et envoyer un code de vérification
      */
     @PostMapping("/send-verification-code")
+    @Operation(summary = "Envoyer code de vérification", description = "Envoie un code à l'email pour validation")
     public ResponseEntity<Map<String, String>> sendVerificationCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         Map<String, String> response = new HashMap<>();
@@ -209,6 +207,7 @@ public class UserController {
      * Vérifier le code saisi par l'utilisateur
      */
     @PostMapping("/verify-code")
+    @Operation(summary = "Vérifier code", description = "Vérifie le code saisi par l'utilisateur")
     public ResponseEntity<Map<String, Boolean>> verifyCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String code = request.get("code");
@@ -220,11 +219,12 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
-
     /**
      * Envoyer le lien de réinitialisation (après vérification du code)
      */
     @PostMapping("/send-reset-link")
+    @Operation(summary = "Envoyer lien réinitialisation", description = "Envoie le lien de réinitialisation après vérification du code")
+
     public ResponseEntity<Map<String, String>> sendResetLink(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         Map<String, String> response = new HashMap<>();
@@ -242,15 +242,27 @@ public class UserController {
         }
     }
 
-    /**
-     * Vérifier si un email existe
-     */
-    @GetMapping("/check-email")
-    public ResponseEntity<Map<String, Boolean>> checkEmailExists(@RequestParam String email) {
-        Map<String, Boolean> response = new HashMap<>();
-        boolean exists = service.checkEmailExists(email);
-        response.put("exists", exists);
-        return ResponseEntity.ok(response);
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<Map<String, Boolean>> validateResetToken(@RequestParam String token) {
+        try {
+            boolean isValid = service.validateResetToken(token);
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("valid", isValid);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Erreur dans validate-reset-token: " + e.getMessage());
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("valid", false);
+            return ResponseEntity.ok(response);
+        }
     }
+
+
+
+
+
+
+
+
 }
 

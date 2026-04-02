@@ -45,116 +45,127 @@ public class TechnicalFileService {
 
     @Transactional
     public TechnicalFile createTechnicalFile(TechnicalFileDto.CreateDto dto) {
+        try {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
 
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new RuntimeException("Un dossier technique doit contenir au moins un item");
+            if (dto.getItems() == null || dto.getItems().isEmpty()) {
+                throw new RuntimeException("Un dossier technique doit contenir au moins un item");
+            }
+
+            TechnicalFile technicalFile = new TechnicalFile();
+            technicalFile.setReference(dto.getReference());
+            technicalFile.setCreatedBy(currentUser.getEmail());
+            technicalFile.setCreatedAt(LocalDate.now());
+
+            TechnicalFile savedTechnicalFile = repository.save(technicalFile);
+
+            for (TechnicalFileDto.TechnicalFileItemDto itemDto : dto.getItems()) {
+
+                ChargeSheetItem chargeSheetItem = chargeSheetItemRepository
+                        .findById(itemDto.getChargeSheetItemId())
+                        .orElseThrow(() -> new RuntimeException("Item not found"));
+
+                TechnicalFileItem item = new TechnicalFileItem();
+
+                item.setChargeSheetItem(chargeSheetItem);
+                item.setMaintenanceDate(itemDto.getMaintenanceDate());
+                item.setTechnicianName(itemDto.getTechnicianName());
+                item.setXCode(itemDto.getXCode());
+                item.setIndexValue(itemDto.getIndexValue());
+                item.setLeoniReferenceNumber(itemDto.getLeoniReferenceNumber());
+                item.setProducer(itemDto.getProducer());
+                item.setType(itemDto.getType());
+                item.setReferencePinePushBack(itemDto.getReferencePinePushBack());
+
+                item.setPosition(itemDto.getPosition());
+                item.setPinRigidityM1(itemDto.getPinRigidityM1());
+                item.setPinRigidityM2(itemDto.getPinRigidityM2());
+                item.setPinRigidityM3(itemDto.getPinRigidityM3());
+
+                item.setDisplacementPathM1(itemDto.getDisplacementPathM1());
+                item.setDisplacementPathM2(itemDto.getDisplacementPathM2());
+                item.setDisplacementPathM3(itemDto.getDisplacementPathM3());
+
+                item.setMaxSealingValueM1(itemDto.getMaxSealingValueM1());
+                item.setMaxSealingValueM2(itemDto.getMaxSealingValueM2());
+                item.setMaxSealingValueM3(itemDto.getMaxSealingValueM3());
+
+                item.setProgrammedSealingValueM1(itemDto.getProgrammedSealingValueM1());
+                item.setProgrammedSealingValueM2(itemDto.getProgrammedSealingValueM2());
+                item.setProgrammedSealingValueM3(itemDto.getProgrammedSealingValueM3());
+
+                item.setDetectionsM1(itemDto.getDetectionsM1());
+                item.setDetectionsM2(itemDto.getDetectionsM2());
+                item.setDetectionsM3(itemDto.getDetectionsM3());
+
+                item.setRemarks(itemDto.getRemarks());
+                item.setCreatedBy(currentUser.getEmail());
+                item.setCreatedAt(LocalDate.now());
+                item.setValidationStatus(TechnicalFileItemStatus.DRAFT);
+                savedTechnicalFile.addTechnicalFileItem(item);
+            }
+
+            return repository.save(savedTechnicalFile);
+        } catch (Exception e) {
+            // Ici tu peux logger l'erreur ou notifier
+            System.err.println("Erreur lors de la création du dossier technique : " + e.getMessage());
+            throw new RuntimeException("Impossible de créer le dossier technique. " + e.getMessage());
         }
-
-        TechnicalFile technicalFile = new TechnicalFile();
-        technicalFile.setReference(dto.getReference());
-        technicalFile.setCreatedBy(currentUser.getEmail());
-        technicalFile.setCreatedAt(LocalDate.now());
-
-        TechnicalFile savedTechnicalFile = repository.save(technicalFile);
-
-        for (TechnicalFileDto.TechnicalFileItemDto itemDto : dto.getItems()) {
-
-            ChargeSheetItem chargeSheetItem = chargeSheetItemRepository
-                    .findById(itemDto.getChargeSheetItemId())
-                    .orElseThrow(() -> new RuntimeException("Item not found"));
-
-            TechnicalFileItem item = new TechnicalFileItem();
-
-            item.setChargeSheetItem(chargeSheetItem);
-            item.setMaintenanceDate(itemDto.getMaintenanceDate());
-            item.setTechnicianName(itemDto.getTechnicianName());
-            item.setXCode(itemDto.getXCode());
-            item.setIndexValue(itemDto.getIndexValue());
-            item.setLeoniReferenceNumber(itemDto.getLeoniReferenceNumber());
-            item.setProducer(itemDto.getProducer());
-            item.setType(itemDto.getType());
-            item.setReferencePinePushBack(itemDto.getReferencePinePushBack());
-
-            item.setPosition(itemDto.getPosition());
-            item.setPinRigidityM1(itemDto.getPinRigidityM1());
-            item.setPinRigidityM2(itemDto.getPinRigidityM2());
-            item.setPinRigidityM3(itemDto.getPinRigidityM3());
-
-            item.setDisplacementPathM1(itemDto.getDisplacementPathM1());
-            item.setDisplacementPathM2(itemDto.getDisplacementPathM2());
-            item.setDisplacementPathM3(itemDto.getDisplacementPathM3());
-
-            item.setMaxSealingValueM1(itemDto.getMaxSealingValueM1());
-            item.setMaxSealingValueM2(itemDto.getMaxSealingValueM2());
-            item.setMaxSealingValueM3(itemDto.getMaxSealingValueM3());
-
-            item.setProgrammedSealingValueM1(itemDto.getProgrammedSealingValueM1());
-            item.setProgrammedSealingValueM2(itemDto.getProgrammedSealingValueM2());
-            item.setProgrammedSealingValueM3(itemDto.getProgrammedSealingValueM3());
-
-            item.setDetectionsM1(itemDto.getDetectionsM1());
-            item.setDetectionsM2(itemDto.getDetectionsM2());
-            item.setDetectionsM3(itemDto.getDetectionsM3());
-
-            item.setRemarks(itemDto.getRemarks());
-            item.setCreatedBy(currentUser.getEmail());
-            item.setCreatedAt(LocalDate.now());
-            item.setValidationStatus(TechnicalFileItemStatus.DRAFT);
-            savedTechnicalFile.addTechnicalFileItem(item);
-        }
-
-        return repository.save(savedTechnicalFile);
     }
     @Transactional
     public TechnicalFileItem addItemToTechnicalFile(Long technicalFileId, TechnicalFileDto.AddItemDto dto) {
-        TechnicalFile tf = repository.findById(technicalFileId)
-                .orElseThrow(() -> new RuntimeException("Technical file not found"));
+        try {
+            TechnicalFile tf = repository.findById(technicalFileId)
+                    .orElseThrow(() -> new RuntimeException("Technical file not found"));
 
-        ChargeSheetItem chargeSheetItem = chargeSheetItemRepository.findById(dto.getChargeSheetItemId())
-                .orElseThrow(() -> new RuntimeException("ChargeSheetItem not found"));
+            ChargeSheetItem chargeSheetItem = chargeSheetItemRepository.findById(dto.getChargeSheetItemId())
+                    .orElseThrow(() -> new RuntimeException("ChargeSheetItem not found"));
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
 
-        TechnicalFileItem item = new TechnicalFileItem();
-        item.setChargeSheetItem(chargeSheetItem);
-        item.setMaintenanceDate(dto.getMaintenanceDate());
-        item.setTechnicianName(dto.getTechnicianName());
-        item.setXCode(dto.getXCode());
-        item.setIndexValue(dto.getIndexValue());
-        item.setLeoniReferenceNumber(dto.getLeoniReferenceNumber());
-        item.setProducer(dto.getProducer());
-        item.setType(dto.getType());
-        item.setReferencePinePushBack(dto.getReferencePinePushBack());
-        item.setPosition(dto.getPosition());
-        item.setPinRigidityM1(dto.getPinRigidityM1());
-        item.setPinRigidityM2(dto.getPinRigidityM2());
-        item.setPinRigidityM3(dto.getPinRigidityM3());
-        item.setDisplacementPathM1(dto.getDisplacementPathM1());
-        item.setDisplacementPathM2(dto.getDisplacementPathM2());
-        item.setDisplacementPathM3(dto.getDisplacementPathM3());
-        item.setMaxSealingValueM1(dto.getMaxSealingValueM1());
-        item.setMaxSealingValueM2(dto.getMaxSealingValueM2());
-        item.setMaxSealingValueM3(dto.getMaxSealingValueM3());
-        item.setProgrammedSealingValueM1(dto.getProgrammedSealingValueM1());
-        item.setProgrammedSealingValueM2(dto.getProgrammedSealingValueM2());
-        item.setProgrammedSealingValueM3(dto.getProgrammedSealingValueM3());
-        item.setDetectionsM1(dto.getDetectionsM1());
-        item.setDetectionsM2(dto.getDetectionsM2());
-        item.setDetectionsM3(dto.getDetectionsM3());
-        item.setRemarks(dto.getRemarks());
-        item.setValidationStatus(TechnicalFileItemStatus.DRAFT);
-        item.setCreatedBy(currentUser.getEmail());
-        item.setCreatedAt(LocalDate.now());
+            TechnicalFileItem item = new TechnicalFileItem();
+            item.setChargeSheetItem(chargeSheetItem);
+            item.setMaintenanceDate(dto.getMaintenanceDate());
+            item.setTechnicianName(dto.getTechnicianName());
+            item.setXCode(dto.getXCode());
+            item.setIndexValue(dto.getIndexValue());
+            item.setLeoniReferenceNumber(dto.getLeoniReferenceNumber());
+            item.setProducer(dto.getProducer());
+            item.setType(dto.getType());
+            item.setReferencePinePushBack(dto.getReferencePinePushBack());
+            item.setPosition(dto.getPosition());
+            item.setPinRigidityM1(dto.getPinRigidityM1());
+            item.setPinRigidityM2(dto.getPinRigidityM2());
+            item.setPinRigidityM3(dto.getPinRigidityM3());
+            item.setDisplacementPathM1(dto.getDisplacementPathM1());
+            item.setDisplacementPathM2(dto.getDisplacementPathM2());
+            item.setDisplacementPathM3(dto.getDisplacementPathM3());
+            item.setMaxSealingValueM1(dto.getMaxSealingValueM1());
+            item.setMaxSealingValueM2(dto.getMaxSealingValueM2());
+            item.setMaxSealingValueM3(dto.getMaxSealingValueM3());
+            item.setProgrammedSealingValueM1(dto.getProgrammedSealingValueM1());
+            item.setProgrammedSealingValueM2(dto.getProgrammedSealingValueM2());
+            item.setProgrammedSealingValueM3(dto.getProgrammedSealingValueM3());
+            item.setDetectionsM1(dto.getDetectionsM1());
+            item.setDetectionsM2(dto.getDetectionsM2());
+            item.setDetectionsM3(dto.getDetectionsM3());
+            item.setRemarks(dto.getRemarks());
+            item.setValidationStatus(TechnicalFileItemStatus.DRAFT);
+            item.setCreatedBy(currentUser.getEmail());
+            item.setCreatedAt(LocalDate.now());
 
-        tf.addTechnicalFileItem(item);
+            tf.addTechnicalFileItem(item);
 
-        repository.save(tf);
+            repository.save(tf);
 
-        return item;
+            return item;
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'ajout d'un item : " + e.getMessage());
+            throw new RuntimeException("Impossible d'ajouter l'item au dossier technique. " + e.getMessage());
+        }
     }
     public List<TechnicalFileDto.ListDto> getAllTechnicalFilesList() {
         return repository.findAll().stream()
@@ -622,76 +633,79 @@ public class TechnicalFileService {
                 .build();
     }
 
-    /*
-    =========================
-    HISTORY
-    =========================
-     */
-
-    public List<TechnicalFileHistory> getHistory(Long technicalFileId){
-        return historyRepository.findByTechnicalFileId(technicalFileId);
-    }
     // ==================== VALIDATION DES ITEMS ====================
 
     @Transactional
     public TechnicalFileItem validateItem(Long itemId, String role) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        TechnicalFileItem item = getTechnicalFileItemById(itemId);
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
+            TechnicalFileItem item = getTechnicalFileItemById(itemId);
 
-        TechnicalFileItemStatus currentStatus = item.getValidationStatus();
+            TechnicalFileItemStatus currentStatus = item.getValidationStatus();
 
-        // Vérifier si le rôle peut valider ce statut
-        if (!currentStatus.canBeValidatedBy(role)) {
-            throw new RuntimeException(
-                    String.format("Impossible de valider cet item avec le rôle %s (statut actuel: %s)",
-                            role, currentStatus.getDisplayName())
+            // Vérifier si le rôle peut valider ce statut
+            if (!currentStatus.canBeValidatedBy(role)) {
+                throw new RuntimeException(
+                        String.format("Impossible de valider cet item avec le rôle %s (statut actuel: %s)",
+                                role, currentStatus.getDisplayName())
+                );
+            }
+
+            switch (role) {
+                case "PP":
+                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_PP);
+                    item.setValidatedByPp(currentUser.getEmail());
+                    item.setValidatedAtPp(LocalDateTime.now());
+                    break;
+
+                case "MC":
+                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MC);
+                    item.setValidatedByMc(currentUser.getEmail());
+                    item.setValidatedAtMc(LocalDateTime.now());
+                    break;
+
+                case "MP":
+                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MP);
+                    item.setValidatedByMp(currentUser.getEmail());
+                    item.setValidatedAtMp(LocalDateTime.now());
+                    break;
+
+                default:
+                    throw new RuntimeException("Rôle non reconnu pour la validation: " + role);
+            }
+
+            item.setUpdatedBy(currentUser.getEmail());
+            item.setUpdatedAt(LocalDate.now());
+
+            // Sauvegarder l'historique
+            saveHistory(
+                    item.getTechnicalFileId(),
+                    item.getId(),
+                    "validationStatus",
+                    currentStatus.name(),
+                    item.getValidationStatus().name(),
+                    currentUser.getEmail()
             );
+
+            return technicalFileItemRepository.save(item);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la validation de l'item : " + e.getMessage());
+            throw new RuntimeException("Impossible de valider l'item. " + e.getMessage());
         }
-
-        switch (role) {
-            case "PP":
-                item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_PP);
-                item.setValidatedByPp(currentUser.getEmail());
-                item.setValidatedAtPp(LocalDateTime.now());
-                break;
-
-            case "MC":
-                item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MC);
-                item.setValidatedByMc(currentUser.getEmail());
-                item.setValidatedAtMc(LocalDateTime.now());
-                break;
-
-            case "MP":
-                item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MP);
-                item.setValidatedByMp(currentUser.getEmail());
-                item.setValidatedAtMp(LocalDateTime.now());
-                break;
-
-            default:
-                throw new RuntimeException("Rôle non reconnu pour la validation: " + role);
-        }
-
-        item.setUpdatedBy(currentUser.getEmail());
-        item.setUpdatedAt(LocalDate.now());
-
-        // Sauvegarder l'historique
-        saveHistory(
-                item.getTechnicalFileId(),
-                item.getId(),
-                "validationStatus",
-                currentStatus.name(),
-                item.getValidationStatus().name(),
-                currentUser.getEmail()
-        );
-
-        return technicalFileItemRepository.save(item);
     }
 
     // Vérifier si un utilisateur peut valider un item
     public boolean canValidateItem(Long itemId, String role) {
-        TechnicalFileItem item = getTechnicalFileItemById(itemId);
-        return item.getValidationStatus().canBeValidatedBy(role);
+        try {
+            TechnicalFileItem item = getTechnicalFileItemById(itemId);
+            return item.getValidationStatus().canBeValidatedBy(role);
+        }
+        catch (Exception e) {
+            System.err.println("Erreur lors de la validation de l'item : " + e.getMessage());
+            return false;
+        }
+
     }
 
 }
