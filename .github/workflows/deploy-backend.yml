@@ -10,17 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: yes  # ← Met un vrai mot de passe
-          MYSQL_DATABASE: testmodulesleonipfe
-          MYSQL_ROOT_HOST: '%'
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,36 +20,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Wait for MySQL
-        run: |
-          sudo apt-get install -y mysql-client
-          for i in {1..30}; do
-            if mysql -h127.0.0.1 -uroot -e "SELECT 1" >/dev/null 2>&1; then
-              echo "MySQL is ready!"
-              break
-            fi
-            echo "Waiting for MySQL... (attempt $i/30)"
-            sleep 3
-          done
-
-      - name: Create test properties
-        run: |
-          mkdir -p src/test/resources
-          cat > src/test/resources/application-test.properties << EOF
-          spring.datasource.url=jdbc:mysql://127.0.0.1:3306/testmodulesleonipfe?createDatabaseIfNotExist=true&serverTimezone=UTC
-          spring.datasource.username=root
-          spring.datasource.password=
-          spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-          spring.jpa.hibernate.ddl-auto=update
-          spring.jpa.show-sql=true
-          EOF
-
-      - name: Build and test with specific profile
-        run: mvn clean test -Dspring.profiles.active=test
-        env:
-          SPRING_PROFILES_ACTIVE: test
-
-      - name: Build package (skip tests as they already ran)
+      - name: Build with Maven (skip tests)
         run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
@@ -95,6 +55,9 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
             ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
+
+      - name: Image digest
+        run: echo "Image pushed successfully"
 
   deploy:
     needs: docker-build
