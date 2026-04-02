@@ -1,6 +1,8 @@
 package com.example.security.reclamation;
 
 import com.example.security.cahierdeCharge.ImageStorageService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,6 +22,7 @@ import java.util.Map;
 )
 @RestController
 @RequestMapping("/api/v1/claims")
+@Tag(name = "Réclamations", description = "Gestion des réclamations, suivi, assignation et résolution")
 @RequiredArgsConstructor
 public class ClaimController {
 
@@ -29,12 +32,14 @@ public class ClaimController {
     // PP, MC, MP, PT: Créer une réclamation
     @PostMapping
     @PreAuthorize("hasAuthority('claim:write')")
+    @Operation(summary = "Créer une réclamation", description = "Créer une nouvelle réclamation liée à un problème")
     public ResponseEntity<Claim> createClaim(@RequestBody ClaimDto.CreateDto dto) {
         return ResponseEntity.ok(service.createClaim(dto));
     }
 
     // Mettre à jour une réclamation
     @PutMapping("/{id}")
+    @Operation(summary = "Modifier une réclamation", description = "Mettre à jour une réclamation existante")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Claim> updateClaim(
             @PathVariable Long id,
@@ -44,6 +49,7 @@ public class ClaimController {
 
     // Assigner une réclamation
     @PutMapping("/{id}/assign")
+    @Operation(summary = "Assigner une réclamation", description = "Assigner une réclamation à un utilisateur")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Claim> assignClaim(
             @PathVariable Long id,
@@ -53,6 +59,7 @@ public class ClaimController {
 
     // Résoudre une réclamation
     @PutMapping("/{id}/resolve")
+    @Operation(summary = "Résoudre une réclamation", description = "Marquer une réclamation comme résolue")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Claim> resolveClaim(
             @PathVariable Long id,
@@ -62,6 +69,7 @@ public class ClaimController {
 
     // Changer le statut d'une réclamation
     @PatchMapping("/{id}/status/{status}")
+    @Operation(summary = "Changer statut", description = "Mettre à jour le statut d’une réclamation")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Claim> updateClaimStatus(
             @PathVariable Long id,
@@ -71,6 +79,7 @@ public class ClaimController {
 
     // Lire une réclamation spécifique
     @GetMapping("/{id}")
+    @Operation(summary = "Consulter une réclamation", description = "Afficher une réclamation par ID")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<Claim> getClaim(@PathVariable Long id) {
         return ResponseEntity.ok(service.getClaimById(id));
@@ -78,6 +87,7 @@ public class ClaimController {
 
     // Récupérer les réclamations par cahier des charges
     @GetMapping("/charge-sheet/{chargeSheetId}")
+    @Operation(summary = "Réclamations par cahier", description = "Lister les réclamations liées à un cahier")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getClaimsByChargeSheet(
             @PathVariable Long chargeSheetId) {
@@ -95,6 +105,7 @@ public class ClaimController {
 
     // Récupérer mes réclamations signalées
     @GetMapping("/my-reported")
+    @Operation(summary = "Mes réclamations", description = "Récupérer les réclamations signalées par l’utilisateur")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getMyReportedClaims() {
         return ResponseEntity.ok(service.getClaimsByReportedBy(getCurrentUserEmail()));
@@ -102,6 +113,7 @@ public class ClaimController {
 
     // Récupérer les réclamations qui me sont assignées
     @GetMapping("/my-assigned")
+    @Operation(summary = "Mes tâches", description = "Récupérer les réclamations assignées à l’utilisateur")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getMyAssignedClaims() {
         return ResponseEntity.ok(service.getClaimsByAssignedTo(getCurrentUserEmail()));
@@ -109,6 +121,7 @@ public class ClaimController {
 
     // Récupérer les réclamations par statut
     @GetMapping("/status/{status}")
+    @Operation(summary = "Filtrer par statut", description = "Lister les réclamations par statut")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getClaimsByStatus(
             @PathVariable Claim.ClaimStatus status) {
@@ -117,6 +130,7 @@ public class ClaimController {
 
     // Récupérer les réclamations par priorité
     @GetMapping("/priority/{priority}")
+    @Operation(summary = "Filtrer par priorité", description = "Lister les réclamations par priorité")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getClaimsByPriority(
             @PathVariable Claim.Priority priority) {
@@ -133,6 +147,7 @@ public class ClaimController {
 
     // Rechercher des réclamations
     @GetMapping("/search")
+    @Operation(summary = "Recherche", description = "Rechercher des réclamations par mot-clé")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> searchClaims(@RequestParam String keyword) {
         return ResponseEntity.ok(service.searchClaims(keyword));
@@ -140,6 +155,7 @@ public class ClaimController {
 
     // Récupérer toutes les réclamations (admin)
     @GetMapping
+    @Operation(summary = "Lister toutes les réclamations", description = "Afficher toutes les réclamations")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<List<Claim>> getAllClaims() {
         return ResponseEntity.ok(service.getAllClaims());
@@ -152,6 +168,7 @@ public class ClaimController {
         return auth.getName();
     }
     @GetMapping("/summary/{chargeSheetId}")
+    @Operation(summary = "Statistiques", description = "Obtenir un résumé des réclamations par statut")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<Map<String, Object>> getClaimSummary(@PathVariable Long chargeSheetId) {
         List<Claim> claims = repository.findByChargeSheetId(chargeSheetId);
@@ -166,6 +183,7 @@ public class ClaimController {
         return ResponseEntity.ok(summary);
     }
     @DeleteMapping("/{id}")
+    @Operation(summary = "Supprimer une réclamation", description = "Supprimer une réclamation")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Void> deleteClaim(@PathVariable Long id) {
         service.deleteClaim(id);
@@ -175,6 +193,7 @@ public class ClaimController {
     private static final String CLAIM_IMAGE_FOLDER = "claims";
 
     @PostMapping("/{id}/upload-image")
+    @Operation(summary = "Uploader image", description = "Ajouter une image à une réclamation")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Map<String, String>> uploadImage(
             @PathVariable Long id,
@@ -207,6 +226,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{id}/image")
+    @Operation(summary = "Afficher image", description = "Afficher l’image d’une réclamation")
     @PreAuthorize("hasAuthority('claim:read')")
     public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
         try {
@@ -244,6 +264,7 @@ public class ClaimController {
     }
 
     @DeleteMapping("/{id}/image")
+    @Operation(summary = "Supprimer image", description = "Supprimer l’image associée à une réclamation")
     @PreAuthorize("hasAuthority('claim:write')")
     public ResponseEntity<Map<String, String>> deleteImage(@PathVariable Long id) {
         try {

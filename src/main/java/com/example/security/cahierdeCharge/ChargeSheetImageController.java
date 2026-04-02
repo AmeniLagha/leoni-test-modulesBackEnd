@@ -1,5 +1,7 @@
 package com.example.security.cahierdeCharge;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/charge-sheets")
+@Tag(name = "Gestion des images", description = "Upload, consultation et suppression des images des items")
 @RequiredArgsConstructor
 public class ChargeSheetImageController {
 
@@ -28,6 +31,10 @@ public class ChargeSheetImageController {
      * Upload une image pour un item spécifique
      */
     @PostMapping("/{sheetId}/items/{itemId}/upload-image")
+    @Operation(
+            summary = "Uploader une image",
+            description = "Permet d’ajouter une image (ex: connecteur réel) à un item spécifique d’un cahier de charges"
+    )
     @PreAuthorize("hasAuthority('charge_sheet:basic:write') or hasAuthority('charge_sheet:tech:create')")
     public ResponseEntity<Map<String, String>> uploadItemImage(
             @PathVariable Long sheetId,
@@ -72,6 +79,10 @@ public class ChargeSheetImageController {
      * Récupère l'image d'un item spécifique
      */
     @GetMapping("/{sheetId}/items/{itemId}/image")
+    @Operation(
+            summary = "Afficher une image",
+            description = "Récupérer et afficher l’image associée à un item"
+    )
     @PreAuthorize("hasAuthority('charge_sheet:all:read')")
     public ResponseEntity<byte[]> getItemImage(
             @PathVariable Long sheetId,
@@ -128,6 +139,10 @@ public class ChargeSheetImageController {
      * Supprime l'image d'un item spécifique
      */
     @DeleteMapping("/{sheetId}/items/{itemId}/image")
+    @Operation(
+            summary = "Supprimer une image",
+            description = "Supprimer l’image associée à un item d’un cahier de charges"
+    )
     @PreAuthorize("hasAuthority('charge_sheet:basic:write') or hasAuthority('charge_sheet:tech:create')")
     public ResponseEntity<Map<String, String>> deleteItemImage(
             @PathVariable Long sheetId,

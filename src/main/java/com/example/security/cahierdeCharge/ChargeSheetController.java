@@ -1,5 +1,7 @@
 package com.example.security.cahierdeCharge;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@Tag(name = "Cahier de charges", description = "Gestion des cahiers de charges")
 @RequestMapping("/api/v1/charge-sheets")
 @RequiredArgsConstructor
 public class ChargeSheetController {
@@ -17,6 +20,11 @@ public class ChargeSheetController {
 
     // ING: Créer avec plusieurs items
     @PostMapping
+    @Operation(
+            summary = "Créer un cahier de charges",
+           description = "Créer un nouveau cahier de charges avec plusieurs items"
+
+    )
     @PreAuthorize("hasAuthority('charge_sheet:basic:create')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> createChargeSheet(@RequestBody ChargeSheetDto.CreateDto dto) {
         ChargeSheet created = service.createChargeSheet(dto);
@@ -25,6 +33,7 @@ public class ChargeSheetController {
 
     // PT: Mettre à jour un item spécifique
     @PutMapping("/{sheetId}/items/{itemId}/tech")
+    @Operation(summary = "Modifier un item technique", description = "Mettre à jour les informations techniques d’un item spécifique")
     @PreAuthorize("hasAuthority('charge_sheet:tech:write')")
     public ResponseEntity<ChargeSheetDto.ItemDto> updateItemTech(
             @PathVariable Long sheetId,
@@ -37,6 +46,7 @@ public class ChargeSheetController {
 
     // ING: Ajouter un nouvel item
     @PostMapping("/{sheetId}/items")
+    @Operation(summary = "Ajouter un item", description = "Ajouter un nouvel item dans un cahier de charges")
     @PreAuthorize("hasAuthority('charge_sheet:basic:write')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> addItem(
             @PathVariable Long sheetId,
@@ -47,6 +57,7 @@ public class ChargeSheetController {
 
     // ING: Supprimer un item
     @DeleteMapping("/{sheetId}/items/{itemId}")
+    @Operation(summary = "Supprimer un item", description = "Supprimer un item d’un cahier de charges")
     @PreAuthorize("hasAuthority('charge_sheet:basic:write')")
     public ResponseEntity<Void> removeItem(
             @PathVariable Long sheetId,
@@ -57,6 +68,7 @@ public class ChargeSheetController {
 
     // Tous les rôles: Lire un cahier des charges complet
     @GetMapping("/{id}")
+    @Operation(summary = "Consulter un cahier", description = "Récupérer les détails complets d’un cahier de charges")
     @PreAuthorize("hasAuthority('charge_sheet:all:read')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> getChargeSheet(@PathVariable Long id) {
         return ResponseEntity.ok(service.getChargeSheetComplete(id));
@@ -64,12 +76,14 @@ public class ChargeSheetController {
 
     // Tous les rôles: Lister tous les cahiers des charges
     @GetMapping
+    @Operation(summary = "Lister les cahiers", description = "Afficher tous les cahiers de charges")
     @PreAuthorize("hasAuthority('charge_sheet:all:read')")
     public ResponseEntity<List<ChargeSheetDto.CompleteDto>> getAllChargeSheets() {
         return ResponseEntity.ok(service.getAllChargeSheets());
     }
     // ADMIN: Supprimer un cahier des charges complet
     @DeleteMapping("/{id}")
+    @Operation(summary = "Supprimer un cahier", description = "Supprimer complètement un cahier de charges (ADMIN uniquement)")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteChargeSheet(@PathVariable Long id) {
         service.deleteChargeSheet(id);
@@ -77,6 +91,7 @@ public class ChargeSheetController {
     }
     // ING: Valider le cahier
     @PutMapping("/{id}/validate-ing")
+    @Operation(summary = "Validation ingénieur", description = "Valider le cahier par l’ingénieur")
     @PreAuthorize("hasAuthority('charge_sheet:basic:write')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> validateByIng(@PathVariable Long id) {
         ChargeSheet validated = service.validateByIng(id);
@@ -85,6 +100,7 @@ public class ChargeSheetController {
 
     // PT: Valider le cahier
     @PutMapping("/{id}/validate-pt")
+    @Operation(summary = "Validation technique", description = "Valider le cahier par le responsable technique")
     @PreAuthorize("hasAuthority('charge_sheet:tech:write')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> validateByPt(@PathVariable Long id) {
         ChargeSheet validated = service.validateByPt(id);
@@ -92,11 +108,13 @@ public class ChargeSheetController {
     }
     // Statistiques pour le dashboard
     @GetMapping("/stats")
+    @Operation(summary = "Statistiques", description = "Récupérer les statistiques pour le dashboard")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         return ResponseEntity.ok(service.getDashboardStats());
     }
     // Envoyer au fournisseur
     @PutMapping("/{id}/send-supplier")
+    @Operation(summary = "Envoyer au fournisseur", description = "Envoyer le cahier au fournisseur")
     public ResponseEntity<ChargeSheetDto.CompleteDto> sendToSupplier(@PathVariable Long id) {
         ChargeSheet updated = service.sendToSupplier(id);
         return ResponseEntity.ok(service.getChargeSheetComplete(updated.getId()));
@@ -104,6 +122,7 @@ public class ChargeSheetController {
 
     // Valider la réception
     @PutMapping("/{id}/confirm-reception")
+    @Operation(summary = "Confirmer réception", description = "Confirmer la réception du cahier")
     public ResponseEntity<ChargeSheetDto.CompleteDto> confirmReception(@PathVariable Long id) {
         ChargeSheet updated = service.confirmReception(id);
         return ResponseEntity.ok(service.getChargeSheetComplete(updated.getId()));
@@ -112,6 +131,7 @@ public class ChargeSheetController {
 
     // ING: Mettre à jour les informations générales du cahier (seulement si DRAFT)
     @PutMapping("/{id}")
+    @Operation(summary = "Modifier un cahier", description = "Mettre à jour les informations générales d’un cahier (mode DRAFT uniquement)")
     @PreAuthorize("hasAuthority('charge_sheet:basic:write')")
     public ResponseEntity<ChargeSheetDto.CompleteDto> updateChargeSheet(
             @PathVariable Long id,
@@ -121,6 +141,7 @@ public class ChargeSheetController {
     }
     // Compléter
     @PutMapping("/{id}/complete")
+    @Operation(summary = "Compléter le cahier", description = "Marquer le cahier comme complété")
     public ResponseEntity<ChargeSheetDto.CompleteDto> complete(@PathVariable Long id) {
         ChargeSheet updated = service.completeChargeSheet(id);
         return ResponseEntity.ok(service.getChargeSheetComplete(updated.getId()));
@@ -131,6 +152,7 @@ public class ChargeSheetController {
      * Préparer les données pour la réception
      */
     @GetMapping("/{id}/prepare-reception")
+    @Operation(summary = "Préparer réception", description = "Préparer les données nécessaires pour la réception")
     @PreAuthorize("hasAuthority('charge_sheet:tech:write')")
     public ResponseEntity<ReceptionDto.ReceptionResponseDto> prepareReception(@PathVariable Long id) {
         return ResponseEntity.ok(service.prepareReceptionData(id));
@@ -140,6 +162,7 @@ public class ChargeSheetController {
      * Confirmer une réception partielle
      */
     @PostMapping("/{id}/confirm-partial-reception")
+    @Operation(summary = "Réception partielle", description = "Confirmer une réception partielle des items")
     @PreAuthorize("hasAuthority('charge_sheet:tech:write')")
     public ResponseEntity<ReceptionDto.ReceptionResponseDto> confirmPartialReception(
             @PathVariable Long id,
@@ -152,6 +175,7 @@ public class ChargeSheetController {
      * Obtenir l'historique des réceptions
      */
     @GetMapping("/{id}/reception-history")
+    @Operation(summary = "Historique réception", description = "Afficher l’historique des réceptions d’un cahier")
     @PreAuthorize("hasAuthority('charge_sheet:all:read')")
     public ResponseEntity<List<ReceptionHistoryDto>> getReceptionHistory(@PathVariable Long id) {
         return ResponseEntity.ok(service.getReceptionHistoryDto(id));

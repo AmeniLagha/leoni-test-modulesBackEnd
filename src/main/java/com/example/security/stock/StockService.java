@@ -28,24 +28,89 @@ public class StockService {
 
     @Transactional
     public StockModule moveToStock(Long technicalFileId) {
-        // Récupérer le dossier technique avec ses items
-        TechnicalFile technicalFile = technicalFileService.getTechnicalFileById(technicalFileId);
+        try {
+            // Récupérer le dossier technique avec ses items
+            TechnicalFile technicalFile = technicalFileService.getTechnicalFileById(technicalFileId);
 
-        // Vérifier qu'il y a au moins un item
-        if (technicalFile.getTechnicalFileItems() == null || technicalFile.getTechnicalFileItems().isEmpty()) {
-            throw new RuntimeException("Le dossier technique ne contient aucun item");
+            // Vérifier qu'il y a au moins un item
+            if (technicalFile.getTechnicalFileItems() == null || technicalFile.getTechnicalFileItems().isEmpty()) {
+                throw new RuntimeException("Le dossier technique ne contient aucun item");
+            }
+
+            // Auth utilisateur courant
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
+
+            // Pour chaque item, on pourrait créer un module en stock
+            // Mais ici on va créer un module par item du dossier
+
+            List<StockModule> stockModules = new ArrayList<>();
+
+            for (TechnicalFileItem item : technicalFile.getTechnicalFileItems()) {
+                // Extraire les valeurs finales pour cet item
+                Double finalDisplacement = pickFinalValue(
+                        item.getDisplacementPathM1(),
+                        item.getDisplacementPathM2(),
+                        item.getDisplacementPathM3()
+                );
+
+                Double finalProgrammedSealing = pickFinalValue(
+                        item.getProgrammedSealingValueM1(),
+                        item.getProgrammedSealingValueM2(),
+                        item.getProgrammedSealingValueM3()
+                );
+
+                String finalDetection = pickFinalDetection(
+                        item.getDetectionsM1(),
+                        item.getDetectionsM2(),
+                        item.getDetectionsM3()
+                );
+
+                // Créer et sauvegarder le module en stock
+                StockModule stock = StockModule.builder()
+                        .technicalFileItem(item)  // Lier à l'item spécifique
+                        .technicalFile(technicalFile)  // Garder aussi la référence au dossier
+                        .chargeSheetItemId(item.getChargeSheetItem().getId())
+                        .itemNumber(item.getChargeSheetItem().getItemNumber())
+                        .position(item.getPosition())
+                        .finalDisplacement(finalDisplacement)
+                        .finalProgrammedSealing(finalProgrammedSealing)
+                        .finalDetection(finalDetection)
+                        .movedBy(currentUser.getEmail())
+                        .movedAt(LocalDate.now())
+                        .status(StockModule.StockStatus.AVAILABLE)
+                        .build();
+
+                stockModules.add(stockRepository.save(stock));
+            }
+
+            // Optionnel : retourner le premier module ou la liste
+            return stockModules.isEmpty() ? null : stockModules.get(0);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans moveToStock: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
+    }
+    // Dans StockService.java
+    // Dans StockService.java
+    @Transactional
+    public StockModule moveItemToStock(Long technicalFileItemId) {
+        try {
+            // Vérifier si l'item est déjà en stock
+            StockModule existingStock = stockRepository.findByTechnicalFileItemId(technicalFileItemId).orElse(null);
 
-        // Auth utilisateur courant
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
+            if (existingStock != null) {
+                throw new RuntimeException("Cet item est déjà présent dans le stock. Veuillez utiliser la mise à jour de statut.");
+            }
 
-        // Pour chaque item, on pourrait créer un module en stock
-        // Mais ici on va créer un module par item du dossier
+            // Récupérer l'item technique
+            TechnicalFileItem item = technicalFileService.getTechnicalFileItemById(technicalFileItemId);
 
-        List<StockModule> stockModules = new ArrayList<>();
+            // Auth utilisateur courant
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
 
-        for (TechnicalFileItem item : technicalFile.getTechnicalFileItems()) {
             // Extraire les valeurs finales pour cet item
             Double finalDisplacement = pickFinalValue(
                     item.getDisplacementPathM1(),
@@ -67,8 +132,8 @@ public class StockService {
 
             // Créer et sauvegarder le module en stock
             StockModule stock = StockModule.builder()
-                    .technicalFileItem(item)  // Lier à l'item spécifique
-                    .technicalFile(technicalFile)  // Garder aussi la référence au dossier
+                    .technicalFileItem(item)
+                    .technicalFile(item.getTechnicalFile())
                     .chargeSheetItemId(item.getChargeSheetItem().getId())
                     .itemNumber(item.getChargeSheetItem().getItemNumber())
                     .position(item.getPosition())
@@ -80,75 +145,34 @@ public class StockService {
                     .status(StockModule.StockStatus.AVAILABLE)
                     .build();
 
-            stockModules.add(stockRepository.save(stock));
+            return stockRepository.save(stock);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans moveItemToStock: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
-
-        // Optionnel : retourner le premier module ou la liste
-        return stockModules.isEmpty() ? null : stockModules.get(0);
-    }
-    // Dans StockService.java
-    // Dans StockService.java
-    @Transactional
-    public StockModule moveItemToStock(Long technicalFileItemId) {
-        // Vérifier si l'item est déjà en stock
-        StockModule existingStock = stockRepository.findByTechnicalFileItemId(technicalFileItemId).orElse(null);
-
-        if (existingStock != null) {
-            throw new RuntimeException("Cet item est déjà présent dans le stock. Veuillez utiliser la mise à jour de statut.");
-        }
-
-        // Récupérer l'item technique
-        TechnicalFileItem item = technicalFileService.getTechnicalFileItemById(technicalFileItemId);
-
-        // Auth utilisateur courant
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-
-        // Extraire les valeurs finales pour cet item
-        Double finalDisplacement = pickFinalValue(
-                item.getDisplacementPathM1(),
-                item.getDisplacementPathM2(),
-                item.getDisplacementPathM3()
-        );
-
-        Double finalProgrammedSealing = pickFinalValue(
-                item.getProgrammedSealingValueM1(),
-                item.getProgrammedSealingValueM2(),
-                item.getProgrammedSealingValueM3()
-        );
-
-        String finalDetection = pickFinalDetection(
-                item.getDetectionsM1(),
-                item.getDetectionsM2(),
-                item.getDetectionsM3()
-        );
-
-        // Créer et sauvegarder le module en stock
-        StockModule stock = StockModule.builder()
-                .technicalFileItem(item)
-                .technicalFile(item.getTechnicalFile())
-                .chargeSheetItemId(item.getChargeSheetItem().getId())
-                .itemNumber(item.getChargeSheetItem().getItemNumber())
-                .position(item.getPosition())
-                .finalDisplacement(finalDisplacement)
-                .finalProgrammedSealing(finalProgrammedSealing)
-                .finalDetection(finalDetection)
-                .movedBy(currentUser.getEmail())
-                .movedAt(LocalDate.now())
-                .status(StockModule.StockStatus.AVAILABLE)
-                .build();
-
-        return stockRepository.save(stock);
     }
     // Lister tous les modules
     public List<StockModule> getAllStock() {
-        return stockRepository.findAll();
+        try {
+            return stockRepository.findAll();
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans getAllStock: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
     // Récupérer un module par ID
     public StockModule getStockById(Long id) {
-        return stockRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Module stock non trouvé"));
+        try {
+            return stockRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Module stock non trouvé"));
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans getStockById: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 
     // --- Fonctions utilitaires ---
@@ -182,11 +206,15 @@ public class StockService {
     }
     @Transactional
     public StockModule changeStatus(Long id, StockModule.StockStatus status) {
-        StockModule module = stockRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Module stock non trouvé"));
-        module.setStatus(status);
-        return stockRepository.save(module);
+        try {
+            StockModule module = stockRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Module stock non trouvé"));
+            module.setStatus(status);
+            return stockRepository.save(module);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur dans changeStatus: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
-
-
 }
