@@ -12,7 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -329,5 +331,140 @@ public class ClaimService {
 
     public List<Claim> searchClaims(String keyword) {
         return repository.findAll();
+    }
+    /**
+     * Calcule la variation entre deux mois spécifiques pour les réclamations
+     */
+    public Map<String, Object> getVariationBetweenMonths(String project, String month1, String month2) {
+        List<Object[]> results;
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+
+        if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
+            results = repository.countByMonthForAllProjects();
+        } else {
+            // Pour les réclamations, on filtre par projet via chargeSheet
+            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjet();
+            results = repository.countByMonthForAllProjects(); // TODO: filtrer par projet
+        }
+
+        Map<String, Long> monthlyCounts = new HashMap<>();
+        for (Object[] result : results) {
+            String month = (String) result[0];
+            Long count = ((Number) result[1]).longValue();
+            monthlyCounts.put(month, count);
+        }
+
+        Long countMonth1 = monthlyCounts.getOrDefault(month1, 0L);
+        Long countMonth2 = monthlyCounts.getOrDefault(month2, 0L);
+
+        double variation = 0.0;
+        String trend = "stable";
+        String formula = "";
+
+        if (countMonth1 > 0) {
+            variation = ((countMonth2 - countMonth1) * 100.0) / countMonth1;
+            variation = Math.round(variation * 10.0) / 10.0;
+
+            if (variation > 0) {
+                trend = "hausse";
+            } else if (variation < 0) {
+                trend = "baisse";
+            }
+
+            formula = String.format("((%d - %d) / %d) × 100 = %.1f%%",
+                    countMonth2, countMonth1, countMonth1, variation);
+        } else if (countMonth1 == 0 && countMonth2 > 0) {
+            variation = 100.0;
+            trend = "hausse";
+            formula = String.format("Création depuis zéro: %d réclamations", countMonth2);
+        } else if (countMonth1 == 0 && countMonth2 == 0) {
+            formula = "Aucune réclamation sur les deux mois";
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("project", (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) ? "TOUS_PROJETS" : project);
+        result.put("month1", month1);
+        result.put("month1Count", countMonth1);
+        result.put("month2", month2);
+        result.put("month2Count", countMonth2);
+        result.put("variation", variation);
+        result.put("trend", trend);
+        result.put("formula", formula);
+        result.put("interpretation", getClaimInterpretation(trend, variation, countMonth2, countMonth1));
+
+        return result;
+    }
+
+    /**
+     * Version simplifiée pour le dashboard avec les deux derniers mois
+     */
+    public Map<String, Object> getLastTwoMonthsVariation(String project) {
+        List<Object[]> results = repository.countByMonthForAllProjects();
+
+        if (results == null || results.size() < 2) {
+            Map<String, Object> emptyResult = new HashMap<>();
+            emptyResult.put("message", "Pas assez de données pour calculer la variation");
+            emptyResult.put("availableMonths", results != null ? results.size() : 0);
+            return emptyResult;
+        }
+
+        Object[] latestMonth = results.get(0);
+        Object[] previousMonth = results.get(1);
+
+        String monthLatest = (String) latestMonth[0];
+        Long countLatest = ((Number) latestMonth[1]).longValue();
+        String monthPrevious = (String) previousMonth[0];
+        Long countPrevious = ((Number) previousMonth[1]).longValue();
+
+        double variation = 0.0;
+        String trend = "stable";
+        String formula = "";
+
+        if (countPrevious > 0) {
+            variation = ((countLatest - countPrevious) * 100.0) / countPrevious;
+            variation = Math.round(variation * 10.0) / 10.0;
+
+            if (variation > 0) {
+                trend = "hausse";
+            } else if (variation < 0) {
+                trend = "baisse";
+            }
+
+            formula = String.format("((%d - %d) / %d) × 100 = %.1f%%",
+                    countLatest, countPrevious, countPrevious, variation);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("currentMonth", monthLatest);
+        result.put("currentMonthCount", countLatest);
+        result.put("previousMonth", monthPrevious);
+        result.put("previousMonthCount", countPrevious);
+        result.put("variation", variation);
+        result.put("trend", trend);
+        result.put("formula", formula);
+        result.put("interpretation", getClaimInterpretation(trend, variation, countLatest, countPrevious));
+
+        return result;
+    }
+
+    private String getClaimInterpretation(String trend, double variation, long currentCount, long previousCount) {
+        if (trend.equals("hausse")) {
+            if (variation > 50) {
+                return String.format("📈 Forte augmentation de %.1f%% (%d vs %d réclamations)", variation, currentCount, previousCount);
+            } else {
+                return String.format("📈 Augmentation de %.1f%% (%d vs %d réclamations)", variation, currentCount, previousCount);
+            }
+        } else if (trend.equals("baisse")) {
+            if (variation < -50) {
+                return String.format("📉 Forte baisse de %.1f%% (%d vs %d réclamations)", Math.abs(variation), currentCount, previousCount);
+            } else {
+                return String.format("📉 Baisse de %.1f%% (%d vs %d réclamations)", Math.abs(variation), currentCount, previousCount);
+            }
+        } else {
+            return String.format("➡️ Stable (%d réclamations pour les deux mois)", currentCount);
+        }
     }
 }

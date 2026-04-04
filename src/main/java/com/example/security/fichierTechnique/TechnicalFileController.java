@@ -1,5 +1,6 @@
 package com.example.security.fichierTechnique;
 
+import com.example.security.email.GlobalNotificationService;
 import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistory;
 import com.example.security.user.Role;
 import com.example.security.user.User;
@@ -13,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Tag(name = "Dossier Technique", description = "Gestion des dossiers techniques, items, historique et validation")
@@ -21,6 +23,7 @@ import java.util.List;
 public class TechnicalFileController {
 
     private final TechnicalFileService service;
+    private final TechnicalFileNotificationService notificationService ;
 
     // ✅ Créer un dossier technique
     @PostMapping
@@ -195,5 +198,17 @@ public class TechnicalFileController {
             @PathVariable Long id,
             @RequestBody TechnicalFileDto.AddItemDto dto) {
         return ResponseEntity.ok(service.addItemToTechnicalFile(id, dto));
+    }
+    // Dans TechnicalFileController.java - Ajoutez
+
+    @GetMapping("/notifications/pending")
+    @Operation(summary = "Notifications en attente", description = "Récupère les items techniques nécessitant une attention")
+    @PreAuthorize("hasAuthority('technical_file:read')")
+    public ResponseEntity<List<Map<String, Object>>> getPendingNotifications() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = auth.getName();
+
+        List<Map<String, Object>> notifications = notificationService.getPendingNotificationsForUser(userEmail);
+        return ResponseEntity.ok(notifications);
     }
 }

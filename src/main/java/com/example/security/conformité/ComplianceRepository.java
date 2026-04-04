@@ -54,4 +54,25 @@ AND cs.status = :status
                 List<ChargeSheetStatus> statuses
         );
 
+
+    // 📊 NOUVELLES MÉTHODES POUR LES STATISTIQUES DE CONFORMITÉ
+
+    // Compter les conformités par mois pour un projet spécifique
+    @Query(value = "SELECT DATE_FORMAT(c.created_at, '%Y-%m') as month, COUNT(c.id) as count " +
+            "FROM compliance c " +
+            "JOIN charge_sheet_item i ON c.item_id = i.id " +
+            "JOIN charge_sheet cs ON i.charge_sheet_id = cs.id " +
+            "WHERE cs.project = :project " +
+            "GROUP BY DATE_FORMAT(c.created_at, '%Y-%m') " +
+            "ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC",
+            nativeQuery = true)
+    List<Object[]> countByMonthForProject(@Param("project") String project);
+
+    // Compter les conformités par mois pour tous les projets (Admin)
+    @Query(value = "SELECT DATE_FORMAT(c.created_at, '%Y-%m') as month, COUNT(c.id) as count " +
+            "FROM compliance c " +
+            "GROUP BY DATE_FORMAT(c.created_at, '%Y-%m') " +
+            "ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC",
+            nativeQuery = true)
+    List<Object[]> countByMonthForAllProjects();
     }

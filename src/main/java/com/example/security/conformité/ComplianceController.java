@@ -2,14 +2,18 @@ package com.example.security.conformité;
 
 import com.example.security.cahierdeCharge.ChargeSheetItem;
 import com.example.security.cahierdeCharge.ChargeSheetItemRepository;
+import com.example.security.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/compliance")
@@ -155,6 +159,54 @@ public class ComplianceController {
             @RequestParam int numberOfSheets) {
         return ResponseEntity.ok(compliancePreparationService.createComplianceForReceivedQuantity(itemId, numberOfSheets));
     }
+// Dans ComplianceController.java - Ajoutez ces méthodes
 
+    @GetMapping("/stats/monthly-variation")
+    @Operation(summary = "Variation mensuelle des conformités",
+            description = "Calcule la variation entre deux mois spécifiques")
+    @PreAuthorize("hasAuthority('compliance:read')")
+    public ResponseEntity<Map<String, Object>> getMonthlyVariation(
+            @RequestParam String month1,
+            @RequestParam String month2,
+            @RequestParam(required = false) String project) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : null;
+
+        Map<String, Object> variation = service.getVariationBetweenMonths(userProject, month1, month2);
+        return ResponseEntity.ok(variation);
+    }
+
+    @GetMapping("/stats/last-two-months")
+    @Operation(summary = "Variation deux derniers mois des conformités",
+            description = "Calcule automatiquement la variation entre les deux derniers mois disponibles")
+    @PreAuthorize("hasAuthority('compliance:read')")
+    public ResponseEntity<Map<String, Object>> getLastTwoMonthsVariation(
+            @RequestParam(required = false) String project) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : null;
+
+        Map<String, Object> variation = service.getLastTwoMonthsVariation(userProject);
+        return ResponseEntity.ok(variation);
+    }
+
+    @GetMapping("/stats/monthly-stats")
+    @Operation(summary = "Statistiques mensuelles des conformités",
+            description = "Nombre de fiches de conformité créées par mois")
+    @PreAuthorize("hasAuthority('compliance:read')")
+    public ResponseEntity<MonthlyComplianceStatsDto> getMonthlyComplianceStats(
+            @RequestParam(required = false) String project,
+            @RequestParam(defaultValue = "6") int months) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : null;
+
+        MonthlyComplianceStatsDto stats = service.getMonthlyComplianceStats(userProject, months);
+        return ResponseEntity.ok(stats);
+    }
 
 }

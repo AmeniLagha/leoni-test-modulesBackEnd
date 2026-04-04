@@ -38,7 +38,8 @@ public enum Role {
                     // Réclamations
                     CLAIM_CREATE,
                     CLAIM_READ,
-                    CLAIM_WRITE
+                    CLAIM_WRITE,
+                    RECEPTION_READ
             )
     ),
 
@@ -68,7 +69,8 @@ public enum Role {
                     // Réclamations
                     CLAIM_CREATE,
                     CLAIM_READ,
-                    CLAIM_WRITE
+                    CLAIM_WRITE,
+                    RECEPTION_READ
             )
     ),
 
@@ -154,7 +156,8 @@ public enum Role {
                     STOCK_WRITE,
                     SEARCH,
                     AJOUTE_USER,
-                    AJOUTE_USER_LISTE
+                    AJOUTE_USER_LISTE,
+                    RECEPTION_READ
             )
     );
 

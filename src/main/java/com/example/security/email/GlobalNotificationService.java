@@ -392,6 +392,108 @@ public class GlobalNotificationService {
 
         sendNotificationToOneUser(subject, message, claim.getAssignedTo());
     }
+    /**
+     * Envoie une notification système (email) à un utilisateur spécifique
+     * @param toEmail Email du destinataire
+     * @param message Contenu du message
+     * @param type Type de notification (ex: TECHNICAL_FILE_REMINDER)
+     */
+    @Async
+    public void sendSystemNotification(String toEmail, String message, String type) {
+        try {
+            SimpleMailMessage mailMessage = new SimpleMailMessage();
+            mailMessage.setTo(toEmail);
+            mailMessage.setSubject("🔔 LEONI System Notification - " + type);
+            mailMessage.setText(message);
+            mailMessage.setFrom("noreply@leoni.com");
 
+            mailSender.send(mailMessage);
+
+            log.info("✅ System notification sent to {} (type: {})", toEmail, type);
+        } catch (Exception e) {
+            log.error("❌ Failed to send system notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    /**
+     * Envoie une notification système avec template HTML
+     */
+    @Async
+    public void sendSystemNotificationHtml(String toEmail, String message, String type) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("🔔 LEONI System Notification - " + type);
+            helper.setFrom("noreply@leoni.com");
+
+            String htmlContent = buildSystemNotificationHtml(message, type);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(mimeMessage);
+
+            log.info("✅ HTML system notification sent to {} (type: {})", toEmail, type);
+        } catch (Exception e) {
+            log.error("❌ Failed to send HTML system notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Construit le template HTML pour les notifications système
+     */
+    private String buildSystemNotificationHtml(String message, String type) {
+        String color = getColorForType(type);
+        String icon = getIconForType(type);
+
+        // Version sans text block pour éviter l'erreur
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>\n");
+        html.append("<html>\n");
+        html.append("<head>\n");
+        html.append("    <style>\n");
+        html.append("        body { font-family: Arial, sans-serif; background-color: #0A0E1A; margin: 0; padding: 20px; }\n");
+        html.append("        .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0F1525 0%, #0A0E1A 100%); border-radius: 20px; overflow: hidden; border: 1px solid rgba(0, 212, 255, 0.2); }\n");
+        html.append("        .header { background: linear-gradient(135deg, #00D4FF, #0052CC); padding: 20px; text-align: center; }\n");
+        html.append("        .header h1 { color: white; margin: 0; font-size: 24px; }\n");
+        html.append("        .content { padding: 30px; }\n");
+        html.append("        .message { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; white-space: pre-line; color: #E0E0E0; }\n");
+        html.append("        .type-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; background-color: ").append(color).append("; color: white; }\n");
+        html.append("        .footer { background: rgba(0, 0, 0, 0.3); padding: 15px; text-align: center; font-size: 12px; color: #666; }\n");
+        html.append("        .icon { font-size: 48px; text-align: center; margin-bottom: 10px; }\n");
+        html.append("    </style>\n");
+        html.append("</head>\n");
+        html.append("<body>\n");
+        html.append("    <div class=\"container\">\n");
+        html.append("        <div class=\"header\">\n");
+        html.append("            <h1>🔔 LEONI System Notification</h1>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"content\">\n");
+        html.append("            <div class=\"icon\">").append(icon).append("</div>\n");
+        html.append("            <div class=\"type-badge\">").append(type).append("</div>\n");
+        html.append("            <div class=\"message\">").append(message.replace("\n", "<br>")).append("</div>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"footer\">\n");
+        html.append("            <p>© 2026 LEONI Group - Industrial Intelligence Platform</p>\n");
+        html.append("            <p>Ce message est généré automatiquement, merci de ne pas y répondre.</p>\n");
+        html.append("        </div>\n");
+        html.append("    </div>\n");
+        html.append("</body>\n");
+        html.append("</html>");
+
+        return html.toString();
+    }
+
+    private String getColorForType(String type) {
+        if (type.contains("REMINDER")) return "#FFA500";
+        if (type.contains("GLOBAL")) return "#00D4FF";
+        return "#00FF88";
+    }
+
+    private String getIconForType(String type) {
+        if (type.contains("REMINDER")) return "⚠️";
+        if (type.contains("GLOBAL")) return "📊";
+        return "🔔";
+    }
 
 }

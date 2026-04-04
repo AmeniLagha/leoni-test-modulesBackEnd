@@ -37,7 +37,27 @@ AND u.email <> :currentEmail
             @Param("projet") String projet,
             @Param("currentEmail") String currentEmail);
 
+    @Query("""
+    SELECT u FROM User u
+    WHERE u.projet = :projet 
+    AND (u.role = 'MC' OR u.role = 'MP')
+    """)
+    List<User> findMcAndMpByProject(@Param("projet") String projet);
 
+    // Trouver tous les MC et MP (pour admin)
+    @Query("""
+    SELECT u FROM User u
+    WHERE u.role = 'MC' OR u.role = 'MP'
+    """)
+    List<User> findAllMcAndMp();
+
+    // Trouver les emails des MC et MP par projet
+    @Query("""
+    SELECT u.email FROM User u
+    WHERE u.projet = :projet 
+    AND (u.role = 'MC' OR u.role = 'MP')
+    """)
+    List<String> findMcAndMpEmailsByProject(@Param("projet") String projet);
 
 
 }

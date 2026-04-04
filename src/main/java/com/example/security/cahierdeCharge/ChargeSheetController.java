@@ -1,10 +1,13 @@
 package com.example.security.cahierdeCharge;
 
+import com.example.security.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -179,5 +182,53 @@ public class ChargeSheetController {
     @PreAuthorize("hasAuthority('charge_sheet:all:read')")
     public ResponseEntity<List<ReceptionHistoryDto>> getReceptionHistory(@PathVariable Long id) {
         return ResponseEntity.ok(service.getReceptionHistoryDto(id));
+    }
+// Dans ChargeSheetController.java - Ajoutez ces méthodes
+
+    @GetMapping("/stats/monthly-variation")
+    @Operation(summary = "Variation mensuelle", description = "Calcule la variation entre deux mois spécifiques")
+    @PreAuthorize("hasAuthority('charge_sheet:all:read')")
+    public ResponseEntity<Map<String, Object>> getMonthlyVariation(
+            @RequestParam String month1,
+            @RequestParam String month2,
+            @RequestParam(required = false) String project) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+
+        Map<String, Object> variation = service.getVariationBetweenMonths(userProject, month1, month2);
+        return ResponseEntity.ok(variation);
+    }
+
+    @GetMapping("/stats/monthly-creation")
+    @Operation(summary = "Statistiques de création mensuelles",
+            description = "Nombre de cahiers créés par mois avec variations")
+    @PreAuthorize("hasAuthority('charge_sheet:all:read')")
+    public ResponseEntity<MonthlyStatsDto> getMonthlyCreationStats(
+            @RequestParam(required = false) String project,
+            @RequestParam(defaultValue = "6") int months) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+
+        MonthlyStatsDto stats = service.getMonthlyCreationStats(userProject, months);
+        return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/stats/last-two-months")
+    @Operation(summary = "Variation deux derniers mois",
+            description = "Calcule automatiquement la variation entre les deux derniers mois disponibles")
+    @PreAuthorize("hasAuthority('charge_sheet:all:read')")
+    public ResponseEntity<Map<String, Object>> getLastTwoMonthsVariation(
+            @RequestParam(required = false) String project) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+
+        Map<String, Object> variation = service.getLastTwoMonthsVariation(userProject);
+        return ResponseEntity.ok(variation);
     }
 }

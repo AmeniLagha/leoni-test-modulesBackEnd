@@ -48,7 +48,8 @@ public enum Permission {
     ADMIN_CREATE("admin:create"),
     ADMIN_DELETE("admin:delete"),
     AJOUTE_USER("admin:createuser"),
-    AJOUTE_USER_LISTE("admin:readuser");
+    AJOUTE_USER_LISTE("admin:readuser"),
+    RECEPTION_READ("reception:read");
 
 
     @Getter

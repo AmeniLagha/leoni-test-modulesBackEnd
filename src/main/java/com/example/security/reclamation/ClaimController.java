@@ -284,5 +284,29 @@ public class ClaimController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+// Dans ClaimController.java - Ajoutez ces méthodes
 
+    @GetMapping("/stats/last-two-months")
+    @Operation(summary = "Variation deux derniers mois des réclamations",
+            description = "Calcule automatiquement la variation entre les deux derniers mois disponibles")
+    @PreAuthorize("hasAuthority('claim:read')")
+    public ResponseEntity<Map<String, Object>> getLastTwoMonthsVariation(
+            @RequestParam(required = false) String project) {
+
+        Map<String, Object> variation = service.getLastTwoMonthsVariation(project);
+        return ResponseEntity.ok(variation);
+    }
+
+    @GetMapping("/stats/monthly-variation")
+    @Operation(summary = "Variation mensuelle des réclamations",
+            description = "Calcule la variation entre deux mois spécifiques")
+    @PreAuthorize("hasAuthority('claim:read')")
+    public ResponseEntity<Map<String, Object>> getMonthlyVariation(
+            @RequestParam String month1,
+            @RequestParam String month2,
+            @RequestParam(required = false) String project) {
+
+        Map<String, Object> variation = service.getVariationBetweenMonths(project, month1, month2);
+        return ResponseEntity.ok(variation);
+    }
 }
