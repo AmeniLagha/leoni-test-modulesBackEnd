@@ -1,6 +1,8 @@
 package com.example.security.conformité;
 
 import com.example.security.cahierdeCharge.*;
+import com.example.security.reception.ReceptionHistory;
+import com.example.security.reception.ReceptionHistoryRepository;
 import com.example.security.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;

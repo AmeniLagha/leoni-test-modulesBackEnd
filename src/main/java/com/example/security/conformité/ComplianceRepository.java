@@ -25,14 +25,14 @@ AND cs.status = :status
             String project,
             ChargeSheetStatus status
     );
-        @Query("""
+    @Query("""
     SELECT c
     FROM Compliance c
     JOIN c.item i
     JOIN i.chargeSheet cs
     WHERE cs.project = :project
     """)
-        List<Compliance> findByProject(String project);
+    List<Compliance> findByProject(String project);
     // Ajoutez ces méthodes
     List<Compliance> findByItemId(Long itemId);
 
@@ -41,7 +41,7 @@ AND cs.status = :status
     @Query("SELECT COUNT(c) FROM Compliance c WHERE c.item.id = :itemId")
     int countByItemId(@Param("itemId") Long itemId);
 
-        @Query("""
+    @Query("""
     SELECT c
     FROM Compliance c
     JOIN c.item i
@@ -49,24 +49,25 @@ AND cs.status = :status
     WHERE cs.project = :project
     AND cs.status IN :statuses
     """)
-        List<Compliance> findByProjectAndChargeSheetStatusIn(
-                String project,
-                List<ChargeSheetStatus> statuses
-        );
+    List<Compliance> findByProjectAndChargeSheetStatusIn(
+            String project,
+            List<ChargeSheetStatus> statuses
+    );
 
 
     // 📊 NOUVELLES MÉTHODES POUR LES STATISTIQUES DE CONFORMITÉ
 
     // Compter les conformités par mois pour un projet spécifique
-    @Query(value = "SELECT DATE_FORMAT(c.created_at, '%Y-%m') as month, COUNT(c.id) as count " +
-            "FROM compliance c " +
-            "JOIN charge_sheet_item i ON c.item_id = i.id " +
-            "JOIN charge_sheet cs ON i.charge_sheet_id = cs.id " +
-            "WHERE cs.project = :project " +
-            "GROUP BY DATE_FORMAT(c.created_at, '%Y-%m') " +
-            "ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC",
-            nativeQuery = true)
-    List<Object[]> countByMonthForProject(@Param("project") String project);
+    @Query(value = """
+    SELECT DATE_FORMAT(c.created_at, '%Y-%m') as month, COUNT(c.id) as count 
+    FROM compliance c 
+    JOIN charge_sheet_item i ON c.charge_sheet_item_id = i.id 
+    JOIN charge_sheet cs ON i.charge_sheet_id = cs.id 
+    WHERE cs.project = ? 
+    GROUP BY DATE_FORMAT(c.created_at, '%Y-%m') 
+    ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC
+    """, nativeQuery = true)
+    List<Object[]> countByMonthForProject(String project);
 
     // Compter les conformités par mois pour tous les projets (Admin)
     @Query(value = "SELECT DATE_FORMAT(c.created_at, '%Y-%m') as month, COUNT(c.id) as count " +
@@ -75,4 +76,7 @@ AND cs.status = :status
             "ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC",
             nativeQuery = true)
     List<Object[]> countByMonthForAllProjects();
-    }
+
+    @Query("SELECT c FROM Compliance c WHERE c.item.id = :itemId")
+    List<Compliance> findByChargeSheetItemId(@Param("itemId") Long itemId);
+}

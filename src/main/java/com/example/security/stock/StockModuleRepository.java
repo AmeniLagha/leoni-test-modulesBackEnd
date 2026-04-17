@@ -12,10 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface StockModuleRepository extends JpaRepository<StockModule, Long> {
-    // Tu peux ajouter des méthodes custom si besoin (par ex: findByStatus)
-    Optional<StockModule> findByTechnicalFileItemId(Long technicalFileItemId);
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM StockModule s WHERE s.technicalFileItem.id = :itemId")
-    void deleteByTechnicalFileItemId(@Param("itemId") Long itemId);
+    @Query("SELECT s FROM StockModule s WHERE s.technicalFileItem.id = :itemId")
+    Optional<StockModule> findByTechnicalFileItemId(@Param("itemId") Long technicalFileItemId);
+
 }

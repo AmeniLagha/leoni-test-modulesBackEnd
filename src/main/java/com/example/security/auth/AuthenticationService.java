@@ -1,9 +1,14 @@
 package com.example.security.auth;
 
 import com.example.security.config.JwtService;
+import com.example.security.projet.Projet;
+import com.example.security.projet.ProjetRepository;
+import com.example.security.site.Site;
+import com.example.security.site.SiteRepository;
 import com.example.security.token.Token;
 import com.example.security.token.TokenRepository;
 import com.example.security.token.TokenType;
+import com.example.security.user.Role;
 import com.example.security.user.User;
 import com.example.security.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +33,8 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final SiteRepository siteRepository;
+    private final ProjetRepository projetRepository ;
 
     public AuthenticationResponse register(RegisterRequest request) {
         if (repository.existsByEmail(request.getEmail())) {
@@ -36,14 +45,23 @@ public class AuthenticationService {
         if (repository.existsByMatricule(request.getMatricule())) {
             throw new RuntimeException("Matricule déjà utilisé");
         }
+        Site site = siteRepository.findByName(request.getSiteName())
+                .orElseThrow(() -> new RuntimeException("Site non trouvé: " + request.getSiteName()));
+        Set<Projet> projets = new HashSet<>();
+        for (String projetName : request.getProjets()) {
+            Projet projet = projetRepository.findByName(projetName)
+                    .orElseThrow(() -> new RuntimeException("Projet non trouvé: " + projetName));
+            projets.add(projet);
+        }
         var user = User.builder()
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
                 .email(request.getEmail())
                 .matricule(request.getMatricule())
-                .projet(request.getProjet())
+                .projets(projets)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .site(site)
                 .build();
         var savedUser = repository.save(user);
         var jwtToken = jwtService.generateToken(user);
@@ -64,10 +82,23 @@ public class AuthenticationService {
         );
         var user = repository.findByEmail(request.getEmail())
                 .orElseThrow();
+
+        // ✅ Vérification du site SEULEMENT si l'utilisateur n'est pas ADMIN
+        if (user.getRole() != Role.ADMIN) {
+            if (request.getSiteName() == null || request.getSiteName().isEmpty()) {
+                throw new RuntimeException("Veuillez sélectionner un site");
+            }
+            if (user.getSite() == null || !user.getSite().getName().equals(request.getSiteName())) {
+                throw new RuntimeException("Vous n'avez pas accès à ce site");
+            }
+        }
+        // Si ADMIN → pas de vérification de site, il voit tout
+
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
         revokeAllUserTokens(user);
         saveUserToken(user, jwtToken);
+
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)

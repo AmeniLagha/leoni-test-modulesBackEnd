@@ -1,5 +1,6 @@
 package com.example.security.fichierTechnique;
 
+import com.example.security.cahierdeCharge.ChargeSheet;
 import com.example.security.cahierdeCharge.ChargeSheetItem;
 import com.example.security.cahierdeCharge.ChargeSheetItemRepository;
 import com.example.security.cahierdeCharge.ChargeSheetStatus;
@@ -558,8 +559,102 @@ public class TechnicalFileService {
 
     public List<TechnicalFileDto.ResponseDto> getAllTechnicalFilesWithItems(){
 
-        return repository.findAll()
-                .stream()
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userRole = currentUser.getRole().name();
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+        String userSite = currentUser.getSiteName();  // ✅ AJOUTER
+
+        List<TechnicalFile> allFiles;
+
+        if (userRole.equals("ADMIN")) {
+            // ADMIN voit tout
+            allFiles = repository.findAll();
+        }
+        else {
+            // ✅ Pour les autres rôles, récupérer les dossiers liés au projet
+            allFiles = new ArrayList<>();
+            for (String project : userProjects) {
+                allFiles.addAll(repository.findByProject(project));
+            }
+
+            // ✅ Filtrer par site (plant du chargeSheet)
+            allFiles = allFiles.stream()
+                    .filter(tf -> {
+                        if (tf.getTechnicalFileItems() == null) return false;
+                        return tf.getTechnicalFileItems().stream().anyMatch(item -> {
+                            ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();
+                            if (chargeSheetItem == null) return false;
+                            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+                            if (chargeSheet == null) return false;
+                            String plant = chargeSheet.getPlant();
+                            return plant != null && plant.equals(userSite);
+                        });
+                    })
+                    .collect(Collectors.toList());
+
+            // ✅ Appliquer les filtres de statut selon le rôle
+            switch (userRole) {
+                case "ING":
+                    // ING voit tous les dossiers de son projet ET site
+                    break;
+                case "PT":
+                    allFiles = allFiles.stream()
+                            .filter(tf -> {
+                                if (tf.getTechnicalFileItems() == null) return false;
+                                return tf.getTechnicalFileItems().stream().anyMatch(item -> {
+                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();
+                                    return cs != null && List.of(
+                                            ChargeSheetStatus.VALIDATED_ING,
+                                            ChargeSheetStatus.TECH_FILLED,
+                                            ChargeSheetStatus.VALIDATED_PT,
+                                            ChargeSheetStatus.SENT_TO_SUPPLIER,
+                                            ChargeSheetStatus.COMPLETED
+                                    ).contains(cs.getStatus());
+                                });
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                case "PP":
+                    allFiles = allFiles.stream()
+                            .filter(tf -> {
+                                if (tf.getTechnicalFileItems() == null) return false;
+                                return tf.getTechnicalFileItems().stream().anyMatch(item -> {
+                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();
+                                    return cs != null && List.of(
+                                            ChargeSheetStatus.VALIDATED_PT,
+                                            ChargeSheetStatus.SENT_TO_SUPPLIER,
+                                            ChargeSheetStatus.COMPLETED
+                                    ).contains(cs.getStatus());
+                                });
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                case "MC":
+                case "MP":
+                    allFiles = allFiles.stream()
+                            .filter(tf -> {
+                                if (tf.getTechnicalFileItems() == null) return false;
+                                return tf.getTechnicalFileItems().stream().anyMatch(item -> {
+                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();
+                                    return cs != null && cs.getStatus() == ChargeSheetStatus.COMPLETED;
+                                });
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                default:
+                    allFiles = List.of();
+                    break;
+            }
+        }
+
+        // Log pour debug
+        System.out.println("📋 Dossiers techniques pour site '" + userSite + "': " + allFiles.size());
+
+        return allFiles.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
@@ -706,6 +801,107 @@ public class TechnicalFileService {
             return false;
         }
 
+    }
+    // TechnicalFileService.java - Ajouter cette méthode
+
+    public Map<String, Object> getFirstAndCurrentVersions(Long itemId) {
+        AuditReader reader = AuditReaderFactory.get(entityManager);
+
+        // Récupérer la première version (création)
+        List<Object[]> firstRevision = reader.createQuery()
+                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)
+                .add(AuditEntity.id().eq(itemId))
+                .addOrder(AuditEntity.revisionNumber().asc())
+                .setMaxResults(1)
+                .getResultList();
+
+        // Récupérer la dernière version (actuelle)
+        List<Object[]> lastRevision = reader.createQuery()
+                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)
+                .add(AuditEntity.id().eq(itemId))
+                .addOrder(AuditEntity.revisionNumber().desc())
+                .setMaxResults(1)
+                .getResultList();
+
+        Map<String, Object> result = new HashMap<>();
+
+        if (!firstRevision.isEmpty()) {
+            TechnicalFileItem firstEntity = (TechnicalFileItem) firstRevision.get(0)[0];
+            CustomRevisionEntity firstRev = (CustomRevisionEntity) firstRevision.get(0)[1];
+            result.put("firstVersion", Map.of(
+                    "entity", firstEntity,
+                    "revisionNumber", firstRev.getRevisionNumber(),
+                    "modifiedBy", firstRev.getUsername(),
+                    "modifiedAt", new Date(firstRev.getTimestamp())
+            ));
+        }
+
+        if (!lastRevision.isEmpty()) {
+            TechnicalFileItem lastEntity = (TechnicalFileItem) lastRevision.get(0)[0];
+            CustomRevisionEntity lastRev = (CustomRevisionEntity) lastRevision.get(0)[1];
+            result.put("currentVersion", Map.of(
+                    "entity", lastEntity,
+                    "revisionNumber", lastRev.getRevisionNumber(),
+                    "modifiedBy", lastRev.getUsername(),
+                    "modifiedAt", new Date(lastRev.getTimestamp())
+            ));
+        }
+
+        // Calculer les différences entre les deux versions
+        if (!firstRevision.isEmpty() && !lastRevision.isEmpty()) {
+            TechnicalFileItem first = (TechnicalFileItem) firstRevision.get(0)[0];
+            TechnicalFileItem last = (TechnicalFileItem) lastRevision.get(0)[0];
+            result.put("differences", getDifferencesBetweenVersions(first, last));
+        }
+
+        return result;
+    }
+
+    private List<Map<String, Object>> getDifferencesBetweenVersions(TechnicalFileItem oldItem, TechnicalFileItem newItem) {
+        List<Map<String, Object>> differences = new ArrayList<>();
+
+        // Liste des champs à comparer
+        Map<String, java.util.function.Function<TechnicalFileItem, String>> fieldGetters = new LinkedHashMap<>();
+        fieldGetters.put("position", TechnicalFileItem::getPosition);
+        fieldGetters.put("technicianName", TechnicalFileItem::getTechnicianName);
+        fieldGetters.put("xCode", TechnicalFileItem::getXCode);
+        fieldGetters.put("indexValue", item -> item.getIndexValue() != null ? item.getIndexValue().toString() : null);
+        fieldGetters.put("pinRigidityM1", TechnicalFileItem::getPinRigidityM1);
+        fieldGetters.put("pinRigidityM2", TechnicalFileItem::getPinRigidityM2);
+        fieldGetters.put("pinRigidityM3", TechnicalFileItem::getPinRigidityM3);
+        fieldGetters.put("displacementPathM1", TechnicalFileItem::getDisplacementPathM1);
+        fieldGetters.put("displacementPathM2", TechnicalFileItem::getDisplacementPathM2);
+        fieldGetters.put("displacementPathM3", TechnicalFileItem::getDisplacementPathM3);
+        fieldGetters.put("maxSealingValueM1", TechnicalFileItem::getMaxSealingValueM1);
+        fieldGetters.put("maxSealingValueM2", TechnicalFileItem::getMaxSealingValueM2);
+        fieldGetters.put("maxSealingValueM3", TechnicalFileItem::getMaxSealingValueM3);
+        fieldGetters.put("programmedSealingValueM1", TechnicalFileItem::getProgrammedSealingValueM1);
+        fieldGetters.put("programmedSealingValueM2", TechnicalFileItem::getProgrammedSealingValueM2);
+        fieldGetters.put("programmedSealingValueM3", TechnicalFileItem::getProgrammedSealingValueM3);
+        fieldGetters.put("detectionsM1", TechnicalFileItem::getDetectionsM1);
+        fieldGetters.put("detectionsM2", TechnicalFileItem::getDetectionsM2);
+        fieldGetters.put("detectionsM3", TechnicalFileItem::getDetectionsM3);
+        fieldGetters.put("validationStatus", item -> {
+            if (item.getValidationStatus() == null) return null;
+            return item.getValidationStatus().name();
+        });
+        fieldGetters.put("remarks", TechnicalFileItem::getRemarks);
+
+        for (Map.Entry<String, java.util.function.Function<TechnicalFileItem, String>> entry : fieldGetters.entrySet()) {
+            String fieldName = entry.getKey();
+            String oldVal = entry.getValue().apply(oldItem);
+            String newVal = entry.getValue().apply(newItem);
+
+            if (!Objects.equals(oldVal, newVal)) {
+                Map<String, Object> diff = new HashMap<>();
+                diff.put("fieldName", fieldName);
+                diff.put("oldValue", oldVal != null ? oldVal : "-");
+                diff.put("newValue", newVal != null ? newVal : "-");
+                differences.add(diff);
+            }
+        }
+
+        return differences;
     }
 
 }

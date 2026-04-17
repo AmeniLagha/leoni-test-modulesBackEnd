@@ -495,5 +495,23 @@ public class GlobalNotificationService {
         if (type.contains("GLOBAL")) return "📊";
         return "🔔";
     }
+    @Async
+    public void sendHtmlNotificationToOneUser(String subject, String htmlMessage, String emailTo) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom("noreply@leoni-system.com");
+            helper.setTo(emailTo);
+            helper.setSubject("[Système Leoni] " + subject);
+            helper.setText(htmlMessage, true);
+
+            mailSender.send(message);
+
+            log.info("📧 HTML notification envoyée à {}", emailTo);
+
+        } catch (MessagingException e) {
+            log.error("Erreur lors de l'envoi HTML à {}: {}", emailTo, e.getMessage());
+        }
+    }
 
 }

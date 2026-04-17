@@ -33,4 +33,13 @@ JOIN csi.chargeSheet cs
 WHERE cs.project = :project
 """)
     List<TechnicalFile> findByProject(String project);
+    // ✅ NOUVELLE MÉTHODE : Compter les dossiers techniques par projet et site
+    @Query("SELECT COUNT(DISTINCT tf) FROM TechnicalFile tf " +
+            "JOIN tf.technicalFileItems tfi " +
+            "JOIN tfi.chargeSheetItem csi " +
+            "JOIN csi.chargeSheet cs " +
+            "WHERE cs.project = :project AND cs.plant = :siteName")
+    long countByProjectAndSite(@Param("project") String project, @Param("siteName") String siteName);
+
+
 }

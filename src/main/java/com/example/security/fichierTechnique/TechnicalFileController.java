@@ -211,4 +211,12 @@ public class TechnicalFileController {
         List<Map<String, Object>> notifications = notificationService.getPendingNotificationsForUser(userEmail);
         return ResponseEntity.ok(notifications);
     }
+    // TechnicalFileController.java - Ajouter cet endpoint
+
+    @GetMapping("/items/{itemId}/versions-compare")
+    @Operation(summary = "Comparer versions", description = "Affiche la première et la dernière version d'un item")
+    @PreAuthorize("hasAuthority('technical_file:read')")
+    public ResponseEntity<Map<String, Object>> getFirstAndCurrentVersions(@PathVariable Long itemId) {
+        return ResponseEntity.ok(service.getFirstAndCurrentVersions(itemId));
+    }
 }

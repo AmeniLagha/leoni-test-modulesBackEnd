@@ -1,4 +1,8 @@
 package com.example.security.user;
+import com.example.security.projet.Projet;
+import com.example.security.projet.ProjetRepository;
+import com.example.security.site.Site;
+import com.example.security.site.SiteRepository;
 import com.example.security.token.TokenRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -9,9 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -22,6 +25,8 @@ public class UserService {
     private final TokenRepository tokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final JavaMailSender mailSender;
+    private final SiteRepository siteRepository;
+    private final ProjetRepository projetRepository;
     @Value("${app.base-url}")
     private String baseUrl;
     public List<UserDto> getUserListWithPermissions() {
@@ -35,7 +40,14 @@ public class UserService {
                 userDto.setFirstname(user.getFirstname());
                 userDto.setLastname(user.getLastname());
                 userDto.setMatricule(user.getMatricule());
-                userDto.setProjet(user.getProjet());
+                userDto.setSite(user.getSiteName());
+                userDto.setPassword(passwordEncoder.encode(user.getPassword()));
+                // ✅ Récupérer la liste des noms de projets
+                List<String> projetNames = user.getProjets().stream()
+                        .map(Projet::getName)
+                        .collect(Collectors.toList());
+                userDto.setProjets(projetNames);
+
                 userDto.setEmail(user.getEmail());
                 userDto.setRole(user.getRole().toString());
 
@@ -82,8 +94,21 @@ public class UserService {
                         user.setFirstname(userDto.getFirstname());
                         user.setLastname(userDto.getLastname());
                         user.setEmail(userDto.getEmail());
-                        user.setProjet(userDto.getProjet());
+                        if (userDto.getProjets() != null && !userDto.getProjets().isEmpty()) {
+                            Set<Projet> projets = new HashSet<>();
+                            for (String projetName : userDto.getProjets()) {
+                                Projet projet = projetRepository.findByName(projetName)
+                                        .orElseThrow(() -> new RuntimeException("Projet non trouvé: " + projetName));
+                                projets.add(projet);
+                            }
+                            user.setProjets(projets);
+                        }
                         user.setMatricule(userDto.getMatricule());
+                        if (userDto.getSite() != null && !userDto.getSite().isEmpty()) {
+                            Site site = siteRepository.findByName(userDto.getSite())
+                                    .orElseThrow(() -> new RuntimeException("Site non trouvé: " + userDto.getSite()));
+                            user.setSite(site);
+                        }
                         if (userDto.getRole() != null) {
                             user.setRole(Role.valueOf(userDto.getRole()));
                         }
@@ -96,6 +121,12 @@ public class UserService {
                         updatedDto.setLastname(user.getLastname());
                         updatedDto.setEmail(user.getEmail());
                         updatedDto.setMatricule(user.getMatricule());
+                        updatedDto.setPassword(user.getPassword());
+                        List<String> projetNames = user.getProjets().stream()
+                                .map(Projet::getName)
+                                .collect(Collectors.toList());
+                        updatedDto.setProjets(projetNames);
+                        updatedDto.setSite(user.getSiteName());
                         updatedDto.setRole(user.getRole().name());
 
                         return updatedDto;
@@ -233,6 +264,60 @@ public class UserService {
         } catch (Exception e) {
             System.err.println("❌ Erreur dans validateResetToken: " + e.getMessage());
             e.printStackTrace();
+            return false;
+        }
+    }
+    // Dans UserService.java
+
+    /**
+     * Changer le mot de passe d'un utilisateur (par ADMIN)
+     */
+    @Transactional
+    public boolean changePassword(Integer userId, String newPassword) {
+        try {
+            User user = repository.findById(userId).orElse(null);
+            if (user == null) {
+                return false;
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            repository.save(user);
+
+            // Révoquer tous les tokens JWT de l'utilisateur
+            tokenRepository.deleteByUserId(userId);
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur changement mot de passe: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Changer son propre mot de passe
+     */
+    @Transactional
+    public boolean changeMyPassword(Integer userId, String oldPassword, String newPassword) {
+        try {
+            User user = repository.findById(userId).orElse(null);
+            if (user == null) {
+                return false;
+            }
+
+            // Vérifier l'ancien mot de passe
+            if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+                return false;
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            repository.save(user);
+
+            // Révoquer tous les tokens JWT de l'utilisateur (déconnexion forcée)
+            tokenRepository.deleteByUserId(userId);
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Erreur changement mot de passe: " + e.getMessage());
             return false;
         }
     }

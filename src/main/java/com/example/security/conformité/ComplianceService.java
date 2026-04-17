@@ -1,12 +1,10 @@
 package com.example.security.conformité;
 
-import com.example.security.cahierdeCharge.ChargeSheetItem;
-import com.example.security.cahierdeCharge.ChargeSheetItemRepository;
-import com.example.security.cahierdeCharge.ChargeSheetService;
-import com.example.security.cahierdeCharge.ChargeSheetStatus;
+import com.example.security.cahierdeCharge.*;
 import com.example.security.email.GlobalNotificationService;
 import com.example.security.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -14,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +21,8 @@ public class ComplianceService {
     private final ComplianceRepository repository;
     private final GlobalNotificationService notificationService;
     private final ChargeSheetItemRepository chargeSheetItemRepository;
+    @Autowired
+    private ComplianceReminderService reminderService;
 
     @Transactional
     public Compliance createCompliance(ComplianceDto.CreateDto dto) {
@@ -75,6 +76,7 @@ public class ComplianceService {
                 saved.getChargeSheetId(),
                 currentUser.getEmail()
         );
+        reminderService.resetRemindersForItem(dto.getItemId());
 
         return saved;
     }
@@ -167,49 +169,85 @@ public class ComplianceService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
         String userRole = currentUser.getRole().name();
-        String userProject = currentUser.getProjet();
+        String userProjectsString = currentUser.getProjetsNames();  // ✅ Récupérer tous les projets
+        String userSite = currentUser.getSiteName();
+
+        // ✅ Convertir en liste
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
 
         List<Compliance> list;
 
-        switch (userRole) {
-
-            case "ADMIN":
-                list = repository.findAll();
-                break;
-
-            case "ING":
-                list = repository.findByProject(userProject);
-                break;
-
-            case "PT":
-                list = repository.findByProjectAndChargeSheetStatusIn(
-                        userProject,
-                        List.of(
-                                ChargeSheetStatus.COMPLETED
-                        )
-                );
-                break;
-
-            case "PP":
-                list = repository.findByProjectAndChargeSheetStatusIn(
-                        userProject,
-                        List.of(
-                                ChargeSheetStatus.COMPLETED
-                        )
-                );
-                break;
-
-            case "MC":
-            case "MP":
-                list = repository.findByProjectAndChargeSheetStatus(
-                        userProject,
-                        ChargeSheetStatus.COMPLETED
-                );
-                break;
-
-            default:
-                list = List.of();
+        if (userRole.equals("ADMIN")) {
+            list = repository.findAll();
         }
+        else {
+            // ✅ Récupérer toutes les conformités pour les projets de l'utilisateur
+            List<Compliance> allCompliances = new ArrayList<>();
+            for (String project : userProjects) {
+                allCompliances.addAll(repository.findByProject(project));
+            }
+
+            // Filtrer en mémoire par site (plant du chargeSheet)
+            list = allCompliances.stream()
+                    .filter(compliance -> {
+                        ChargeSheetItem item = compliance.getItem();
+                        if (item == null) return false;
+                        ChargeSheet chargeSheet = item.getChargeSheet();
+                        if (chargeSheet == null) return false;
+                        String plant = chargeSheet.getPlant();
+                        return plant != null && plant.equals(userSite);
+                    })
+                    .collect(Collectors.toList());
+
+            // ✅ Appliquer les filtres de statut selon le rôle
+            switch (userRole) {
+                case "ING":
+                    // ING voit tous les cahiers de ses projets ET site (déjà filtré)
+                    break;
+                case "PT":
+                    list = list.stream()
+                            .filter(c -> {
+                                ChargeSheet cs = c.getItem().getChargeSheet();
+                                return cs != null && List.of(
+                                        ChargeSheetStatus.VALIDATED_ING,
+                                        ChargeSheetStatus.TECH_FILLED,
+                                        ChargeSheetStatus.VALIDATED_PT,
+                                        ChargeSheetStatus.SENT_TO_SUPPLIER,
+                                        ChargeSheetStatus.COMPLETED
+                                ).contains(cs.getStatus());
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                case "PP":
+                    list = list.stream()
+                            .filter(c -> {
+                                ChargeSheet cs = c.getItem().getChargeSheet();
+                                return cs != null && List.of(
+                                        ChargeSheetStatus.VALIDATED_PT,
+                                        ChargeSheetStatus.SENT_TO_SUPPLIER,
+                                        ChargeSheetStatus.COMPLETED
+                                ).contains(cs.getStatus());
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                case "MC":
+                case "MP":
+                    list = list.stream()
+                            .filter(c -> {
+                                ChargeSheet cs = c.getItem().getChargeSheet();
+                                return cs != null && cs.getStatus() == ChargeSheetStatus.COMPLETED;
+                            })
+                            .collect(Collectors.toList());
+                    break;
+                default:
+                    list = List.of();
+                    break;
+            }
+        }
+
+        System.out.println("📋 Compliance pour site '" + userSite + "': " + list.size() + " élément(s)");
 
         return list.stream().map(c -> ComplianceDisplayDto.builder()
                 .id(c.getId())
@@ -282,11 +320,30 @@ public class ComplianceService {
         User currentUser = (User) auth.getPrincipal();
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
+        // ✅ Récupérer tous les projets de l'utilisateur
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+
         if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
             results = repository.countByMonthForAllProjects();
         } else {
-            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjet();
-            results = repository.countByMonthForProject(userProject);
+            // ✅ Déterminer le projet cible
+            String targetProject = project;
+            if (targetProject == null || targetProject.isEmpty() || targetProject.equals("ALL")) {
+                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);
+            }
+
+            if (targetProject == null) {
+                Map<String, Object> emptyResult = new HashMap<>();
+                emptyResult.put("message", "Aucun projet disponible");
+                emptyResult.put("month1Count", 0L);
+                emptyResult.put("month2Count", 0L);
+                return emptyResult;
+            }
+
+            results = repository.countByMonthForProject(targetProject);
         }
 
         Map<String, Long> monthlyCounts = new HashMap<>();
@@ -350,7 +407,7 @@ public class ComplianceService {
         if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
             results = repository.countByMonthForAllProjects();
         } else {
-            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjet();
+            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjetsNames();
             results = repository.countByMonthForProject(userProject);
         }
 
@@ -445,11 +502,28 @@ public class ComplianceService {
         User currentUser = (User) auth.getPrincipal();
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
+        // ✅ Récupérer tous les projets de l'utilisateur
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+
         if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
             results = repository.countByMonthForAllProjects();
         } else {
-            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjet();
-            results = repository.countByMonthForProject(userProject);
+            String targetProject = project;
+            if (targetProject == null || targetProject.isEmpty() || targetProject.equals("ALL")) {
+                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);
+            }
+
+            if (targetProject == null) {
+                Map<String, Object> emptyResult = new HashMap<>();
+                emptyResult.put("message", "Aucun projet disponible");
+                emptyResult.put("availableMonths", 0);
+                return emptyResult;
+            }
+
+            results = repository.countByMonthForProject(targetProject);
         }
 
         if (results == null || results.size() < 2) {

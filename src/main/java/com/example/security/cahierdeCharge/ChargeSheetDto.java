@@ -174,6 +174,8 @@ public class ChargeSheetDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UpdateTechDto {
+        private String housingReferenceLeoni;
+        private Integer quantityOfTestModules;
         private String outsideHousingExist;
         private String insideHousingExist;
         private String mechanicalCoding;

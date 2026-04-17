@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -31,9 +33,12 @@ public class RegisterRequest {
     private Integer matricule;
 
     @NotBlank(message = "Le projet est obligatoire")
-    private String projet;
+    private List<String> projets;
 
 
     @NotNull(message = "Le rôle est obligatoire")
     private Role role;
+
+    @NotNull(message = "Le site est obligatoire")
+    private String siteName;
 }

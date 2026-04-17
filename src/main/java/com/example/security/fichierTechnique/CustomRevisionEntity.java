@@ -23,4 +23,7 @@ public class CustomRevisionEntity {
     private long timestamp;
 
     private String username; // ⭐ QUI MODIFIE
+    public int getRevisionNumber() {
+        return this.id;
+    }
 }

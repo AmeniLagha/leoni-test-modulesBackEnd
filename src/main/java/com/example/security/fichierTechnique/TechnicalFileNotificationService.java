@@ -224,7 +224,7 @@ public class TechnicalFileNotificationService {
                     // Admin voit tout
                     addNotification(notifications, item, lastActivity, itemProject);
                 } else if ((user.getRole().name().equals("MC") || user.getRole().name().equals("MP"))
-                        && itemProject != null && itemProject.equals(user.getProjet())) {
+                        && itemProject != null && itemProject.equals(user.getProjets())) {
                     // MC/MP voient uniquement leur projet
                     addNotification(notifications, item, lastActivity, itemProject);
                 }

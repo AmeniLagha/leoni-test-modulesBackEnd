@@ -1,6 +1,7 @@
 package com.example.security.cahierdeCharge;
 
 import com.example.security.fichierTechnique.TechnicalFile;
+import com.example.security.reception.ReceptionHistory;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,9 +25,11 @@ public class ChargeSheetItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "charge_sheet_id", nullable = false)
+    @JsonIgnore
     private ChargeSheet chargeSheet;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "technical_file_id", nullable = true)
+    @JsonIgnore
     private TechnicalFile technicalFile;
 
     // === ITEM IDENTIFICATION ===
@@ -348,7 +351,7 @@ public class ChargeSheetItem {
     @Column(name = "leoni_emo_standard_hv", length = 50)
     private String leoniEMOStandardHV;
 
-    @Column(name = "clip_orientation", length = 50)
+    @Column(name = "clip_orientation", length = 600)
     private String clipOrientation;
 
     // PRICE

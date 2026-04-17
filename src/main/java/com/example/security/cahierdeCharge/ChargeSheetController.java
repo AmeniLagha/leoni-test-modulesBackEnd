@@ -1,5 +1,7 @@
 package com.example.security.cahierdeCharge;
 
+import com.example.security.reception.ReceptionDto;
+import com.example.security.reception.ReceptionHistoryDto;
 import com.example.security.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -195,7 +197,7 @@ public class ChargeSheetController {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjetsNames();
 
         Map<String, Object> variation = service.getVariationBetweenMonths(userProject, month1, month2);
         return ResponseEntity.ok(variation);
@@ -211,7 +213,7 @@ public class ChargeSheetController {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjetsNames();
 
         MonthlyStatsDto stats = service.getMonthlyCreationStats(userProject, months);
         return ResponseEntity.ok(stats);
@@ -226,9 +228,24 @@ public class ChargeSheetController {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjet();
+        String userProject = (project != null && !project.isEmpty()) ? project : currentUser.getProjetsNames();
 
         Map<String, Object> variation = service.getLastTwoMonthsVariation(userProject);
         return ResponseEntity.ok(variation);
+    }
+    // ChargeSheetController.java - Ajouter cet endpoint
+
+    // ChargeSheetController.java - Ajouter l'endpoint avec raison
+
+    @PutMapping("/{id}/revert-to-ing")
+    @Operation(summary = "Retourner à ING", description = "Permet à PT de retourner un cahier à ING pour corrections")
+    @PreAuthorize("hasAuthority('charge_sheet:tech:write')")
+    public ResponseEntity<ChargeSheetDto.CompleteDto> revertToIng(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+
+        String reason = body != null ? body.get("reason") : null;
+        ChargeSheet reverted = service.revertToIng(id, reason);
+        return ResponseEntity.ok(service.getChargeSheetComplete(reverted.getId()));
     }
 }

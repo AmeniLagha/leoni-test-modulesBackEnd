@@ -1,4 +1,4 @@
-package com.example.security.cahierdeCharge;
+package com.example.security.reception;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

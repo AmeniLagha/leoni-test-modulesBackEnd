@@ -1,5 +1,6 @@
 package com.example.security.cahierdeCharge;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,6 +56,7 @@ public class ChargeSheet {
     // === RELATION AVEC LES ITEMS ===
     @OneToMany(mappedBy = "chargeSheet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private List<ChargeSheetItem> items = new ArrayList<>();
 
     // === CHAMPS DE STATUT ===

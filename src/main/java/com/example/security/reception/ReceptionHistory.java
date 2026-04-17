@@ -1,5 +1,7 @@
-package com.example.security.cahierdeCharge;
+package com.example.security.reception;
 
+import com.example.security.cahierdeCharge.ChargeSheet;
+import com.example.security.cahierdeCharge.ChargeSheetItem;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

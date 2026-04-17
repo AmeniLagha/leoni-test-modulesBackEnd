@@ -65,7 +65,18 @@ public class JwtService {
             claims.put("role", user.getRole().name());
             claims.put("firstname", user.getFirstname());
             claims.put("lastname", user.getLastname());
-            claims.put("projet",user.getProjet());
+            // ✅ CORRECTION : Utiliser getProjetName() qui retourne String
+            List<String> projetNames = user.getProjetNamesAsList();
+            claims.put("projets", projetNames);  // Liste des projets
+
+            // Pour compatibilité avec l'ancien code, garder un projet principal
+            if (projetNames != null && !projetNames.isEmpty()) {
+                claims.put("projet", projetNames.get(0));  // Premier projet
+            }
+
+            if (user.getSite() != null) {
+                claims.put("siteName", user.getSite().getName());
+            }
             // Optionnel : fullName
             claims.put("fullName", user.getFirstname() + " " + user.getLastname());
         }

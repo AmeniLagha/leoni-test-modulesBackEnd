@@ -1,5 +1,7 @@
 package com.example.security.reclamation;
 
+import com.example.security.cahierdeCharge.ChargeSheet;
+import com.example.security.cahierdeCharge.ChargeSheetRepository;
 import com.example.security.cahierdeCharge.ImageStorageService;
 import com.example.security.email.GlobalNotificationService;
 import com.example.security.user.User;
@@ -12,9 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,42 +27,88 @@ public class ClaimService {
     private final ClaimRepository repository;
     private final GlobalNotificationService notificationService;
     private final ImageStorageService imageStorageService;
+    private final ChargeSheetRepository chargeSheetRepository;
+
+    // ClaimService.java - Modifier la méthode createClaim
+
+    // ClaimService.java - Modifier la méthode createClaim
 
     @Transactional
     public Claim createClaim(ClaimDto.CreateDto dto) {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserEmail = auth.getName();
+        User currentUser = (User) auth.getPrincipal();
 
-            Claim claim = Claim.builder()
-                    .chargeSheetId(dto.getChargeSheetId())
-                    .relatedTo(dto.getRelatedTo())
-                    .relatedId(dto.getRelatedId())
-                    .imagePath(dto.getImagePath())
-                    .title(dto.getTitle())
-                    .description(dto.getDescription())
-                    .priority(dto.getPriority() != null ? dto.getPriority() : Claim.Priority.MEDIUM)
-                    .category(dto.getCategory() != null ? dto.getCategory() : "OTHER")
-                    .status(Claim.ClaimStatus.ASSIGNED)
-                    .reportedBy(currentUser.getEmail())
-                    .reportedDate(LocalDate.now())
-                    .assignedTo(dto.getAssignedTo())
-                    .assignedDate(dto.getAssignedTo() != null ? LocalDate.now() : null)
-                    .createdBy(currentUser.getEmail())
-                    .createdAt(LocalDate.now())
-                    .build();
+        // Récupérer le site de l'utilisateur
+        String userSite = currentUser.getSiteName();
 
-            Claim saved = repository.save(claim);
+        Claim claim = Claim.builder()
+                .chargeSheetId(dto.getChargeSheetId())
+                .relatedTo(dto.getRelatedTo())
+                .relatedId(dto.getRelatedId())
+                // NOUVEAUX CHAMPS
+                .plant(dto.getPlant() != null ? dto.getPlant() : userSite)
+                .customer(dto.getCustomer())
+                .contactPerson(dto.getContactPerson())
+                .customerEmail(dto.getCustomerEmail())
+                .customerPhone(dto.getCustomerPhone())
+                .supplier(dto.getSupplier())
+                .supplierContactPerson(dto.getSupplierContactPerson())
+                .orderNumber(dto.getOrderNumber())
+                .testModuleNumber(dto.getTestModuleNumber())
+                .testModuleQuantity(dto.getTestModuleQuantity())
+                .ppoSignature(dto.getPpoSignature())
+                .problemWhatHappened(dto.getProblemWhatHappened())
+                .problemWhy(dto.getProblemWhy())
+                .problemWhenDetected(dto.getProblemWhenDetected())
+                .problemWhoDetected(dto.getProblemWhoDetected())
+                .problemWhereDetected(dto.getProblemWhereDetected())
+                .problemHowDetected(dto.getProblemHowDetected())
+                .claimDate(dto.getClaimDate() != null ? dto.getClaimDate() : LocalDate.now())
+                // Champs existants
+                .title(dto.getTitle())
+                .description(dto.getDescription())
+                .priority(dto.getPriority() != null ? dto.getPriority() : Claim.Priority.MEDIUM)
+                .category(dto.getCategory())
+                .imagePath(dto.getImagePath())
+                .status(Claim.ClaimStatus.ASSIGNED)
+                .reportedBy(currentUserEmail)
+                .reportedDate(LocalDate.now())
+                .assignedTo(dto.getAssignedTo())
+                .assignedDate(dto.getAssignedTo() != null ? LocalDate.now() : null)
+                .createdBy(currentUserEmail)
+                .createdAt(LocalDate.now())
+                .build();
 
-            notificationService.notifyClaimAssigned(saved, currentUser.getEmail());
+        Claim savedClaim = repository.save(claim);
 
+        // ✅ AJOUTER LA NOTIFICATION À LA PERSONNE ASSIGNÉE
+        if (savedClaim.getAssignedTo() != null && !savedClaim.getAssignedTo().isEmpty()) {
+            // Envoyer un email à la personne assignée
+            String subject = "🔔 Nouvelle réclamation assignée - #" + savedClaim.getId();
+            String message = String.format(
+                    "Bonjour,\n\n" +
+                            "Une nouvelle réclamation vous a été assignée.\n\n" +
+                            "📋 **Titre:** %s\n" +
+                            "🔴 **Priorité:** %s\n" +
+                            "📝 **Description:** %s\n" +
+                            "👤 **Signalé par:** %s\n" +
+                            "📅 **Date:** %s\n\n" +
+                            "🔗 Veuillez vous connecter à l'application pour traiter cette réclamation.\n\n" +
+                            "Cordialement,\n" +
+                            "L'équipe Qualité Leoni",
+                    savedClaim.getTitle(),
+                    savedClaim.getPriority(),
+                    savedClaim.getDescription(),
+                    currentUserEmail,
+                    LocalDate.now()
+            );
 
-            return saved;
-        } catch (Exception e) {
-            System.err.println("❌ Erreur dans createClaim: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+            notificationService.sendNotificationToOneUser(subject, message, savedClaim.getAssignedTo());
+
         }
+
+        return savedClaim;
     }
 
     @Transactional
@@ -279,7 +329,37 @@ public class ClaimService {
 
     public List<Claim> getAllClaims() {
         try {
-            return repository.findAll();
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
+            String userRole = currentUser.getRole().name();
+            String userProjectsString = currentUser.getProjetsNames();
+            List<String> userProjects = userProjectsString != null ?
+                    Arrays.asList(userProjectsString.split(", ")) :
+                    List.of();
+            String userSite = currentUser.getSiteName();
+
+            List<Claim> allClaims = repository.findAll();
+
+            if (userRole.equals("ADMIN")) {
+                return allClaims;
+            }
+
+            // ✅ Filtrer comme les autres services
+            return allClaims.stream()
+                    .filter(claim -> {
+                        // Récupérer le ChargeSheet associé à cette réclamation
+                        ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);
+                        if (chargeSheet == null) return false;
+
+                        // Vérifier le site (plant)
+                        String plant = chargeSheet.getPlant();
+                        if (plant == null || !plant.equals(userSite)) return false;
+
+                        // ✅ Vérifier que le projet est dans la liste des projets de l'utilisateur
+                        String project = chargeSheet.getProject();
+                        return project != null && userProjects.contains(project);
+                    })
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             System.err.println("❌ Erreur dans getAllClaims: " + e.getMessage());
             e.printStackTrace();
@@ -335,6 +415,9 @@ public class ClaimService {
     /**
      * Calcule la variation entre deux mois spécifiques pour les réclamations
      */
+    /**
+     * Calcule la variation entre deux mois spécifiques pour les réclamations
+     */
     public Map<String, Object> getVariationBetweenMonths(String project, String month1, String month2) {
         List<Object[]> results;
 
@@ -342,12 +425,30 @@ public class ClaimService {
         User currentUser = (User) auth.getPrincipal();
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
 
+        // ✅ Récupérer tous les projets de l'utilisateur
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+
         if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
             results = repository.countByMonthForAllProjects();
         } else {
-            // Pour les réclamations, on filtre par projet via chargeSheet
-            String userProject = (project != null && !project.isEmpty() && !project.equals("ALL")) ? project : currentUser.getProjet();
-            results = repository.countByMonthForAllProjects(); // TODO: filtrer par projet
+            // ✅ Déterminer le projet cible
+            String targetProject = project;
+            if (targetProject == null || targetProject.isEmpty() || targetProject.equals("ALL")) {
+                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);
+            }
+
+            if (targetProject == null) {
+                Map<String, Object> emptyResult = new HashMap<>();
+                emptyResult.put("message", "Aucun projet disponible");
+                emptyResult.put("month1Count", 0L);
+                emptyResult.put("month2Count", 0L);
+                return emptyResult;
+            }
+
+            results = repository.countByMonthForProject(targetProject);
         }
 
         Map<String, Long> monthlyCounts = new HashMap<>();
@@ -401,8 +502,39 @@ public class ClaimService {
     /**
      * Version simplifiée pour le dashboard avec les deux derniers mois
      */
+    /**
+     * Version simplifiée pour le dashboard avec les deux derniers mois
+     */
     public Map<String, Object> getLastTwoMonthsVariation(String project) {
-        List<Object[]> results = repository.countByMonthForAllProjects();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+
+        // ✅ Récupérer tous les projets de l'utilisateur
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+
+        List<Object[]> results;
+
+        if (isAdmin && (project == null || project.isEmpty() || project.equals("ALL"))) {
+            results = repository.countByMonthForAllProjects();
+        } else {
+            String targetProject = project;
+            if (targetProject == null || targetProject.isEmpty() || targetProject.equals("ALL")) {
+                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);
+            }
+
+            if (targetProject == null) {
+                Map<String, Object> emptyResult = new HashMap<>();
+                emptyResult.put("message", "Aucun projet disponible");
+                emptyResult.put("availableMonths", 0);
+                return emptyResult;
+            }
+
+            results = repository.countByMonthForProject(targetProject);
+        }
 
         if (results == null || results.size() < 2) {
             Map<String, Object> emptyResult = new HashMap<>();

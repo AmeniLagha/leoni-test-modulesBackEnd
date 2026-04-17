@@ -29,6 +29,7 @@ public class SecurityConfiguration {
 
     private static final String[] WHITE_LIST_URL = {
             "/api/v1/auth/**",
+            
             "/v2/api-docs",
             "/v3/api-docs",
             "/v3/api-docs/**",
@@ -45,7 +46,11 @@ public class SecurityConfiguration {
             "/api/v1/users/verify-email",
             "/api/v1/users/verify-code",
             "/api/v1/users/send-reset-link",
-            "/api/v1/chatbot/ask"
+            "/api/v1/chatbot/ask",
+            "/uploads/**",
+            "/api/v1/sites",           // ✅ AJOUTER CETTE LIGNE
+
+
 
 
     };
@@ -60,7 +65,13 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var corsConfig = new CorsConfiguration();
-                    corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
+                    corsConfig.setAllowedOrigins(Arrays.asList("http://localhost",
+                            "http://localhost:80",
+                            "http://localhost:4200",
+                            "http://localhost:5000",
+                            "http://127.0.0.1",
+                            "http://127.0.0.1:80",
+                            "http://127.0.0.1:4200"));
                     corsConfig.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
                     corsConfig.setAllowedHeaders(Arrays.asList("*"));
                     corsConfig.setAllowCredentials(true);
@@ -74,6 +85,7 @@ public class SecurityConfiguration {
                         .requestMatchers(GET, "/api/v1/users/me").authenticated()
                         .requestMatchers(GET,  "/api/v1/users/project-emails").authenticated()
                         .requestMatchers(GET,"/api/v1/charge-sheets/stats").authenticated()
+                        
 
                         .requestMatchers(GET, "/api/v1/users/getUsers").hasAuthority(AJOUTE_USER_LISTE.getPermission())
                         .requestMatchers(POST, "/api/v1/auth/register").hasAuthority(AJOUTE_USER.getPermission())

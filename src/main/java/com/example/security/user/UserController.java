@@ -54,6 +54,7 @@ public class UserController {
         userInfo.put("lastname", user.getLastname());
         userInfo.put("email", user.getEmail());
         userInfo.put("matricule", user.getMatricule());
+        userInfo.put("site", user.getSiteName());
         userInfo.put("role", user.getRole().name());
         userInfo.put("permissions", user.getRole().getPermissions().stream()
                 .map(Permission::getPermission)
@@ -85,6 +86,8 @@ public class UserController {
         }
         return ResponseEntity.ok(updatedUser);
     }
+    // UserController.java - Modifier getProjectEmails()
+
     @GetMapping("/project-emails")
     @Operation(summary = "Emails du projet", description = "Récupère les emails des utilisateurs selon le projet et le rôle de l'utilisateur courant")
     public List<String> getProjectEmails() {
@@ -97,28 +100,66 @@ public class UserController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         System.out.println("👤 Utilisateur trouvé: " + currentUser.getEmail());
-        System.out.println("🏢 Projet: " + currentUser.getProjet());
+        System.out.println("🏢 Projets: " + currentUser.getProjetsNames());
         System.out.println("👑 Rôle: " + currentUser.getRole());
 
         List<String> emails;
 
         // ✅ Si ADMIN → voir TOUS les emails
         if (currentUser.getRole() == Role.ADMIN) {
-            emails = repository.findAllUserEmails(); // Tous les emails
+            emails = repository.findAllUserEmails();
             System.out.println("🔓 ADMIN - Tous les emails: " + emails);
         }
-        // ✅ Sinon → emails du projet + ADMIN
+        // ✅ Sinon → emails du premier projet de l'utilisateur + ADMIN
         else {
-            emails = repository.findActiveUserEmailsByProjetExcludingCurrent(
-                    currentUser.getProjet(),
-                    currentUser.getEmail()
-            );
+            // Récupérer le premier projet de l'utilisateur (ou tous)
+            String userProject = currentUser.getProjetsNames();
+
+            if (userProject == null || userProject.isEmpty()) {
+                // Si l'utilisateur n'a pas de projet, retourner seulement les admins
+                emails = repository.findActiveUserEmailsByProjet("ADMIN");
+            } else {
+                emails = repository.findActiveUserEmailsByProjetExcludingCurrent(
+                        userProject,
+                        currentUser.getEmail()
+                );
+            }
             System.out.println("🔒 Non-ADMIN - Emails du projet: " + emails);
         }
 
         System.out.println("📨 Emails trouvés: " + emails.size());
 
         return emails;
+    }
+    @GetMapping("/project-site-emails")
+    public ResponseEntity<List<String>> getEmailsByProjectAndSite() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+
+        List<String> emails;
+
+        // Si ADMIN, voir tous les emails
+        if (currentUser.getRole().name().equals("ADMIN")) {
+            emails = repository.findAllUserEmails();
+        } else {
+            // Pour les autres rôles, filtrer par site ET projet
+            String userSite = currentUser.getSiteName();
+            String userProjectsString = currentUser.getProjetsNames();
+
+            // Récupérer la liste des projets de l'utilisateur
+            List<String> userProjects = userProjectsString != null ?
+                    java.util.Arrays.asList(userProjectsString.split(", ")) :
+                    java.util.List.of();
+
+            if (userProjects.isEmpty()) {
+                emails = java.util.List.of();
+            } else {
+                // Récupérer les emails des utilisateurs qui ont au moins un projet en commun ET le même site
+                emails = repository.findEmailsByProjectsAndSite(userProjects, userSite);
+            }
+        }
+
+        return ResponseEntity.ok(emails);
     }
 
     // --- Réinitialisation mot de passe ---
@@ -257,7 +298,39 @@ public class UserController {
         }
     }
 
+    @PutMapping("/{id}/change-password")
+    public ResponseEntity<?> changeUserPassword(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> request) {
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String newPassword = request.get("newPassword");
+
+        // Vérifier que l'utilisateur est ADMIN
+        if (!currentUser.getRole().name().equals("ADMIN")) {
+            return ResponseEntity.status(403).body(Map.of("error", "Seul l'administrateur peut modifier les mots de passe"));
+        }
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le nouveau mot de passe est requis"));
+        }
+
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le mot de passe doit contenir au moins 6 caractères"));
+        }
+
+        boolean success = service.changePassword(id, newPassword);
+
+        if (success) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Mot de passe modifié avec succès");
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("error", "Utilisateur non trouvé"));
+        }
+    }
 
 
 

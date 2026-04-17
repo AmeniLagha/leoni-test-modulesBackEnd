@@ -2,6 +2,7 @@ package com.example.security.reclamation;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -28,4 +29,12 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
             "ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') DESC",
             nativeQuery = true)
     List<Object[]> countByMonthForAllProjects();
+    @Query(value = "SELECT DATE_FORMAT(c.reported_date, '%Y-%m') as month, COUNT(c.id) as count " +
+            "FROM claim c " +
+            "JOIN charge_sheet cs ON c.charge_sheet_id = cs.id " +
+            "WHERE cs.project = :project " +
+            "GROUP BY DATE_FORMAT(c.reported_date, '%Y-%m') " +
+            "ORDER BY DATE_FORMAT(c.reported_date, '%Y-%m') DESC",
+            nativeQuery = true)
+    List<Object[]> countByMonthForProject(@Param("project") String project);
 }

@@ -14,16 +14,36 @@ public class ClaimDto {
     @AllArgsConstructor
     public static class CreateDto {
         private Long chargeSheetId;
+        private String relatedTo;
+        private Long relatedId;
 
-        private String relatedTo; // "CHARGE_SHEET", "COMPLIANCE", "TECHNICAL_FILE"
-        private Long relatedId;   // ID de la section concernée
+        // NOUVEAUX CHAMPS
+        private String plant;
+        private String customer;
+        private String contactPerson;
+        private String customerEmail;
+        private String customerPhone;
+        private String supplier;
+        private String supplierContactPerson;
+        private String orderNumber;
+        private String testModuleNumber;
+        private Integer testModuleQuantity;
+        private String ppoSignature;
+        private String problemWhatHappened;
+        private String problemWhy;
+        private String problemWhenDetected;
+        private String problemWhoDetected;
+        private String problemWhereDetected;
+        private String problemHowDetected;
+        private LocalDate claimDate;
 
+        // Champs existants
         private String title;
         private String description;
         private Claim.Priority priority;
-        private String category; // "TECHNICAL", "QUALITY", "LOGISTIC", "OTHER"
+        private String category;
         private String imagePath;
-        private String assignedTo; // Optionnel: assigner directement
+        private String assignedTo;
     }
 
     @Data
@@ -38,12 +58,18 @@ public class ClaimDto {
         private String imagePath;
         private Claim.ClaimStatus status;
         private String assignedTo;
-
         private String actionTaken;
         private String resolution;
-
         private LocalDate estimatedResolutionDate;
         private LocalDate actualResolutionDate;
+
+        // NOUVEAUX CHAMPS pour mise à jour
+        private String problemWhatHappened;
+        private String problemWhy;
+        private String problemWhenDetected;
+        private String problemWhoDetected;
+        private String problemWhereDetected;
+        private String problemHowDetected;
     }
 
     @Data
@@ -64,7 +90,7 @@ public class ClaimDto {
         private String actionTaken;
         private String resolution;
         private LocalDate actualResolutionDate;
-        private Claim.ClaimStatus status; // Doit être RESOLVED ou CLOSED
+        private Claim.ClaimStatus status;
     }
 
     @Data
@@ -74,31 +100,48 @@ public class ClaimDto {
     public static class ResponseDto {
         private Long id;
         private Long chargeSheetId;
-
         private String relatedTo;
         private Long relatedId;
+
+        // NOUVEAUX CHAMPS
+        private String plant;
+        private String customer;
+        private String contactPerson;
+        private String customerEmail;
+        private String customerPhone;
+        private String supplier;
+        private String supplierContactPerson;
+        private String orderNumber;
+        private String testModuleNumber;
+        private Integer testModuleQuantity;
+        private String ppoSignature;
+        private String problemWhatHappened;
+        private String problemWhy;
+        private String problemWhenDetected;
+        private String problemWhoDetected;
+        private String problemWhereDetected;
+        private String problemHowDetected;
+        private LocalDate claimDate;
+
+        // Champs existants
         private String imagePath;
         private String title;
         private String description;
         private Claim.Priority priority;
         private String category;
-
         private Claim.ClaimStatus status;
         private String reportedBy;
         private LocalDate reportedDate;
         private String assignedTo;
         private LocalDate assignedDate;
-
         private String actionTaken;
         private String resolution;
         private String resolvedBy;
         private LocalDate resolvedDate;
-
         private LocalDate estimatedResolutionDate;
         private LocalDate actualResolutionDate;
         private String closedBy;
         private LocalDate closedDate;
-
         private String createdBy;
         private LocalDate createdAt;
         private String updatedBy;

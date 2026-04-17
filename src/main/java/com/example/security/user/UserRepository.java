@@ -15,49 +15,101 @@ public interface UserRepository extends JpaRepository<User,Integer> {
     // Récupérer tous les emails des utilisateurs
     @Query("SELECT u.email FROM User u")
     List<String> findAllUserEmails();
+
     @Query("SELECT u FROM User u WHERE u.email = :email")
     Optional<User> findByEmail(@Param("email") String email);
-    // Récupérer tous les emails (méthode par défaut si vous n'avez pas enabled)
+
     default List<String> findAllActiveUserEmails() {
-        return findAllUserEmails(); // Retourne tous les utilisateurs
+        return findAllUserEmails();
     }
 
+    // ✅ CORRECTION : Utiliser la jointure avec projets
     @Query("""
-SELECT u.email FROM User u
-WHERE u.projet = :projet OR u.role = 'ADMIN'
-""")
+        SELECT DISTINCT u.email FROM User u
+        JOIN u.projets p
+        WHERE p.name = :projet OR u.role = 'ADMIN'
+    """)
     List<String> findActiveUserEmailsByProjet(@Param("projet") String projet);
 
+    // ✅ CORRECTION : Exclure l'utilisateur courant
     @Query("""
-SELECT u.email FROM User u
-WHERE (u.projet = :projet OR u.role = 'ADMIN')
-AND u.email <> :currentEmail
-""")
+        SELECT DISTINCT u.email FROM User u
+        JOIN u.projets p
+        WHERE (p.name = :projet OR u.role = 'ADMIN')
+        AND u.email <> :currentEmail
+    """)
     List<String> findActiveUserEmailsByProjetExcludingCurrent(
             @Param("projet") String projet,
             @Param("currentEmail") String currentEmail);
 
+    // ✅ CORRECTION : Trouver les MC et MP par projet
     @Query("""
-    SELECT u FROM User u
-    WHERE u.projet = :projet 
-    AND (u.role = 'MC' OR u.role = 'MP')
+        SELECT DISTINCT u FROM User u
+        JOIN u.projets p
+        WHERE p.name = :projet 
+        AND (u.role = 'MC' OR u.role = 'MP')
     """)
     List<User> findMcAndMpByProject(@Param("projet") String projet);
 
-    // Trouver tous les MC et MP (pour admin)
+    @Query("""
+        SELECT DISTINCT u.email FROM User u
+        JOIN u.projets p
+        WHERE p.name IN :projets
+        AND (u.site.name = :site OR u.role = 'ADMIN')
+    """)
+    List<String> findEmailsByProjectsAndSite(
+            @Param("projets") List<String> projets,
+            @Param("site") String site);
+    @Query("""
+        SELECT DISTINCT u FROM User u
+        JOIN u.projets p
+        WHERE u.role = 'PT' 
+        AND p.name LIKE %:projet%
+    """)
+    List<User> findPtUsersByProjectContaining(@Param("projet") String projet);
+    // ✅ Récupérer tous les utilisateurs par rôle
+    @Query("SELECT u FROM User u WHERE u.role = :role")
+    List<User> findByRole(@Param("role") Role role);
+
+
+    @Query("""
+        SELECT DISTINCT u FROM User u
+        JOIN u.projets p
+        WHERE u.role = 'PT' 
+        AND p.name = :projet
+    """)
+    List<User> findPtUsersByProject(@Param("projet") String projet);
+    // Dans UserRepository.java - Ajoutez ces méthodes
+
+    // ✅ Trouver les utilisateurs PP par projet et site
+    @Query("""
+    SELECT DISTINCT u FROM User u
+    JOIN u.projets p
+    WHERE u.role = 'PP' 
+    AND p.name = :projet
+    AND u.site.name = :site
+""")
+    List<User> findPpUsersByProjectAndSite(@Param("projet") String projet, @Param("site") String site);
+
+    // ✅ Trouver les emails des utilisateurs PP par projet et site
+    @Query("""
+    SELECT DISTINCT u.email FROM User u
+    JOIN u.projets p
+    WHERE u.role = 'PP' 
+    AND p.name = :projet
+    AND u.site.name = :site
+""")
+    List<String> findPpEmailsByProjectAndSite(@Param("projet") String projet, @Param("site") String site);
+
+    // ✅ Récupérer tous les utilisateurs PP (optionnel, pour fallback)
+    @Query("SELECT u FROM User u WHERE u.role = 'PP'")
+    List<User> findAllPpUsers();
+
+    // ✅ Récupérer les PP d'un site spécifique
     @Query("""
     SELECT u FROM User u
-    WHERE u.role = 'MC' OR u.role = 'MP'
-    """)
-    List<User> findAllMcAndMp();
-
-    // Trouver les emails des MC et MP par projet
-    @Query("""
-    SELECT u.email FROM User u
-    WHERE u.projet = :projet 
-    AND (u.role = 'MC' OR u.role = 'MP')
-    """)
-    List<String> findMcAndMpEmailsByProject(@Param("projet") String projet);
-
-
+    WHERE u.role = 'PP' 
+    AND u.site.name = :site
+""")
+    List<User> findPpUsersBySite(@Param("site") String site);
 }
