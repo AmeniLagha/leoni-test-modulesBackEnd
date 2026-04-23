@@ -21,18 +21,39 @@ public class TestDataInitializer {
 
     @PostConstruct
     public void init() {
-        Site testSite = Site.builder()
-                .name("Test Site")
-                .description("Site pour les tests")
-                .active(true)
-                .build();
-        siteRepository.save(testSite);
+        // Créer le site de test s'il n'existe pas
+        Site testSite = siteRepository.findByName("Test Site").orElse(null);
+        if (testSite == null) {
+            testSite = Site.builder()
+                    .name("Test Site")
+                    .description("Site pour les tests")
+                    .active(true)
+                    .build();
+            testSite = siteRepository.save(testSite);
+            System.out.println("✅ Site de test créé: " + testSite.getName());
+        } else {
+            System.out.println("✅ Site de test existe déjà: " + testSite.getName());
+        }
 
-        Projet testProjet = Projet.builder()
-                .name("Test Projet")
-                .description("Projet pour les tests")
-                .active(true)
-                .build();
-        projetRepository.save(testProjet);
+        // Créer le projet de test s'il n'existe pas
+        Projet testProjet = projetRepository.findByName("Test Projet").orElse(null);
+        if (testProjet == null) {
+            testProjet = Projet.builder()
+                    .name("Test Projet")
+                    .description("Projet pour les tests")
+                    .active(true)
+                    .build();
+            testProjet = projetRepository.save(testProjet);
+            System.out.println("✅ Projet de test créé: " + testProjet.getName());
+        } else {
+            System.out.println("✅ Projet de test existe déjà: " + testProjet.getName());
+        }
+
+        // Associer le projet au site
+        if (!testSite.getProjets().contains(testProjet)) {
+            testSite.getProjets().add(testProjet);
+            siteRepository.save(testSite);
+            System.out.println("✅ Projet associé au site");
+        }
     }
 }
