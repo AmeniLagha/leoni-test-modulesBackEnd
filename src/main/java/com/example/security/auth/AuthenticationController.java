@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:4200")
+
 @RestController
 @Tag(name = "Authentification", description = "Gestion de l'authentification et des tokens JWT")
 @RequestMapping("api/v1/auth")

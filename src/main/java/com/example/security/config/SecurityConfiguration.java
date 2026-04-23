@@ -71,7 +71,7 @@ public class SecurityConfiguration {
                             "http://localhost:5000",
                             "http://127.0.0.1",
                             "http://127.0.0.1:80",
-                            "http://127.0.0.1:4200"));
+                            "http://127.0.0.1:4200","https://leoni-test-modulesfrontend.onrender.com"));
                     corsConfig.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
                     corsConfig.setAllowedHeaders(Arrays.asList("*"));
                     corsConfig.setAllowCredentials(true);
