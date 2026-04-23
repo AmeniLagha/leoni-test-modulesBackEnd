@@ -22,13 +22,7 @@ public class WebConfig implements WebMvcConfigurer {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost",
-                                "http://localhost:80",
-                                "http://localhost:4200",
-                                "http://localhost:5000",
-                                "http://127.0.0.1",
-                                "http://127.0.0.1:80",
-                                "http://127.0.0.1:4200")
+                        .allowedOrigins("https://leoni-test-modulesfrontend.onrender.com")
                         .allowedMethods("GET","POST","PUT","PATCH","DELETE","OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
