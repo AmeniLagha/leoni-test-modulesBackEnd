@@ -60,25 +60,7 @@ public interface UserRepository extends JpaRepository<User,Integer> {
     List<String> findEmailsByProjectsAndSite(
             @Param("projets") List<String> projets,
             @Param("site") String site);
-    @Query("""
-        SELECT DISTINCT u FROM User u
-        JOIN u.projets p
-        WHERE u.role = 'PT' 
-        AND p.name LIKE %:projet%
-    """)
-    List<User> findPtUsersByProjectContaining(@Param("projet") String projet);
-    // ✅ Récupérer tous les utilisateurs par rôle
-    @Query("SELECT u FROM User u WHERE u.role = :role")
-    List<User> findByRole(@Param("role") Role role);
 
-
-    @Query("""
-        SELECT DISTINCT u FROM User u
-        JOIN u.projets p
-        WHERE u.role = 'PT' 
-        AND p.name = :projet
-    """)
-    List<User> findPtUsersByProject(@Param("projet") String projet);
     // Dans UserRepository.java - Ajoutez ces méthodes
 
     // ✅ Trouver les utilisateurs PP par projet et site
@@ -91,25 +73,14 @@ public interface UserRepository extends JpaRepository<User,Integer> {
 """)
     List<User> findPpUsersByProjectAndSite(@Param("projet") String projet, @Param("site") String site);
 
-    // ✅ Trouver les emails des utilisateurs PP par projet et site
+    // Trouver les emails des utilisateurs par projet ET par site
     @Query("""
     SELECT DISTINCT u.email FROM User u
     JOIN u.projets p
-    WHERE u.role = 'PP' 
-    AND p.name = :projet
+    WHERE p.name = :projet 
     AND u.site.name = :site
 """)
-    List<String> findPpEmailsByProjectAndSite(@Param("projet") String projet, @Param("site") String site);
+    List<String> findEmailsByProjectAndSite(@Param("projet") String projet, @Param("site") String site);
 
-    // ✅ Récupérer tous les utilisateurs PP (optionnel, pour fallback)
-    @Query("SELECT u FROM User u WHERE u.role = 'PP'")
-    List<User> findAllPpUsers();
 
-    // ✅ Récupérer les PP d'un site spécifique
-    @Query("""
-    SELECT u FROM User u
-    WHERE u.role = 'PP' 
-    AND u.site.name = :site
-""")
-    List<User> findPpUsersBySite(@Param("site") String site);
 }

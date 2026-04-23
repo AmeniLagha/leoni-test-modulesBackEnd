@@ -119,7 +119,14 @@ public class ClaimService {
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
-
+            // ✅ Récupérer les infos projet et site
+            String projet = null;
+            String site = null;
+            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);
+            if (chargeSheet != null) {
+                projet = chargeSheet.getProject();
+                site = chargeSheet.getPlant();
+            }
             // Mise à jour des champs de base
             if (dto.getTitle() != null) claim.setTitle(dto.getTitle());
             if (dto.getDescription() != null) claim.setDescription(dto.getDescription());
@@ -173,13 +180,15 @@ public class ClaimService {
 
             Claim updated = repository.save(claim);
 
-            // Notification à TOUS les utilisateurs
-            notificationService.notifyClaimUpdated(
+            // ✅ Notification modifiée
+            notificationService.notifyClaimUpdatedToProjectAndSite(
                     updated.getId(),
                     updated.getTitle(),
                     updated.getChargeSheetId(),
                     currentUser.getEmail(),
-                    "MODIFIÉE"
+                    "MODIFIÉE",
+                    projet,
+                    site
             );
 
             return updated;
@@ -199,6 +208,17 @@ public class ClaimService {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
 
+            // ✅ Récupérer les infos projet et site
+            String projet = null;
+            String site = null;
+            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);
+            if (chargeSheet != null) {
+                projet = chargeSheet.getProject();
+                site = chargeSheet.getPlant();
+            }
+
+            String oldAssignedTo = claim.getAssignedTo();
+
             claim.setAssignedTo(dto.getAssignedTo());
             claim.setAssignedDate(LocalDate.now());
             claim.setStatus(Claim.ClaimStatus.ASSIGNED);
@@ -212,8 +232,53 @@ public class ClaimService {
 
             Claim updated = repository.save(claim);
 
-            notificationService.notifyClaimAssigned(updated, currentUser.getEmail());
+            // ✅ Notification à la nouvelle personne assignée (individuelle)
+            if (dto.getAssignedTo() != null && !dto.getAssignedTo().isEmpty()) {
+                String subject = "🔔 Réclamation assignée - #" + updated.getId();
+                String message = String.format(
+                        "Bonjour,\n\n" +
+                                "Une réclamation vous a été assignée.\n\n" +
+                                "📋 **Titre:** %s\n" +
+                                "🔴 **Priorité:** %s\n" +
+                                "📝 **Description:** %s\n" +
+                                "👤 **Assigné par:** %s\n" +
+                                "📅 **Date d'assignation:** %s\n\n" +
+                                "🔗 Veuillez vous connecter à l'application pour traiter cette réclamation.\n\n" +
+                                "Cordialement,\n" +
+                                "L'équipe Qualité Leoni",
+                        updated.getTitle(),
+                        updated.getPriority(),
+                        updated.getDescription(),
+                        currentUser.getEmail(),
+                        LocalDate.now()
+                );
 
+                notificationService.sendNotificationToOneUser(subject, message, dto.getAssignedTo());
+            }
+
+            // ✅ Notification à tous les utilisateurs du projet et site (optionnel)
+            // Pour informer l'équipe du changement d'assignation
+            if (oldAssignedTo != null && !oldAssignedTo.equals(dto.getAssignedTo())) {
+                notificationService.notifyClaimUpdatedToProjectAndSite(
+                        updated.getId(),
+                        updated.getTitle(),
+                        updated.getChargeSheetId(),
+                        currentUser.getEmail(),
+                        "ASSIGNATION MODIFIÉE (de " + oldAssignedTo + " à " + dto.getAssignedTo() + ")",
+                        projet,
+                        site
+                );
+            } else {
+                notificationService.notifyClaimUpdatedToProjectAndSite(
+                        updated.getId(),
+                        updated.getTitle(),
+                        updated.getChargeSheetId(),
+                        currentUser.getEmail(),
+                        "ASSIGNÉE",
+                        projet,
+                        site
+                );
+            }
 
             return updated;
         } catch (Exception e) {
@@ -231,7 +296,14 @@ public class ClaimService {
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
-
+            // ✅ Récupérer les infos projet et site
+            String projet = null;
+            String site = null;
+            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);
+            if (chargeSheet != null) {
+                projet = chargeSheet.getProject();
+                site = chargeSheet.getPlant();
+            }
             claim.setActionTaken(dto.getActionTaken());
             claim.setResolution(dto.getResolution());
             claim.setResolvedBy(currentUser.getEmail());
@@ -251,13 +323,17 @@ public class ClaimService {
 
             Claim updated = repository.save(claim);
 
-            notificationService.notifyClaimUpdated(
+            // ✅ Notification modifiée
+            notificationService.notifyClaimUpdatedToProjectAndSite(
                     updated.getId(),
                     updated.getTitle(),
                     updated.getChargeSheetId(),
                     currentUser.getEmail(),
-                    "RÉSOLUE"
+                    "RÉSOLUE",
+                    projet,
+                    site
             );
+
 
             return updated;
         } catch (Exception e) {
@@ -279,14 +355,23 @@ public class ClaimService {
 
             Long chargeSheetId = claim.getChargeSheetId();
             String claimTitle = claim.getTitle();
+            String projet = null;
+            String site = null;
+            ChargeSheet chargeSheet = chargeSheetRepository.findById(chargeSheetId).orElse(null);
+            if (chargeSheet != null) {
+                projet = chargeSheet.getProject();
+                site = chargeSheet.getPlant();
+            }
             repository.deleteById(id);
 
-            // Notification à TOUS les utilisateurs
-            notificationService.notifyDocumentDeleted(
+            // ✅ Notification modifiée
+            notificationService.notifyClaimDeletedToProjectAndSite(
                     "Réclamation: " + claimTitle,
                     id,
                     chargeSheetId,
-                    currentUser.getEmail()
+                    currentUser.getEmail(),
+                    projet,
+                    site
             );
         } catch (Exception e) {
             System.err.println("❌ Erreur dans deleteClaim: " + e.getMessage());
@@ -375,7 +460,14 @@ public class ClaimService {
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
-
+            // ✅ Récupérer les infos projet et site
+            String projet = null;
+            String site = null;
+            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);
+            if (chargeSheet != null) {
+                projet = chargeSheet.getProject();
+                site = chargeSheet.getPlant();
+            }
             claim.setStatus(status);
 
             // Mise à jour des dates selon le statut
@@ -392,13 +484,15 @@ public class ClaimService {
 
             Claim updated = repository.save(claim);
 
-            // Notification à TOUS les utilisateurs
-            notificationService.notifyClaimUpdated(
+            // ✅ Notification modifiée
+            notificationService.notifyClaimUpdatedToProjectAndSite(
                     updated.getId(),
                     updated.getTitle(),
                     updated.getChargeSheetId(),
                     currentUser.getEmail(),
-                    "STATUT MIS À JOUR"
+                    "STATUT MIS À JOUR",
+                    projet,
+                    site
             );
 
             return updated;

@@ -513,5 +513,302 @@ public class GlobalNotificationService {
             log.error("Erreur lors de l'envoi HTML à {}: {}", emailTo, e.getMessage());
         }
     }
+    /**
+     * Envoie une notification HTML aux utilisateurs d'un projet ET d'un site spécifique
+     * @param subject Sujet de l'email
+     * @param htmlMessage Message HTML
+     * @param projet Nom du projet
+     * @param site Nom du site (plant)
+     */
+    @Async
+    @Transactional(readOnly = true)
+    public void sendHtmlNotificationToProjectAndSiteUsers(String subject, String htmlMessage, String projet, String site) {
+        try {
+            List<String> emails = userRepository.findEmailsByProjectAndSite(projet, site);
+
+            if (emails.isEmpty()) {
+                log.warn("Aucun utilisateur trouvé pour le projet {} et le site {}", projet, site);
+                return;
+            }
+
+            for (String recipient : emails) {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "utf-8");
+                helper.setFrom("noreply@leoni-system.com");
+                helper.setTo(recipient);
+                helper.setSubject("[Système Leoni] " + subject);
+                helper.setText(htmlMessage, true);
+                mailSender.send(message);
+            }
+
+            log.info("Notification HTML envoyée à {} utilisateur(s) du projet {} et site {}", emails.size(), projet, site);
+
+        } catch (MessagingException e) {
+            log.error("Erreur lors de l'envoi HTML pour le projet {} et site {}: {}", projet, site, e.getMessage());
+        }
+    }
+
+    /**
+     * Envoie une notification texte aux utilisateurs d'un projet ET d'un site spécifique
+     */
+    @Async
+    @Transactional(readOnly = true)
+    public void sendNotificationToProjectAndSiteUsers(String subject, String message, String projet, String site) {
+        try {
+            List<String> emails = userRepository.findEmailsByProjectAndSite(projet, site);
+
+            if (emails.isEmpty()) {
+                log.warn("Aucun utilisateur trouvé pour le projet {} et le site {}", projet, site);
+                return;
+            }
+
+            SimpleMailMessage email = new SimpleMailMessage();
+            email.setFrom("noreply@leoni-system.com");
+            email.setSubject("[Système Leoni] " + subject);
+            email.setText(message);
+
+            for (String recipient : emails) {
+                email.setTo(recipient);
+                mailSender.send(email);
+            }
+
+            log.info("Notification envoyée à {} utilisateur(s) du projet {} et site {}", emails.size(), projet, site);
+
+        } catch (Exception e) {
+            log.error("Erreur notification projet {} et site {}: {}", projet, site, e.getMessage());
+        }
+    }
+    /**
+     * Notification de mise à jour du cahier - uniquement projet + site
+     */
+    public void notifyChargeSheetUpdatedToProjectAndSite(Long chargeSheetId, String actionType, String performedBy, String role, String projet, String site) {
+        String subject = "Cahier des Charges " + actionType;
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "📋 **CAHIER DES CHARGES %s**\n\n" +
+                        "Un cahier des charges a été %s dans le système.\n\n" +
+                        "🔢 **ID du Cahier:** %d\n" +
+                        "🔧 **Action:** %s\n" +
+                        "👤 **Effectué par:** %s (%s)\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour voir les modifications apportées.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                actionType, actionType.toLowerCase(), chargeSheetId, actionType, performedBy, role, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    /**
+     * Notification de suppression de document - uniquement projet + site
+     */
+    public void notifyDocumentDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = documentType + " Supprimé(e)";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🗑️ **%s SUPPRIMÉ(E)**\n\n" +
+                        "Un %s a été supprimé du système.\n\n" +
+                        "📄 **Type de document:** %s\n" +
+                        "🔢 **ID du document:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Supprimé par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "⚠️ **Note:**\n" +
+                        "Cette action est définitive et ne peut pas être annulée.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                documentType, documentType.toLowerCase(), documentType, documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+    /**
+     * Notification de création de conformité - uniquement projet + site
+     */
+    public void notifyComplianceCreatedToProjectAndSite(Long complianceId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = "Nouvelle Fiche de Conformité";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "✅ **NOUVELLE FICHE DE CONFORMITÉ CRÉÉE**\n\n" +
+                        "Une nouvelle fiche de conformité a été créée dans le système.\n\n" +
+                        "🔢 **ID de la Conformité:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Créé par:** %s (PP)\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour consulter la fiche de conformité.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    /**
+     * Notification de mise à jour de conformité - uniquement projet + site
+     */
+    public void notifyComplianceUpdatedToProjectAndSite(Long complianceId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = "Fiche de Conformité Modifiée";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "✅ **FICHE DE CONFORMITÉ MODIFIÉE**\n\n" +
+                        "Une fiche de conformité a été modifiée dans le système.\n\n" +
+                        "🔢 **ID de la Conformité:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Modifié par:** %s (PP)\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour voir les modifications.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    /**
+     * Notification de suppression de conformité - uniquement projet + site
+     */
+    public void notifyComplianceDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = documentType + " Supprimé(e)";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🗑️ **%s SUPPRIMÉ(E)**\n\n" +
+                        "Une fiche de conformité a été supprimée du système.\n\n" +
+                        "📄 **Type de document:** %s\n" +
+                        "🔢 **ID de la conformité:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Supprimé par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "⚠️ **Note:**\n" +
+                        "Cette action est définitive et ne peut pas être annulée.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                documentType, documentType.toLowerCase(), documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+    // Dans GlobalNotificationService.java
+    public void notifyTechnicalFileCreatedToProjectAndSite(Long technicalFileId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = "Nouveau Dossier Technique";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🔧 **NOUVEAU DOSSIER TECHNIQUE CRÉÉ**\n\n" +
+                        "Un nouveau dossier technique a été créé dans le système.\n\n" +
+                        "🔢 **ID du Dossier:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Créé par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour consulter le dossier technique.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                technicalFileId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    public void notifyTechnicalFileUpdatedToProjectAndSite(Long technicalFileId, Long chargeSheetId, String performedBy, String role, String projet, String site) {
+        String subject = "Dossier Technique Modifié";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🔧 **DOSSIER TECHNIQUE MODIFIÉ**\n\n" +
+                        "Un dossier technique a été modifié dans le système.\n\n" +
+                        "🔢 **ID du Dossier:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Modifié par:** %s (%s)\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "⚠️ **Note importante:**\n" +
+                        "Cette modification peut affecter les opérations de maintenance.\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour voir les modifications.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                technicalFileId, chargeSheetId, performedBy, role, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+    // Dans GlobalNotificationService.java - Ajoutez ces méthodes
+
+    /**
+     * Notification de création de réclamation - uniquement projet + site
+     */
+    public void notifyClaimCreatedToProjectAndSite(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = "Nouvelle Réclamation: " + claimTitle;
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🚨 **NOUVELLE RÉCLAMATION CRÉÉE**\n\n" +
+                        "Une nouvelle réclamation a été créée dans le système.\n\n" +
+                        "📌 **Titre:** %s\n" +
+                        "🔢 **ID de la Réclamation:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Signalé par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "⚠️ **Action requise:**\n" +
+                        "Veuillez examiner cette réclamation dans les plus brefs délais.\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour traiter la réclamation.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    /**
+     * Notification de mise à jour de réclamation - uniquement projet + site
+     */
+    public void notifyClaimUpdatedToProjectAndSite(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String action, String projet, String site) {
+        String subject = "Réclamation " + action + ": " + claimTitle;
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🚨 **RÉCLAMATION %s**\n\n" +
+                        "Une réclamation a été %s dans le système.\n\n" +
+                        "📌 **Titre:** %s\n" +
+                        "🔢 **ID de la Réclamation:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Traité par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "🔗 **Accès rapide:**\n" +
+                        "Connectez-vous pour voir les détails.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                action, action.toLowerCase(), claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
+
+    /**
+     * Notification de suppression de réclamation - uniquement projet + site
+     */
+    public void notifyClaimDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+        String subject = documentType + " Supprimée";
+        String message = String.format(
+                "Bonjour,\n\n" +
+                        "🗑️ **%s SUPPRIMÉE**\n\n" +
+                        "Une réclamation a été supprimée du système.\n\n" +
+                        "📄 **Type de document:** %s\n" +
+                        "🔢 **ID de la réclamation:** %d\n" +
+                        "📋 **ID du Cahier associé:** %d\n" +
+                        "👤 **Supprimé par:** %s\n" +
+                        "🕐 **Date:** %s\n\n" +
+                        "⚠️ **Note:**\n" +
+                        "Cette action est définitive et ne peut pas être annulée.\n\n" +
+                        "Cordialement,\n" +
+                        "Système de Gestion Leoni",
+                documentType, documentType.toLowerCase(), documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
+        );
+
+        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
+    }
 
 }

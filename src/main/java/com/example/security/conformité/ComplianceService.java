@@ -28,10 +28,12 @@ public class ComplianceService {
     public Compliance createCompliance(ComplianceDto.CreateDto dto) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-
         // ⚡ Récupérer l’item
         ChargeSheetItem item = chargeSheetItemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Item not found"));
+        ChargeSheet chargeSheet = item.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
         // ⚡ Récupérer le chargeSheetId depuis l'item
         Long chargeSheetId = item.getChargeSheet().getId();
         Compliance compliance = Compliance.builder()
@@ -71,10 +73,12 @@ public class ComplianceService {
 
         Compliance saved = repository.save(compliance);
 
-        notificationService.notifyComplianceCreated(
+        notificationService.notifyComplianceCreatedToProjectAndSite(
                 saved.getId(),
                 saved.getChargeSheetId(),
-                currentUser.getEmail()
+                currentUser.getEmail(),
+                projet,
+                site
         );
         reminderService.resetRemindersForItem(dto.getItemId());
 
@@ -89,7 +93,10 @@ public class ComplianceService {
 
         Compliance compliance = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Compliance not found"));
-
+        ChargeSheetItem item = compliance.getItem();
+        ChargeSheet chargeSheet = item.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
         // Update inspection fields
         compliance.setOrderitemNumber(dto.getOrderitemNumber());
         compliance.setSequenceTestPins(dto.getSequenceTestPins());
@@ -123,10 +130,12 @@ public class ComplianceService {
         Compliance updated = repository.save(compliance);
 
         // Notification à TOUS les utilisateurs
-        notificationService.notifyComplianceUpdated(
+        notificationService.notifyComplianceUpdatedToProjectAndSite(
                 updated.getId(),
                 updated.getChargeSheetId(),
-                currentUser.getEmail()
+                currentUser.getEmail(),
+                projet,
+                site
         );
 
         return updated;
@@ -139,16 +148,21 @@ public class ComplianceService {
 
         Compliance compliance = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Compliance not found"));
-
+        ChargeSheetItem item = compliance.getItem();
+        ChargeSheet chargeSheet = item.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
         Long chargeSheetId = compliance.getChargeSheetId();
         repository.deleteById(id);
 
         // Notification à TOUS les utilisateurs
-        notificationService.notifyDocumentDeleted(
+        notificationService.notifyComplianceDeletedToProjectAndSite(
                 "Fiche de Conformité",
                 id,
                 chargeSheetId,
-                currentUser.getEmail()
+                currentUser.getEmail(),
+                projet,
+                site
         );
     }
 

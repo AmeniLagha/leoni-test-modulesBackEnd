@@ -54,7 +54,12 @@ public class TechnicalFileService {
             if (dto.getItems() == null || dto.getItems().isEmpty()) {
                 throw new RuntimeException("Un dossier technique doit contenir au moins un item");
             }
-
+            Long firstItemId = dto.getItems().get(0).getChargeSheetItemId();
+            ChargeSheetItem firstChargeSheetItem = chargeSheetItemRepository.findById(firstItemId)
+                    .orElseThrow(() -> new RuntimeException("Item not found"));
+            ChargeSheet chargeSheet = firstChargeSheetItem.getChargeSheet();
+            String projet = chargeSheet.getProject();
+            String site = chargeSheet.getPlant();
             TechnicalFile technicalFile = new TechnicalFile();
             technicalFile.setReference(dto.getReference());
             technicalFile.setCreatedBy(currentUser.getEmail());
@@ -108,7 +113,18 @@ public class TechnicalFileService {
                 savedTechnicalFile.addTechnicalFileItem(item);
             }
 
-            return repository.save(savedTechnicalFile);
+            TechnicalFile result = repository.save(savedTechnicalFile);
+
+            // ✅ Notification modifiée
+            notificationService.notifyTechnicalFileCreatedToProjectAndSite(
+                    result.getId(),
+                    chargeSheet.getId(),
+                    currentUser.getEmail(),
+                    projet,
+                    site
+            );
+
+            return result;
         } catch (Exception e) {
             // Ici tu peux logger l'erreur ou notifier
             System.err.println("Erreur lors de la création du dossier technique : " + e.getMessage());
@@ -123,7 +139,10 @@ public class TechnicalFileService {
 
             ChargeSheetItem chargeSheetItem = chargeSheetItemRepository.findById(dto.getChargeSheetItemId())
                     .orElseThrow(() -> new RuntimeException("ChargeSheetItem not found"));
-
+            // ✅ Récupérer les infos projet et site
+            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+            String projet = chargeSheet.getProject();
+            String site = chargeSheet.getPlant();
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
 
@@ -161,7 +180,14 @@ public class TechnicalFileService {
             tf.addTechnicalFileItem(item);
 
             repository.save(tf);
-
+            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(
+                    technicalFileId,
+                    chargeSheet.getId(),
+                    currentUser.getEmail(),
+                    "PP",
+                    projet,
+                    site
+            );
             return item;
         } catch (Exception e) {
             System.err.println("Erreur lors de l'ajout d'un item : " + e.getMessage());
@@ -186,15 +212,43 @@ public class TechnicalFileService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
         TechnicalFileItem item = getTechnicalFileItemById(itemId);
-
+        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();
+        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
         updateItemFields(item, dto, currentUser.getEmail());
-
+        // ✅ Notification modifiée
+        notificationService.notifyTechnicalFileUpdatedToProjectAndSite(
+                item.getTechnicalFileId(),
+                chargeSheet.getId(),
+                currentUser.getEmail(),
+                "PP",
+                projet,
+                site
+        );
         return item;
     }
     @Transactional
     public void deleteTechnicalFileItem(Long itemId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
         TechnicalFileItem item = getTechnicalFileItemById(itemId);
+        // ✅ Récupérer les infos projet et site
+        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();
+        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
+
         technicalFileItemRepository.delete(item);
+        // ✅ Notification modifiée
+        notificationService.notifyDocumentDeletedToProjectAndSite(
+                "Item de Dossier Technique",
+                itemId,
+                chargeSheet.getId(),
+                currentUser.getEmail(),
+                projet,
+                site
+        );
     }
     public List<Map<String, Object>> getHistoryAudited(Long technicalFileId) {
         AuditReader reader = AuditReaderFactory.get(entityManager);
@@ -437,6 +491,14 @@ public class TechnicalFileService {
     private void updateItemFields(TechnicalFileItem item,
                                   TechnicalFileDto.UpdateItemDto dto,
                                   String user) {
+        // ✅ Récupérer les infos projet et site avant modification
+        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();
+        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+        String projet = chargeSheet.getProject();
+        String site = chargeSheet.getPlant();
+
+        // Variable pour savoir si des modifications ont été faites
+        boolean hasChanges = false;
 
         if(dto.getTechnicianName()!=null){
             saveHistory(item.getTechnicalFileId(),item.getId(),
@@ -480,6 +542,21 @@ public class TechnicalFileService {
         item.setUpdatedAt(LocalDate.now());
 
         technicalFileItemRepository.save(item);
+        // ✅ Envoyer une notification seulement si des modifications ont été faites
+        if (hasChanges) {
+            // Récupérer l'utilisateur courant pour l'email
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = (User) auth.getPrincipal();
+
+            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(
+                    item.getTechnicalFileId(),
+                    chargeSheet.getId(),
+                    currentUser.getEmail(),
+                    "PP",
+                    projet,
+                    site
+            );
+        }
     }
 
     /*
@@ -524,14 +601,34 @@ public class TechnicalFileService {
 
         TechnicalFile tf = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Technical file not found"));
+        // ✅ Récupérer les infos projet et site (premier item)
+        String projet = null;
+        String site = null;
+        Long chargeSheetId = null;
+
+        if (tf.getTechnicalFileItems() != null && !tf.getTechnicalFileItems().isEmpty()) {
+            TechnicalFileItem firstItem = tf.getTechnicalFileItems().iterator().next();
+            ChargeSheetItem chargeSheetItem = firstItem.getChargeSheetItem();
+            if (chargeSheetItem != null) {
+                ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+                if (chargeSheet != null) {
+                    projet = chargeSheet.getProject();
+                    site = chargeSheet.getPlant();
+                    chargeSheetId = chargeSheet.getId();
+                }
+            }
+        }
 
         repository.delete(tf);
 
-        notificationService.notifyDocumentDeleted(
+        // ✅ Notification modifiée
+        notificationService.notifyDocumentDeletedToProjectAndSite(
                 "Dossier Technique",
                 id,
-                null,
-                currentUser.getEmail()
+                chargeSheetId,
+                currentUser.getEmail(),
+                projet,
+                site
         );
     }
 
@@ -736,7 +833,11 @@ public class TechnicalFileService {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = (User) auth.getPrincipal();
             TechnicalFileItem item = getTechnicalFileItemById(itemId);
-
+            // ✅ Récupérer les infos projet et site
+            ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();
+            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();
+            String projet = chargeSheet.getProject();
+            String site = chargeSheet.getPlant();
             TechnicalFileItemStatus currentStatus = item.getValidationStatus();
 
             // Vérifier si le rôle peut valider ce statut
@@ -782,8 +883,18 @@ public class TechnicalFileService {
                     item.getValidationStatus().name(),
                     currentUser.getEmail()
             );
+            TechnicalFileItem saved = technicalFileItemRepository.save(item);
+            // ✅ Notification modifiée
+            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(
+                    item.getTechnicalFileId(),
+                    chargeSheet.getId(),
+                    currentUser.getEmail(),
+                    role,
+                    projet,
+                    site
+            );
 
-            return technicalFileItemRepository.save(item);
+            return saved;
         } catch (Exception e) {
             System.err.println("Erreur lors de la validation de l'item : " + e.getMessage());
             throw new RuntimeException("Impossible de valider l'item. " + e.getMessage());
