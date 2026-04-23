@@ -3,6 +3,7 @@ package com.example.security.auth;
 import com.example.security.TestDataInitializer;
 import com.example.security.user.UserRepository;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ import static org.hamcrest.Matchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import(TestDataInitializer.class)  // ← AJOUTE CETTE LIGNE
+@Import(TestDataInitializer.class)
 class AuthenticationControllerTest {
 
     @LocalServerPort
@@ -33,10 +34,10 @@ class AuthenticationControllerTest {
     void setUp() {
         RestAssured.port = port;
         RestAssured.basePath = "/api/v1/auth";
-        // NE PAS supprimer les sites/projets (garder les données initiales)
-        // Supprimer seulement les utilisateurs créés pendant les tests
+
+        // Nettoyer uniquement les utilisateurs de test
         userRepository.findAll().stream()
-                .filter(u -> u.getEmail().contains("@test.com"))
+                .filter(u -> u.getEmail() != null && u.getEmail().contains("@test.com"))
                 .forEach(userRepository::delete);
     }
 
@@ -49,11 +50,12 @@ class AuthenticationControllerTest {
         registerRequest.put("matricule", "MAT12345");
         registerRequest.put("password", "password123");
         registerRequest.put("role", "USER");
-        registerRequest.put("siteName", "Test Site");  // ← Utilise le site créé par TestDataInitializer
-        registerRequest.put("projets", List.of("Test Projet"));  // ← Utilise le projet créé
+        registerRequest.put("siteName", "Test Site");
+        registerRequest.put("projets", List.of("Test Projet"));
 
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")  // ← AJOUTE CET HEADER
                 .body(registerRequest)
                 .when()
                 .post("/register")
@@ -77,7 +79,8 @@ class AuthenticationControllerTest {
 
         // Premier enregistrement
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")
                 .body(registerRequest)
                 .when()
                 .post("/register")
@@ -87,16 +90,18 @@ class AuthenticationControllerTest {
         // Deuxième enregistrement avec même email
         registerRequest.put("matricule", "MAT12347");
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")
                 .body(registerRequest)
                 .when()
                 .post("/register")
                 .then()
-                .statusCode(500);
+                .statusCode(500);  // RuntimeException "Email déjà utilisé"
     }
 
     @Test
     void testAuthenticate_WithValidCredentials_ShouldReturnToken() {
+        // D'abord créer un utilisateur
         Map<String, Object> registerRequest = new HashMap<>();
         registerRequest.put("firstname", "Jane");
         registerRequest.put("lastname", "Smith");
@@ -108,24 +113,28 @@ class AuthenticationControllerTest {
         registerRequest.put("projets", List.of("Test Projet"));
 
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")
                 .body(registerRequest)
                 .when()
                 .post("/register")
                 .then()
                 .statusCode(200);
 
+        // Ensuite tester l'authentification
         Map<String, String> loginRequest = new HashMap<>();
         loginRequest.put("email", "jane.smith@test.com");
         loginRequest.put("password", "password123");
         loginRequest.put("siteName", "Test Site");
 
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")
                 .body(loginRequest)
                 .when()
                 .post("/authenticate")
                 .then()
+                .log().all()  // ← Affiche la réponse pour debug
                 .statusCode(200)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue());
@@ -139,7 +148,8 @@ class AuthenticationControllerTest {
         loginRequest.put("siteName", "Test Site");
 
         given()
-                .contentType("application/json")
+                .contentType(ContentType.JSON)
+                .header("Origin", "http://localhost:4200")
                 .body(loginRequest)
                 .when()
                 .post("/authenticate")
