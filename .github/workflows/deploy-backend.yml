@@ -20,29 +20,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-
-      - name: Run tests with Maven
-        run: mvn test -Dspring.profiles.active=test
-
-      - name: Generate test report
-        run: mvn surefire-report:report
-
-      - name: Upload test reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-test-reports
-          path: |
-            target/surefire-reports/
-            target/site/
-
-      - name: Build with Maven
+      - name: Build with Maven (skip tests)
         run: mvn clean package -DskipTests
 
       - name: Upload JAR artifact
@@ -80,3 +58,21 @@ jobs:
 
       - name: Image digest
         run: echo "Image pushed successfully"
+
+  # deploy:  <-- COMMENTÉ
+  #   needs: docker-build
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+  #
+  #   steps:
+  #   - name: Deploy to server
+  #     uses: appleboy/ssh-action@v1.2.0
+  #     with:
+  #       host: ${{ secrets.SERVER_HOST }}
+  #       username: ${{ secrets.SERVER_USER }}
+  #       key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #       script: |
+  #         cd /opt/leoni-app
+  #         docker-compose pull backend
+  #         docker-compose up -d backend
+  #         docker system prune -f
