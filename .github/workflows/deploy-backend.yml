@@ -7,72 +7,104 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build-and-test:
+
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Build with Maven (skip tests)
-        run: mvn clean package -DskipTests
-
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
+          cache: 'maven'
+      - run: mvn clean package -DskipTests
+      - uses: actions/upload-artifact@v4
         with:
           name: backend-jar
           path: target/*.jar
 
+  selenium-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install Chrome
+        run: |
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update -q && sudo apt-get install -y google-chrome-stable
+          echo "Chrome: $(google-chrome --version)"
+
+      - name: Wake up Render
+        run: |
+          for i in {1..15}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.FRONTEND_URL }}" 2>/dev/null || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            [ "$STATUS" = "200" ] && echo "Ready!" && break
+            sleep 20
+          done
+
+      - name: Run Login Tests
+        run: mvn test -Dtest=LoginTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.admin.email=${{ secrets.TEST_ADMIN_EMAIL }} -Dtest.admin.password=${{ secrets.TEST_ADMIN_PASSWORD }}
+        env:
+          APP_URL: ${{ secrets.FRONTEND_URL }}
+        continue-on-error: true
+
+      - name: Run Register Tests
+        run: mvn test -Dtest=RegisterTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.admin.email=${{ secrets.TEST_ADMIN_EMAIL }} -Dtest.admin.password=${{ secrets.TEST_ADMIN_PASSWORD }}
+        env:
+          APP_URL: ${{ secrets.FRONTEND_URL }}
+        continue-on-error: true
+
+      - name: Run ChargeSheet Tests
+        run: mvn test -Dtest=ChargeSheetTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.ing.email=${{ secrets.TEST_ING_EMAIL }} -Dtest.ing.password=${{ secrets.TEST_ING_PASSWORD }}
+        env:
+          APP_URL: ${{ secrets.FRONTEND_URL }}
+        continue-on-error: true
+
+      - name: Upload Cucumber Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cucumber-reports
+          path: target/cucumber-reports/
+          retention-days: 7
+
   docker-build:
-    needs: build-and-test
+    needs: selenium-tests
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
             ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Image digest
-        run: echo "Image pushed successfully"
-
-  # deploy:  <-- COMMENTÉ
-  #   needs: docker-build
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-  #
-  #   steps:
-  #   - name: Deploy to server
-  #     uses: appleboy/ssh-action@v1.2.0
-  #     with:
-  #       host: ${{ secrets.SERVER_HOST }}
-  #       username: ${{ secrets.SERVER_USER }}
-  #       key: ${{ secrets.SSH_PRIVATE_KEY }}
-  #       script: |
-  #         cd /opt/leoni-app
-  #         docker-compose pull backend
-  #         docker-compose up -d backend
-  #         docker system prune -f
+  deploy:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy to Clever Cloud
+        run: |
+          curl -s -X POST "https://api.clever-cloud.com/v2/github/redeploy" \
+            -H "Content-Type: application/json" \
+            -d "{\"appId\": \"${{ secrets.CLEVER_CLOUD_APP_ID }}\", \"secret\": \"${{ secrets.CLEVER_CLOUD_SECRET }}\"}"
+          echo "Deployed!"
