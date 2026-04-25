@@ -85,7 +85,11 @@ public class UserService {
     public boolean checkEmailExists(String email) {
         return repository.findByEmail(email).isPresent();
     }
+// UserService.java - Ajouter cette méthode
 
+    public boolean checkMatriculeExists(Integer matricule) {
+        return repository.existsByMatricule(matricule);
+    }
     // --- Mettre à jour un utilisateur ---
     public UserDto updateUser(Integer id, UserDto userDto) {
         try {

@@ -219,7 +219,16 @@ public class UserController {
         response.put("exists", exists);
         return ResponseEntity.ok(response);
     }
+// UserController.java - Ajouter cette méthode
 
+    @GetMapping("/check-matricule")
+    @Operation(summary = "Vérifier si matricule existe", description = "Retourne true si le matricule existe déjà")
+    public ResponseEntity<Map<String, Boolean>> checkMatriculeExists(@RequestParam Integer matricule) {
+        Map<String, Boolean> response = new HashMap<>();
+        boolean exists = service.checkMatriculeExists(matricule);
+        response.put("exists", exists);
+        return ResponseEntity.ok(response);
+    }
     // --- Gestion code de vérification ---
     /**
      * Envoyer un code de vérification par email
