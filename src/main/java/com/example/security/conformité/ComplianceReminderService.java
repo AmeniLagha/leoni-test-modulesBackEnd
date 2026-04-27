@@ -64,11 +64,12 @@ public class ComplianceReminderService {
     /**
      * Tâche programmée qui s'exécute tous les jours à 9h00
      */
-    @Scheduled(cron = "0 45 16 * * *")
+    @Scheduled(cron = "0 05 17 * * *" , zone = "Africa/Tunis")
     @Transactional(readOnly = true)
     public void sendPendingComplianceReminders() {
         log.info("🔔 Démarrage de la vérification des rappels de conformité");
-
+        long count = receptionHistoryRepository.count();
+        log.info("📊 DB accessible - {} réceptions trouvées", count);
         // Récupérer tous les items qui ont des réceptions
         List<ReceptionHistory> allHistories = receptionHistoryRepository.findAll();
         Set<Long> itemIdsWithReceptions = allHistories.stream()
