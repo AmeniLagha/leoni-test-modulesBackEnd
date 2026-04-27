@@ -176,6 +176,6 @@ public class Claim {
     }
 
     public enum ClaimStatus {
-        NEW, IN_PROGRESS, ASSIGNED, ON_HOLD, RESOLVED, CLOSED, REJECTED
+         IN_PROGRESS, ASSIGNED, RESOLVED, CLOSED
     }
 }
