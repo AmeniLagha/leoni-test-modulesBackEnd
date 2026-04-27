@@ -32,7 +32,7 @@ public class ComplianceController {
     public ResponseEntity<String> testMail() {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo("ton-email-personnel@gmail.com"); // Change par ton email
+            message.setTo("laghaamani3@gmail.com"); // Change par ton email
             message.setSubject("Test depuis Clever Cloud");
             message.setText("Si tu reçois ce mail, la configuration email fonctionne !");
             mailSender.send(message);
