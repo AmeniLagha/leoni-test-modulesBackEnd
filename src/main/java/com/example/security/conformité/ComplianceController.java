@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,7 +27,20 @@ public class ComplianceController {
     private final ChargeSheetItemRepository chargeSheetItemRepository;
     private final CompliancePreparationService compliancePreparationService;
     private final ComplianceRepository complianceRepository;
-
+    private final JavaMailSender mailSender;
+    @GetMapping("/test-mail")
+    public ResponseEntity<String> testMail() {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo("ton-email-personnel@gmail.com"); // Change par ton email
+            message.setSubject("Test depuis Clever Cloud");
+            message.setText("Si tu reçois ce mail, la configuration email fonctionne !");
+            mailSender.send(message);
+            return ResponseEntity.ok("Email envoyé avec succès !");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+        }
+    }
     // PP: Créer une conformité
     @PostMapping
     @Operation(
