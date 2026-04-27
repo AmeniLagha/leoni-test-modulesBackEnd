@@ -49,7 +49,8 @@ public class SecurityConfiguration {
             "/api/v1/chatbot/ask",
             "/uploads/**",
             "/api/v1/sites",           // ✅ AJOUTER CETTE LIGNE
-            "/api/v1/health"
+            "/api/v1/health",
+            "/api/v1/compliance/test-mail"
 
 
 

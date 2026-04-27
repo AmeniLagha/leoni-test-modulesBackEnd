@@ -64,7 +64,7 @@ public class ComplianceReminderService {
     /**
      * Tâche programmée qui s'exécute tous les jours à 9h00
      */
-    @Scheduled(cron = "0 55 14 * * *")
+    @Scheduled(cron = "0 05 15 * * *")
     @Transactional(readOnly = true)
     public void sendPendingComplianceReminders() {
         log.info("🔔 Démarrage de la vérification des rappels de conformité");
