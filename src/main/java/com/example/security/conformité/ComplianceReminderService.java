@@ -64,7 +64,7 @@ public class ComplianceReminderService {
     /**
      * Tâche programmée qui s'exécute tous les jours à 9h00
      */
-    @Scheduled(cron = "0 01 21 * * *" , zone = "Africa/Tunis")
+    @Scheduled(cron = "0 11 21 * * *" , zone = "Africa/Tunis")
     @Transactional(readOnly = true, timeout = 60)
     public void sendPendingComplianceReminders() {
         log.info("🔔 Démarrage de la vérification des rappels de conformité");
@@ -168,7 +168,7 @@ public class ComplianceReminderService {
         String htmlMessage = buildReminderText(sheet, item, pendingQuantity, existingCompliances, daysSinceLastReception);
 
         for (User ppUser : ppUsers) {
-            notificationService.sendHtmlNotificationToOneUser(subject, htmlMessage, ppUser.getEmail());
+            notificationService.sendNotificationToOneUser(subject, htmlMessage, ppUser.getEmail());
             log.info("📧 Rappel envoyé à PP {} pour l'item #{} (Jour {}/14) - {} fiche(s) restante(s)",
                     ppUser.getEmail(), item.getItemNumber(), daysSinceLastReception, pendingQuantity);
         }
