@@ -70,242 +70,52 @@ public class ChargeSheetService {
 
         ChargeSheet finalSheet = repository.save(savedSheet);
         String subject = "Nouveau Cahier des Charges";
-        String htmlMessage = buildChargeSheetCreatedHtml(finalSheet);
-        notificationService.sendHtmlNotificationToProjectAndSiteUsers(subject, htmlMessage, finalSheet.getProject(), finalSheet.getPlant());
+        String textMessage = buildChargeSheetCreatedText(finalSheet);
+        notificationService.sendNotificationToProjectAndSiteUsers(subject, textMessage, finalSheet.getProject(), finalSheet.getPlant());
 
         return finalSheet;
     }
-    private String buildChargeSheetCreatedHtml(ChargeSheet chargeSheet) {
+    private String buildChargeSheetCreatedText(ChargeSheet chargeSheet) {
         int numberOfItems = chargeSheet.getItems().size();
 
-        return "<!DOCTYPE html>\n" +
-                "<html>\n" +
-                "<head>\n" +
-                "    <meta charset=\"UTF-8\">\n" +
-                "    <title>LEONI - Nouveau Cahier des Charges</title>\n" +
-                "    <style>\n" +
-                "        * { margin: 0; padding: 0; box-sizing: border-box; }\n" +
-                "        body {\n" +
-                "            font-family: 'Segoe UI', Arial, Helvetica, sans-serif;\n" +
-                "            background-color: #F5F7FA;\n" +
-                "            margin: 0;\n" +
-                "            padding: 20px;\n" +
-                "            line-height: 1.5;\n" +
-                "        }\n" +
-                "        .container {\n" +
-                "            max-width: 650px;\n" +
-                "            margin: 0 auto;\n" +
-                "            background: #FFFFFF;\n" +
-                "            border-radius: 12px;\n" +
-                "            overflow: hidden;\n" +
-                "            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);\n" +
-                "        }\n" +
-                "        .header {\n" +
-                "            background: linear-gradient(135deg, #003366 0%, #0052A5 100%);\n" +
-                "            padding: 25px 20px;\n" +
-                "            text-align: center;\n" +
-                "        }\n" +
-                "        .logo {\n" +
-                "            font-size: 28px;\n" +
-                "            font-weight: bold;\n" +
-                "            color: #FFFFFF;\n" +
-                "            margin-bottom: 10px;\n" +
-                "        }\n" +
-                "        .logo span {\n" +
-                "            color: #00D4FF;\n" +
-                "        }\n" +
-                "        .header h1 {\n" +
-                "            color: #FFFFFF;\n" +
-                "            margin: 0;\n" +
-                "            font-size: 22px;\n" +
-                "            font-weight: normal;\n" +
-                "        }\n" +
-                "        .content {\n" +
-                "            padding: 30px;\n" +
-                "        }\n" +
-                "        .greeting {\n" +
-                "            font-size: 16px;\n" +
-                "            color: #333333;\n" +
-                "            margin-bottom: 25px;\n" +
-                "            padding-bottom: 15px;\n" +
-                "            border-bottom: 2px solid #E0E0E0;\n" +
-                "        }\n" +
-                "        .info-section {\n" +
-                "            background: #F8F9FC;\n" +
-                "            border-radius: 8px;\n" +
-                "            padding: 20px;\n" +
-                "            margin-bottom: 25px;\n" +
-                "            border-left: 4px solid #0052A5;\n" +
-                "        }\n" +
-                "        .section-title {\n" +
-                "            font-size: 16px;\n" +
-                "            font-weight: bold;\n" +
-                "            color: #003366;\n" +
-                "            margin-bottom: 15px;\n" +
-                "            display: flex;\n" +
-                "            align-items: center;\n" +
-                "            gap: 8px;\n" +
-                "        }\n" +
-                "        .info-row {\n" +
-                "            display: flex;\n" +
-                "            margin-bottom: 10px;\n" +
-                "            flex-wrap: wrap;\n" +
-                "        }\n" +
-                "        .info-label {\n" +
-                "            width: 140px;\n" +
-                "            color: #666666;\n" +
-                "            font-weight: 600;\n" +
-                "            font-size: 13px;\n" +
-                "        }\n" +
-                "        .info-value {\n" +
-                "            flex: 1;\n" +
-                "            color: #222222;\n" +
-                "            font-weight: 500;\n" +
-                "            font-size: 13px;\n" +
-                "        }\n" +
-                "        .badge {\n" +
-                "            display: inline-block;\n" +
-                "            background: #E8F4FD;\n" +
-                "            color: #0052A5;\n" +
-                "            padding: 4px 12px;\n" +
-                "            border-radius: 20px;\n" +
-                "            font-size: 12px;\n" +
-                "            font-weight: bold;\n" +
-                "        }\n" +
-                "        .action-button {\n" +
-                "            display: inline-block;\n" +
-                "            background: linear-gradient(135deg, #003366 0%, #0052A5 100%);\n" +
-                "            color: #FFFFFF;\n" +
-                "            text-decoration: none;\n" +
-                "            padding: 12px 28px;\n" +
-                "            border-radius: 8px;\n" +
-                "            font-weight: bold;\n" +
-                "            margin: 15px 0;\n" +
-                "            text-align: center;\n" +
-                "        }\n" +
-                "        .footer {\n" +
-                "            background: #F5F7FA;\n" +
-                "            padding: 20px;\n" +
-                "            text-align: center;\n" +
-                "            font-size: 11px;\n" +
-                "            color: #888888;\n" +
-                "            border-top: 1px solid #E0E0E0;\n" +
-                "        }\n" +
-                "        .footer p {\n" +
-                "            margin: 5px 0;\n" +
-                "        }\n" +
-                "        .highlight {\n" +
-                "            color: #0052A5;\n" +
-                "            font-weight: bold;\n" +
-                "        }\n" +
-                "        hr {\n" +
-                "            border: none;\n" +
-                "            border-top: 1px solid #E0E0E0;\n" +
-                "            margin: 20px 0;\n" +
-                "        }\n" +
-                "    </style>\n" +
-                "</head>\n" +
-                "<body>\n" +
-                "    <div class=\"container\">\n" +
-                "        <div class=\"header\">\n" +
-                "            <div class=\"logo\">LEONI<span>|Quality</span></div>\n" +
-                "            <h1>📋 Nouveau Cahier des Charges</h1>\n" +
-                "        </div>\n" +
-                "        <div class=\"content\">\n" +
-                "            <div class=\"greeting\">\n" +
-                "                <strong>Bonjour,</strong><br>\n" +
-                "                Un nouveau cahier des charges vient d'être créé dans le système LEONI Quality Management.\n" +
-                "                Veuillez trouver ci-dessous les informations principales.\n" +
-                "            </div>\n" +
-                "\n" +
-                "            <div class=\"info-section\">\n" +
-                "                <div class=\"section-title\">\n" +
-                "                    <span>📄</span> INFORMATIONS GÉNÉRALES\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">N° Cahier :</div>\n" +
-                "                    <div class=\"info-value\"><span class=\"badge\">#" + chargeSheet.getId() + "</span></div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">N° Commande :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getOrderNumber()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Site de production :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getPlant()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Projet :</div>\n" +
-                "                    <div class=\"info-value\"><span class=\"highlight\">" + escapeHtml(chargeSheet.getProject()) + "</span></div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Référence Harnais :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getHarnessRef()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Émis par :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getIssuedBy()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Email contact :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getEmailAddress()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Téléphone :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getPhoneNumber()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Centre de coût :</div>\n" +
-                "                    <div class=\"info-value\">" + escapeHtml(chargeSheet.getCostCenterNumber()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Date de création :</div>\n" +
-                "                    <div class=\"info-value\">" + formatDate(chargeSheet.getDate()) + "</div>\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Date livraison souhaitée :</div>\n" +
-                "                    <div class=\"info-value\">" + formatDate(chargeSheet.getPreferredDeliveryDate()) + "</div>\n" +
-                "                </div>\n" +
-                "            </div>\n" +
-                "\n" +
-                "            <div class=\"info-section\">\n" +
-                "                <div class=\"section-title\">\n" +
-                "                    <span>🔧</span> DÉTAIL DES ITEMS\n" +
-                "                </div>\n" +
-                "                <div class=\"info-row\">\n" +
-                "                    <div class=\"info-label\">Nombre total d'items :</div>\n" +
-                "                    <div class=\"info-value\"><span class=\"badge\">" + numberOfItems + " item(s)</span></div>\n" +
-                "                </div>\n" +
-                "                <hr>\n" +
-                "                <div style=\"font-size: 12px; color: #666; margin-top: 10px;\">\n" +
-                "                    ⚠️ Les fiches techniques des modules de test doivent être complétées avant validation.\n" +
-                "                </div>\n" +
-                "            </div>\n" +
-                "\n" +
-                "            <div style=\"text-align: center;\">\n" +
-                "                <a href=\"https://leoni-quality.com/charge-sheets/" + chargeSheet.getId() + "\" class=\"action-button\">\n" +
-                "                    🔗 ACCÉDER AU CAHIER DES CHARGES\n" +
-                "                </a>\n" +
-                "            </div>\n" +
-                "\n" +
-                "            <hr>\n" +
-                "\n" +
-                "            <div style=\"font-size: 12px; color: #666; background: #FFF8E1; padding: 12px; border-radius: 8px; margin-top: 20px;\">\n" +
-                "                <strong>📌 À noter :</strong><br>\n" +
-                "                • Ce cahier des charges est actuellement en statut <strong>BROUILLON</strong><br>\n" +
-                "                • La validation par le service ING est requise avant transmission au fournisseur<br>\n" +
-                "                • Les délais de livraison doivent être respectés selon la date souhaitée\n" +
-                "            </div>\n" +
-                "        </div>\n" +
-                "\n" +
-                "        <div class=\"footer\">\n" +
-                "            <p><strong>LEONI Wiring Systems</strong> - Quality Management System</p>\n" +
-                "            <p>Cet email est généré automatiquement, merci de ne pas y répondre.</p>\n" +
-                "            <p>© 2026 LEONI Group - Tous droits réservés</p>\n" +
-                "        </div>\n" +
-                "    </div>\n" +
-                "</body>\n" +
-                "</html>";
+        StringBuilder text = new StringBuilder();
+
+        text.append("Objet : LEONI - Nouveau Cahier des Charges N°").append(chargeSheet.getOrderNumber()).append("\n\n");
+
+        text.append("Bonjour,\n\n");
+        text.append("Un nouveau cahier des charges vient d'être créé dans le système LEONI Quality Management.\n");
+        text.append("Veuillez trouver ci-dessous les informations principales.\n\n");
+
+        // Informations générales
+        text.append("=== INFORMATIONS GENERALES ===\n\n");
+        text.append("N° Cahier : #").append(chargeSheet.getId()).append("\n");
+        text.append("N° Commande : ").append(chargeSheet.getOrderNumber()).append("\n");
+        text.append("Site de production : ").append(chargeSheet.getPlant()).append("\n");
+        text.append("Projet : ").append(chargeSheet.getProject()).append("\n");
+        text.append("Référence Harnais : ").append(chargeSheet.getHarnessRef()).append("\n");
+        text.append("Émis par : ").append(chargeSheet.getIssuedBy()).append("\n");
+        text.append("Email contact : ").append(chargeSheet.getEmailAddress()).append("\n");
+        text.append("Téléphone : ").append(chargeSheet.getPhoneNumber()).append("\n");
+        text.append("Centre de coût : ").append(chargeSheet.getCostCenterNumber()).append("\n");
+        text.append("Date de création : ").append(formatDate(chargeSheet.getDate())).append("\n");
+        text.append("Date livraison souhaitée : ").append(formatDate(chargeSheet.getPreferredDeliveryDate())).append("\n\n");
+
+        // Détail des items
+        text.append("=== DETAIL DES ITEMS ===\n\n");
+        text.append("Nombre total d'items : ").append(numberOfItems).append(" item(s)\n\n");
+        text.append("⚠️ Les fiches techniques des modules de test doivent être complétées avant validation.\n\n");
+
+        // À noter
+        text.append("=== A NOTER ===\n");
+        text.append("- Ce cahier des charges est actuellement en statut BROUILLON\n");
+        text.append("- La validation par le service ING est requise avant transmission au fournisseur\n");
+        text.append("- Les délais de livraison doivent être respectés selon la date souhaitée\n\n");
+
+        text.append("---\n");
+        text.append("LEONI Wiring Systems - Quality Management System\n");
+        text.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
+
+        return text.toString();
     }
     /**
      * Échappe les caractères HTML pour éviter les injections et les erreurs d'affichage
@@ -1329,313 +1139,55 @@ public class ChargeSheetService {
     /**
      * Envoie une notification email pour la réception
      */
-    /**
-     * Envoie une notification email pour la réception
-     */
     private void sendReceptionNotification(ChargeSheet sheet, ReceptionDto.ReceptionRequestDto request,
-                                           List<ReceptionHistory> newHistories,
-                                           Map<Long, Integer> totalReceivedMap,
-                                           Map<Long, Integer> oldTotals,
-                                           User currentUser) {
+                                            List<ReceptionHistory> newHistories,
+                                            Map<Long, Integer> totalReceivedMap,
+                                            Map<Long, Integer> oldTotals,
+                                            User currentUser) {
 
-        String subject = "📦 LEONI - Réception enregistrée - Cahier N°" + sheet.getOrderNumber();
+        String subject = "LEONI - Réception enregistrée - Cahier N°" + sheet.getOrderNumber();
 
-        // Construction du message HTML professionnel
-        StringBuilder htmlMessage = new StringBuilder();
-        htmlMessage.append("<!DOCTYPE html>\n");
-        htmlMessage.append("<html>\n");
-        htmlMessage.append("<head>\n");
-        htmlMessage.append("    <meta charset=\"UTF-8\">\n");
-        htmlMessage.append("    <title>LEONI - Notification de réception</title>\n");
-        htmlMessage.append("    <style>\n");
-        htmlMessage.append("        * { margin: 0; padding: 0; box-sizing: border-box; }\n");
-        htmlMessage.append("        body {\n");
-        htmlMessage.append("            font-family: 'Segoe UI', Arial, Helvetica, sans-serif;\n");
-        htmlMessage.append("            background-color: #F0F2F5;\n");
-        htmlMessage.append("            margin: 0;\n");
-        htmlMessage.append("            padding: 20px;\n");
-        htmlMessage.append("            line-height: 1.5;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .container {\n");
-        htmlMessage.append("            max-width: 800px;\n");
-        htmlMessage.append("            margin: 0 auto;\n");
-        htmlMessage.append("            background: #FFFFFF;\n");
-        htmlMessage.append("            border-radius: 12px;\n");
-        htmlMessage.append("            overflow: hidden;\n");
-        htmlMessage.append("            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .header {\n");
-        htmlMessage.append("            background: linear-gradient(135deg, #003366 0%, #0052A5 100%);\n");
-        htmlMessage.append("            padding: 25px 20px;\n");
-        htmlMessage.append("            text-align: center;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .logo {\n");
-        htmlMessage.append("            font-size: 28px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            color: #FFFFFF;\n");
-        htmlMessage.append("            margin-bottom: 10px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .logo span {\n");
-        htmlMessage.append("            color: #00D4FF;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .header h1 {\n");
-        htmlMessage.append("            color: #FFFFFF;\n");
-        htmlMessage.append("            margin: 0;\n");
-        htmlMessage.append("            font-size: 22px;\n");
-        htmlMessage.append("            font-weight: normal;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .content {\n");
-        htmlMessage.append("            padding: 30px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .greeting {\n");
-        htmlMessage.append("            background: #E8F4FD;\n");
-        htmlMessage.append("            padding: 15px 20px;\n");
-        htmlMessage.append("            border-radius: 8px;\n");
-        htmlMessage.append("            margin-bottom: 25px;\n");
-        htmlMessage.append("            border-left: 4px solid #0052A5;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .greeting p {\n");
-        htmlMessage.append("            margin: 5px 0;\n");
-        htmlMessage.append("            color: #003366;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .info-section {\n");
-        htmlMessage.append("            background: #F8F9FC;\n");
-        htmlMessage.append("            border-radius: 8px;\n");
-        htmlMessage.append("            padding: 20px;\n");
-        htmlMessage.append("            margin-bottom: 25px;\n");
-        htmlMessage.append("            border: 1px solid #E0E0E0;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .section-title {\n");
-        htmlMessage.append("            font-size: 16px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            color: #003366;\n");
-        htmlMessage.append("            margin-bottom: 15px;\n");
-        htmlMessage.append("            padding-bottom: 8px;\n");
-        htmlMessage.append("            border-bottom: 2px solid #0052A5;\n");
-        htmlMessage.append("            display: flex;\n");
-        htmlMessage.append("            align-items: center;\n");
-        htmlMessage.append("            gap: 8px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .info-row {\n");
-        htmlMessage.append("            display: flex;\n");
-        htmlMessage.append("            margin-bottom: 10px;\n");
-        htmlMessage.append("            flex-wrap: wrap;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .info-label {\n");
-        htmlMessage.append("            width: 160px;\n");
-        htmlMessage.append("            color: #555555;\n");
-        htmlMessage.append("            font-weight: 600;\n");
-        htmlMessage.append("            font-size: 13px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .info-value {\n");
-        htmlMessage.append("            flex: 1;\n");
-        htmlMessage.append("            color: #222222;\n");
-        htmlMessage.append("            font-weight: 500;\n");
-        htmlMessage.append("            font-size: 13px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        table {\n");
-        htmlMessage.append("            width: 100%;\n");
-        htmlMessage.append("            border-collapse: collapse;\n");
-        htmlMessage.append("            margin-top: 10px;\n");
-        htmlMessage.append("            font-size: 12px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        th {\n");
-        htmlMessage.append("            background: #003366;\n");
-        htmlMessage.append("            color: #FFFFFF;\n");
-        htmlMessage.append("            padding: 10px;\n");
-        htmlMessage.append("            text-align: center;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        td {\n");
-        htmlMessage.append("            padding: 8px 10px;\n");
-        htmlMessage.append("            text-align: center;\n");
-        htmlMessage.append("            border-bottom: 1px solid #E0E0E0;\n");
-        htmlMessage.append("            background-color: #FFFFFF;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .badge-success {\n");
-        htmlMessage.append("            background: #D4EDDA;\n");
-        htmlMessage.append("            color: #155724;\n");
-        htmlMessage.append("            padding: 4px 12px;\n");
-        htmlMessage.append("            border-radius: 20px;\n");
-        htmlMessage.append("            font-size: 11px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            display: inline-block;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .badge-warning {\n");
-        htmlMessage.append("            background: #FFF3CD;\n");
-        htmlMessage.append("            color: #856404;\n");
-        htmlMessage.append("            padding: 4px 12px;\n");
-        htmlMessage.append("            border-radius: 20px;\n");
-        htmlMessage.append("            font-size: 11px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            display: inline-block;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .badge-info {\n");
-        htmlMessage.append("            background: #D1ECF1;\n");
-        htmlMessage.append("            color: #0C5460;\n");
-        htmlMessage.append("            padding: 4px 12px;\n");
-        htmlMessage.append("            border-radius: 20px;\n");
-        htmlMessage.append("            font-size: 11px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            display: inline-block;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .alert-success {\n");
-        htmlMessage.append("            background: #D4EDDA;\n");
-        htmlMessage.append("            border-left: 4px solid #28A745;\n");
-        htmlMessage.append("            padding: 15px;\n");
-        htmlMessage.append("            border-radius: 8px;\n");
-        htmlMessage.append("            margin-top: 20px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .alert-warning {\n");
-        htmlMessage.append("            background: #FFF3CD;\n");
-        htmlMessage.append("            border-left: 4px solid #FFC107;\n");
-        htmlMessage.append("            padding: 15px;\n");
-        htmlMessage.append("            border-radius: 8px;\n");
-        htmlMessage.append("            margin-top: 20px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .alert-title {\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            font-size: 14px;\n");
-        htmlMessage.append("            margin-bottom: 5px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .footer {\n");
-        htmlMessage.append("            background: #F5F7FA;\n");
-        htmlMessage.append("            padding: 20px;\n");
-        htmlMessage.append("            text-align: center;\n");
-        htmlMessage.append("            font-size: 11px;\n");
-        htmlMessage.append("            color: #888888;\n");
-        htmlMessage.append("            border-top: 1px solid #E0E0E0;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .footer p {\n");
-        htmlMessage.append("            margin: 5px 0;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .action-button {\n");
-        htmlMessage.append("            display: inline-block;\n");
-        htmlMessage.append("            background: linear-gradient(135deg, #003366 0%, #0052A5 100%);\n");
-        htmlMessage.append("            color: #FFFFFF;\n");
-        htmlMessage.append("            text-decoration: none;\n");
-        htmlMessage.append("            padding: 12px 28px;\n");
-        htmlMessage.append("            border-radius: 8px;\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            margin: 15px 0;\n");
-        htmlMessage.append("            text-align: center;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        .quantity-highlight {\n");
-        htmlMessage.append("            font-weight: bold;\n");
-        htmlMessage.append("            font-size: 14px;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("        hr {\n");
-        htmlMessage.append("            border: none;\n");
-        htmlMessage.append("            border-top: 1px solid #E0E0E0;\n");
-        htmlMessage.append("            margin: 20px 0;\n");
-        htmlMessage.append("        }\n");
-        htmlMessage.append("    </style>\n");
-        htmlMessage.append("</head>\n");
-        htmlMessage.append("<body>\n");
-        htmlMessage.append("    <div class=\"container\">\n");
-        htmlMessage.append("        <div class=\"header\">\n");
-        htmlMessage.append("            <div class=\"logo\">LEONI<span>|Quality</span></div>\n");
-        htmlMessage.append("            <h1>📦 RÉCEPTION DE MARCHANDISES</h1>\n");
-        htmlMessage.append("        </div>\n");
-        htmlMessage.append("        <div class=\"content\">\n");
+        StringBuilder textMessage = new StringBuilder();
 
-        // Message d'accueil
-        htmlMessage.append("            <div class=\"greeting\">\n");
-        htmlMessage.append("                <p><strong>Bonjour,</strong></p>\n");
-        htmlMessage.append("                <p>Une réception de marchandises vient d'être enregistrée dans le système LEONI Quality Management.</p>\n");
-        htmlMessage.append("                <p>Veuillez trouver ci-dessous le détail des produits reçus.</p>\n");
-        htmlMessage.append("            </div>\n");
+        textMessage.append("Objet : ").append(subject).append("\n\n");
+
+        textMessage.append("Bonjour,\n\n");
+        textMessage.append("Une réception de marchandises vient d'être enregistrée dans le système.\n\n");
 
         // Informations générales
-        htmlMessage.append("            <div class=\"info-section\">\n");
-        htmlMessage.append("                <div class=\"section-title\">\n");
-        htmlMessage.append("                    <span>📄</span> INFORMATIONS GÉNÉRALES\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">N° Cahier des charges :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\"><strong>").append(escapeHtml(sheet.getOrderNumber())).append("</strong></div>\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">Projet :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\">").append(escapeHtml(sheet.getProject())).append("</div>\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">Site de production :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\">").append(escapeHtml(sheet.getPlant())).append("</div>\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">N° Bon de livraison :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\"><strong>").append(escapeHtml(request.getDeliveryNoteNumber())).append("</strong></div>\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">Date de réception :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\">").append(formatDate(request.getReceptionDate())).append("</div>\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <div class=\"info-row\">\n");
-        htmlMessage.append("                    <div class=\"info-label\">Réceptionné par :</div>\n");
-        htmlMessage.append("                    <div class=\"info-value\">").append(escapeHtml(currentUser.getEmail())).append("</div>\n");
-        htmlMessage.append("                </div>\n");
+        textMessage.append("=== INFORMATIONS GENERALES ===\n\n");
+        textMessage.append("N° Cahier des charges : ").append(sheet.getOrderNumber()).append("\n");
+        textMessage.append("Projet : ").append(sheet.getProject()).append("\n");
+        textMessage.append("Site de production : ").append(sheet.getPlant()).append("\n");
+        textMessage.append("N° Bon de livraison : ").append(request.getDeliveryNoteNumber()).append("\n");
+        textMessage.append("Date de réception : ").append(formatDate(request.getReceptionDate())).append("\n");
+        textMessage.append("Réceptionné par : ").append(currentUser.getEmail()).append("\n");
         if (request.getComments() != null && !request.getComments().isEmpty()) {
-            htmlMessage.append("                <div class=\"info-row\">\n");
-            htmlMessage.append("                    <div class=\"info-label\">Commentaires :</div>\n");
-            htmlMessage.append("                    <div class=\"info-value\"><em>").append(escapeHtml(request.getComments())).append("</em></div>\n");
-            htmlMessage.append("                </div>\n");
+            textMessage.append("Commentaires : ").append(request.getComments()).append("\n");
         }
-        htmlMessage.append("            </div>\n");
+        textMessage.append("\n");
 
         // Détails des items reçus
-        htmlMessage.append("            <div class=\"info-section\">\n");
-        htmlMessage.append("                <div class=\"section-title\">\n");
-        htmlMessage.append("                    <span>📦</span> DÉTAIL DES ARTICLES REÇUS\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <table>\n");
-        htmlMessage.append("                    <thead>\n");
-        htmlMessage.append("                        <tr>\n");
-        htmlMessage.append("                            <th>Article N°</th>\n");
-        htmlMessage.append("                            <th>Quantité reçue</th>\n");
-        htmlMessage.append("                            <th>Total avant</th>\n");
-        htmlMessage.append("                            <th>Total après</th>\n");
-        htmlMessage.append("                            <th>Quantité commandée</th>\n");
-        htmlMessage.append("                            <th>Statut</th>\n");
-        htmlMessage.append("                        </tr>\n");
-        htmlMessage.append("                    </thead>\n");
-        htmlMessage.append("                    <tbody>\n");
-
+        textMessage.append("=== DETAIL DES ARTICLES REÇUS ===\n\n");
         for (ReceptionHistory history : newHistories) {
-            String status = history.getNewTotalReceived() >= history.getQuantityOrdered() ?
-                    "<span class='badge-success'>✓ COMPLET</span>" :
-                    "<span class='badge-warning'>⏳ PARTIEL (" + (history.getQuantityOrdered() - history.getNewTotalReceived()) + " restant)</span>";
+            textMessage.append("Article N° : ").append(history.getItem().getItemNumber()).append("\n");
+            textMessage.append("Quantité reçue : ").append(history.getQuantityReceived()).append("\n");
+            textMessage.append("Total avant : ").append(history.getPreviousTotalReceived()).append("\n");
+            textMessage.append("Total après : ").append(history.getNewTotalReceived()).append("\n");
+            textMessage.append("Quantité commandée : ").append(history.getQuantityOrdered()).append("\n");
 
-            htmlMessage.append("                        <tr>\n");
-            htmlMessage.append("                            <td><strong>").append(escapeHtml(history.getItem().getItemNumber())).append("</strong></td>\n");
-            htmlMessage.append("                            <td><span class='quantity-highlight' style='color: #28A745;'>+ ").append(history.getQuantityReceived()).append("</span></td>\n");
-            htmlMessage.append("                            <td>").append(history.getPreviousTotalReceived()).append("</td>\n");
-            htmlMessage.append("                            <td><strong>").append(history.getNewTotalReceived()).append("</strong></td>\n");
-            htmlMessage.append("                            <td>").append(history.getQuantityOrdered()).append("</td>\n");
-            htmlMessage.append("                            <td>").append(status).append("</td>\n");
-            htmlMessage.append("                        </tr>\n");
+            String status;
+            if (history.getNewTotalReceived() >= history.getQuantityOrdered()) {
+                status = "COMPLET";
+            } else {
+                int remaining = history.getQuantityOrdered() - history.getNewTotalReceived();
+                status = "PARTIEL (" + remaining + " restant)";
+            }
+            textMessage.append("Statut : ").append(status).append("\n\n");
         }
-        htmlMessage.append("                    </tbody>\n");
-        htmlMessage.append("                </table>\n");
-        htmlMessage.append("            </div>\n");
 
         // Récapitulatif complet
-        htmlMessage.append("            <div class=\"info-section\">\n");
-        htmlMessage.append("                <div class=\"section-title\">\n");
-        htmlMessage.append("                    <span>📊</span> RÉCAPITULATIF COMPLET PAR ARTICLE\n");
-        htmlMessage.append("                </div>\n");
-        htmlMessage.append("                <table>\n");
-        htmlMessage.append("                    <thead>\n");
-        htmlMessage.append("                        <tr>\n");
-        htmlMessage.append("                            <th>Article N°</th>\n");
-        htmlMessage.append("                            <th>Quantité commandée</th>\n");
-        htmlMessage.append("                            <th>Total reçu</th>\n");
-        htmlMessage.append("                            <th>Restant à recevoir</th>\n");
-        htmlMessage.append("                            <th>Statut</th>\n");
-        htmlMessage.append("                        </tr>\n");
-        htmlMessage.append("                    </thead>\n");
-        htmlMessage.append("                    <tbody>\n");
-
+        textMessage.append("=== RECAPITULATIF COMPLET PAR ARTICLE ===\n\n");
         for (ChargeSheetItem item : sheet.getItems()) {
             int totalReceived = totalReceivedMap.getOrDefault(item.getId(), 0);
             int quantityOrdered = item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0;
@@ -1643,24 +1195,19 @@ public class ChargeSheetService {
 
             String status;
             if (remaining == 0) {
-                status = "<span class='badge-success'>✓ COMPLET</span>";
+                status = "COMPLET";
             } else if (totalReceived > 0) {
-                status = "<span class='badge-warning'>⏳ PARTIEL</span>";
+                status = "PARTIEL";
             } else {
-                status = "<span class='badge-info'>⏳ EN ATTENTE</span>";
+                status = "EN ATTENTE";
             }
 
-            htmlMessage.append("                        <tr>\n");
-            htmlMessage.append("                            <td><strong>").append(escapeHtml(item.getItemNumber())).append("</strong></td>\n");
-            htmlMessage.append("                            <td>").append(quantityOrdered).append("</td>\n");
-            htmlMessage.append("                            <td><strong>").append(totalReceived).append("</strong></td>\n");
-            htmlMessage.append("                            <td>").append(remaining).append("</td>\n");
-            htmlMessage.append("                            <td>").append(status).append("</td>\n");
-            htmlMessage.append("                        </tr>\n");
+            textMessage.append("Article N° : ").append(item.getItemNumber()).append("\n");
+            textMessage.append("Quantité commandée : ").append(quantityOrdered).append("\n");
+            textMessage.append("Total reçu : ").append(totalReceived).append("\n");
+            textMessage.append("Restant à recevoir : ").append(remaining).append("\n");
+            textMessage.append("Statut : ").append(status).append("\n\n");
         }
-        htmlMessage.append("                    </tbody>\n");
-        htmlMessage.append("                </table>\n");
-        htmlMessage.append("            </div>\n");
 
         // Message de statut global
         boolean allComplete = totalReceivedMap.entrySet().stream().allMatch(entry -> {
@@ -1669,11 +1216,9 @@ public class ChargeSheetService {
         });
 
         if (allComplete) {
-            htmlMessage.append("            <div class=\"alert-success\">\n");
-            htmlMessage.append("                <div class=\"alert-title\">✅ RÉCEPTION COMPLÈTE</div>\n");
-            htmlMessage.append("                <p>Tous les articles commandés ont été reçus.</p>\n");
-            htmlMessage.append("                <p>Le cahier des charges passe automatiquement en statut <strong>RECEIVED_FROM_SUPPLIER</strong>.</p>\n");
-            htmlMessage.append("            </div>\n");
+            textMessage.append("=== RECEPTION COMPLETE ===\n");
+            textMessage.append("Tous les articles commandés ont été reçus.\n");
+            textMessage.append("Le cahier des charges passe automatiquement en statut RECEIVED_FROM_SUPPLIER.\n\n");
         } else {
             int remainingItems = 0;
             int totalRemaining = 0;
@@ -1685,40 +1230,22 @@ public class ChargeSheetService {
                     totalRemaining += (quantityOrdered - totalReceived);
                 }
             }
-            htmlMessage.append("            <div class=\"alert-warning\">\n");
-            htmlMessage.append("                <div class=\"alert-title\">⚠️ RÉCEPTION PARTIELLE</div>\n");
-            htmlMessage.append("                <p>Il reste <strong>").append(totalRemaining).append(" article(s)</strong> à recevoir répartis sur <strong>").append(remainingItems).append(" référence(s)</strong>.</p>\n");
-            htmlMessage.append("                <p>Une nouvelle notification sera envoyée lors de la prochaine réception.</p>\n");
-            htmlMessage.append("            </div>\n");
+            textMessage.append("=== RECEPTION PARTIELLE ===\n");
+            textMessage.append("Il reste ").append(totalRemaining).append(" article(s) à recevoir répartis sur ").append(remainingItems).append(" référence(s).\n");
+            textMessage.append("Une nouvelle notification sera envoyée lors de la prochaine réception.\n\n");
         }
 
-        // Bouton d'action
-        htmlMessage.append("            <div style=\"text-align: center;\">\n");
-        htmlMessage.append("                <a href=\"https://leoni-quality.com/charge-sheets/").append(sheet.getId()).append("/receptions\" class=\"action-button\">\n");
-        htmlMessage.append("                    🔗 CONSULTER L'HISTORIQUE DES RÉCEPTIONS\n");
-        htmlMessage.append("                </a>\n");
-        htmlMessage.append("            </div>\n");
+        textMessage.append("=== A NOTER ===\n");
+        textMessage.append("- Les fiches de conformité doivent être créées pour chaque article reçu\n");
+        textMessage.append("- Les articles partiellement reçus feront l'objet d'un suivi automatique\n");
+        textMessage.append("- En cas de non-conformité, veuillez créer une réclamation\n\n");
 
-        htmlMessage.append("            <hr>\n");
-        htmlMessage.append("            <div style=\"font-size: 12px; color: #666; background: #F8F9FC; padding: 12px; border-radius: 8px;\">\n");
-        htmlMessage.append("                <strong>📌 À noter :</strong><br>\n");
-        htmlMessage.append("                • Les fiches de conformité doivent être créées pour chaque article reçu<br>\n");
-        htmlMessage.append("                • Les articles partiellement reçus feront l'objet d'un suivi automatique<br>\n");
-        htmlMessage.append("                • En cas de non-conformité, veuillez créer une réclamation\n");
-        htmlMessage.append("            </div>\n");
-
-        htmlMessage.append("        </div>\n");
-        htmlMessage.append("        <div class=\"footer\">\n");
-        htmlMessage.append("            <p><strong>LEONI Wiring Systems</strong> - Quality Management System</p>\n");
-        htmlMessage.append("            <p>Cet email est généré automatiquement, merci de ne pas y répondre.</p>\n");
-        htmlMessage.append("            <p>© 2026 LEONI Group - Tous droits réservés</p>\n");
-        htmlMessage.append("        </div>\n");
-        htmlMessage.append("    </div>\n");
-        htmlMessage.append("</body>\n");
-        htmlMessage.append("</html>\n");
+        textMessage.append("---\n");
+        textMessage.append("LEONI Wiring Systems - Quality Management System\n");
+        textMessage.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
 
         // Envoyer la notification
-        notificationService.sendHtmlNotificationToProjectAndSiteUsers(subject, htmlMessage.toString(), sheet.getProject(), sheet.getPlant());
+        notificationService.sendNotificationToProjectAndSiteUsers(subject, textMessage.toString(), sheet.getProject(), sheet.getPlant());
     }
     private String formatDate(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) return "Non spécifiée";

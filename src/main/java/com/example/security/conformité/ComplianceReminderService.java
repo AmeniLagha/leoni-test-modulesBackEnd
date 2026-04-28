@@ -64,7 +64,7 @@ public class ComplianceReminderService {
     /**
      * Tâche programmée qui s'exécute tous les jours à 9h00
      */
-    @Scheduled(cron = "0 30 17 * * *" , zone = "Africa/Tunis")
+    @Scheduled(cron = "0 50 17 * * *" , zone = "Africa/Tunis")
     @Transactional(readOnly = true, timeout = 60)
     public void sendPendingComplianceReminders() {
         log.info("🔔 Démarrage de la vérification des rappels de conformité");
@@ -165,7 +165,7 @@ public class ComplianceReminderService {
 
         // Construire et envoyer l'email
         String subject = buildReminderSubject(item, daysSinceLastReception);
-        String htmlMessage = buildReminderHtml(sheet, item, pendingQuantity, existingCompliances, daysSinceLastReception);
+        String htmlMessage = buildReminderText(sheet, item, pendingQuantity, existingCompliances, daysSinceLastReception);
 
         for (User ppUser : ppUsers) {
             notificationService.sendHtmlNotificationToOneUser(subject, htmlMessage, ppUser.getEmail());
@@ -210,108 +210,52 @@ public class ComplianceReminderService {
     }
 
     /**
-     * Construit le HTML de l'email
+     * Construit l'email
      */
-    private String buildReminderHtml(ChargeSheet sheet, ChargeSheetItem item,
+    private String buildReminderText(ChargeSheet sheet, ChargeSheetItem item,
                                      int pendingQuantity, int existingCompliances,
                                      long daysSinceLastReception) {
 
         int totalReceived = pendingQuantity + existingCompliances;
-        int daysRemaining = 14 - (int) daysSinceLastReception;
 
-        String urgencyColor;
-        String urgencyBadge;
-        if (daysSinceLastReception >= 7) {
-            urgencyColor = "#FF4444";
-            urgencyBadge = "<span style='background: #FF4444; color: white; padding: 5px 15px; border-radius: 20px;'>⚠️ URGENT - " + pendingQuantity + " fiche(s) à créer immédiatement</span>";
-        } else if (daysSinceLastReception >= 3) {
-            urgencyColor = "#FFA500";
-            urgencyBadge = "<span style='background: #FFA500; color: white; padding: 5px 15px; border-radius: 20px;'>🔔 IMPORTANT - " + pendingQuantity + " fiche(s) à créer</span>";
-        } else {
-            urgencyColor = "#00D4FF";
-            urgencyBadge = "<span style='background: #00D4FF; color: white; padding: 5px 15px; border-radius: 20px;'>📋 Rappel - " + pendingQuantity + " fiche(s) à créer</span>";
-        }
+        StringBuilder text = new StringBuilder();
 
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>\n");
-        html.append("<html>\n");
-        html.append("<head>\n");
-        html.append("<style>\n");
-        html.append("body { font-family: Arial, sans-serif; background-color: #0A0E1A; margin: 0; padding: 20px; }\n");
-        html.append(".container { max-width: 650px; margin: 0 auto; background: #0F1525; border-radius: 20px; overflow: hidden; border: 1px solid rgba(0, 212, 255, 0.2); }\n");
-        html.append(".header { background: linear-gradient(135deg, #00D4FF, #0052CC); padding: 20px; text-align: center; }\n");
-        html.append(".header h1 { color: white; margin: 0; font-size: 24px; }\n");
-        html.append(".content { padding: 30px; }\n");
-        html.append(".info-section { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; }\n");
-        html.append(".info-section h3 { color: #00D4FF; margin-top: 0; margin-bottom: 15px; }\n");
-        html.append(".info-row { display: flex; margin-bottom: 10px; }\n");
-        html.append(".info-label { width: 180px; color: #888; font-weight: bold; }\n");
-        html.append(".info-value { color: #E0E0E0; }\n");
-        html.append(".urgent-box { background: ").append(urgencyColor).append("22; border-left: 4px solid ").append(urgencyColor).append("; padding: 15px; margin: 20px 0; border-radius: 8px; }\n");
-        html.append(".progress-bar-bg { background: #1A2335; border-radius: 10px; height: 30px; overflow: hidden; margin: 15px 0; }\n");
-        html.append(".progress-bar-fill { background: linear-gradient(90deg, #00D4FF, #0052CC); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }\n");
-        html.append(".action-button { background: linear-gradient(135deg, #00D4FF, #0052CC); color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; display: inline-block; margin-top: 15px; font-weight: bold; }\n");
-        html.append(".footer { background: rgba(0, 0, 0, 0.3); padding: 15px; text-align: center; font-size: 12px; color: #666; }\n");
-        html.append("</style>\n");
-        html.append("</head>\n");
-        html.append("<body>\n");
-        html.append("<div class=\"container\">\n");
-        html.append("<div class=\"header\">\n");
-        html.append("<h1>📋 CRÉATION DE FICHES DE CONFORMITÉ</h1>\n");
-        html.append("</div>\n");
-        html.append("<div class=\"content\">\n");
+        // Objet
+        text.append("Objet : Rappel - Création des fiches de conformité - Cahier ")
+                .append(sheet.getOrderNumber()).append("\n\n");
 
-        html.append("<div style=\"text-align: center; margin-bottom: 20px;\">\n");
-        html.append(urgencyBadge).append("\n");
-        html.append("</div>\n");
+        // Corps du message
+        text.append("Bonjour,\n\n");
+        text.append("Des modules réceptionnés pour l'item ci-dessous n'ont pas encore de fiches de conformité.\n\n");
 
-        html.append("<div class=\"urgent-box\">\n");
-        html.append("<strong>⚠️ Action requise (PP) :</strong> ").append(pendingQuantity).append(" module(s) ont été reçus mais n'ont pas encore de fiches de conformité.<br>\n");
-        html.append("📅 <strong>Jour ").append(daysSinceLastReception).append("/14</strong> - ").append(daysRemaining).append(" jour(s) restant(s) avant fin des rappels\n");
-        html.append("</div>\n");
+        // Cahier des charges
+        text.append("Cahier des charges :\n\n");
+        text.append("N° commande : ").append(sheet.getOrderNumber()).append("\n");
+        text.append("Projet : ").append(sheet.getProject()).append("\n");
+        text.append("Site : ").append(sheet.getPlant()).append("\n\n");
 
-        html.append("<div class=\"info-section\">\n");
-        html.append("<h3>📋 Informations du cahier</h3>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Cahier N°:</span><span class=\"info-value\">").append(sheet.getOrderNumber()).append("</span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Projet:</span><span class=\"info-value\">").append(sheet.getProject()).append("</span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Plant/Site:</span><span class=\"info-value\">").append(sheet.getPlant()).append("</span></div>\n");
-        html.append("</div>\n");
+        // Item concerné
+        text.append("Item concerné :\n\n");
+        text.append("N° item : ").append(item.getItemNumber()).append("\n");
+        text.append("Réf. Leoni : ").append(item.getHousingReferenceLeoni() != null ? item.getHousingReferenceLeoni() : "-").append("\n");
+        text.append("Réf. Client : ").append(item.getHousingReferenceSupplierCustomer() != null ? item.getHousingReferenceSupplierCustomer() : "-").append("\n\n");
 
-        html.append("<div class=\"info-section\">\n");
-        html.append("<h3>🔧 Informations de l'item</h3>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Item N°:</span><span class=\"info-value\">").append(item.getItemNumber()).append("</span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Réf. Leoni:</span><span class=\"info-value\">").append(item.getHousingReferenceLeoni() != null ? item.getHousingReferenceLeoni() : "-").append("</span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Réf. Client:</span><span class=\"info-value\">").append(item.getHousingReferenceSupplierCustomer() != null ? item.getHousingReferenceSupplierCustomer() : "-").append("</span></div>\n");
-        html.append("</div>\n");
+        // État des fiches
+        text.append("État des fiches :\n\n");
+        text.append("Quantité totale reçue : ").append(totalReceived).append("\n");
+        text.append("Fiches déjà créées : ").append(existingCompliances).append("\n");
+        text.append("Fiches restantes à créer : ").append(pendingQuantity).append("\n\n");
 
-        html.append("<div class=\"info-section\">\n");
-        html.append("<h3>📊 Statut des fiches de conformité</h3>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Quantité totale reçue:</span><span class=\"info-value\"><strong>").append(totalReceived).append("</strong></span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Fiches de conformité créées:</span><span class=\"info-value\"><strong style='color: #00FF88;'>").append(existingCompliances).append("</strong></span></div>\n");
-        html.append("<div class=\"info-row\"><span class=\"info-label\">Fiches restant à créer:</span><span class=\"info-value\"><strong style='color: #FFA500;'>").append(pendingQuantity).append("</strong></span></div>\n");
+        // Délai
+        text.append("Délai : Jour ").append(daysSinceLastReception).append("/14\n\n");
 
-        int percentageComplete = totalReceived > 0 ? (existingCompliances * 100 / totalReceived) : 0;
-        html.append("<div class=\"progress-bar-bg\">\n");
-        html.append("<div class=\"progress-bar-fill\" style=\"width: ").append(percentageComplete).append("%;\">").append(percentageComplete).append("%</div>\n");
-        html.append("</div>\n");
-        html.append("</div>\n");
+        // Conclusion
+        text.append("Merci de créer les fiches de conformité manquantes dès que possible.\n\n");
+        text.append("Cordialement,\n\n");
+        text.append("LEONI Tunisia\n");
+        text.append("Gestion des Cahiers des Charges\n");
 
-        html.append("<div style=\"text-align: center;\">\n");
-        html.append("<a href='https://votre-societe.com/compliance/create?itemId=").append(item.getId()).append("' class='action-button'>\n");
-        html.append("➕ CRÉER LES ").append(pendingQuantity).append(" FICHE(S) DE CONFORMITÉ\n");
-        html.append("</a>\n");
-        html.append("</div>\n");
-
-        html.append("</div>\n");
-        html.append("<div class=\"footer\">\n");
-        html.append("<p>© 2026 LEONI Group - Système de Gestion des Cahiers des Charges</p>\n");
-        html.append("<p>Ce rappel est automatique. Les rappels s'arrêteront automatiquement quand toutes les fiches seront créées.</p>\n");
-        html.append("</div>\n");
-        html.append("</div>\n");
-        html.append("</body>\n");
-        html.append("</html>");
-
-        return html.toString();
+        return text.toString();
     }
 
     /**
