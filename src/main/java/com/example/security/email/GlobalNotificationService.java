@@ -568,7 +568,7 @@ public class GlobalNotificationService {
                 helper.setFrom("noreply@leoni-system.com");
                 helper.setTo(recipient);
                 helper.setSubject("[Système Leoni] " + subject);
-                helper.setText(message, false); // false = texte brut, true = HTML
+                helper.setText(message, false); // false = TEXTE BRUT
                 mailSender.send(mimeMessage);
             }
 
