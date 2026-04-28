@@ -64,7 +64,7 @@ public class ComplianceReminderService {
     /**
      * Tâche programmée qui s'exécute tous les jours à 9h00
      */
-    @Scheduled(cron = "0 26 20 * * *" , zone = "Africa/Tunis")
+    @Scheduled(cron = "0 50 20 * * *" , zone = "Africa/Tunis")
     @Transactional(readOnly = true, timeout = 60)
     public void sendPendingComplianceReminders() {
         log.info("🔔 Démarrage de la vérification des rappels de conformité");
@@ -206,7 +206,7 @@ public class ComplianceReminderService {
         } else if (daysSinceLastReception >= 3) {
             urgency = "🔔 IMPORTANT - ";
         }
-        return urgency + "Rappel: Créer les fiches de conformité - Item #" + item.getItemNumber();
+        return urgency + "Rappel: Créer les fiches de conformité - Item #" + item.getHousingReferenceSupplierCustomer();
     }
 
     /**
@@ -236,7 +236,7 @@ public class ComplianceReminderService {
 
         // Item concerné
         text.append("Item concerné :\n\n");
-        text.append("N° item : ").append(item.getItemNumber()).append("\n");
+        text.append("N° item : ").append(item.getId()).append("\n");
         text.append("Réf. Leoni : ").append(item.getHousingReferenceLeoni() != null ? item.getHousingReferenceLeoni() : "-").append("\n");
         text.append("Réf. Client : ").append(item.getHousingReferenceSupplierCustomer() != null ? item.getHousingReferenceSupplierCustomer() : "-").append("\n\n");
 

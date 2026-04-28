@@ -562,14 +562,14 @@ public class GlobalNotificationService {
                 return;
             }
 
-            SimpleMailMessage email = new SimpleMailMessage();
-            email.setFrom("noreply@leoni-system.com");
-            email.setSubject("[Système Leoni] " + subject);
-            email.setText(message);
-
             for (String recipient : emails) {
-                email.setTo(recipient);
-                mailSender.send(email);
+                MimeMessage mimeMessage = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+                helper.setFrom("noreply@leoni-system.com");
+                helper.setTo(recipient);
+                helper.setSubject("[Système Leoni] " + subject);
+                helper.setText(message, false); // false = texte brut, true = HTML
+                mailSender.send(mimeMessage);
             }
 
             log.info("Notification envoyée à {} utilisateur(s) du projet {} et site {}", emails.size(), projet, site);
