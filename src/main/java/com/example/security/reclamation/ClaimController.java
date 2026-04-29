@@ -175,6 +175,7 @@ public class ClaimController {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put("total", claims.size());
+        summary.put("new", claims.stream().filter(c -> c.getStatus() == Claim.ClaimStatus.NEW).count());
         summary.put("inProgress", claims.stream().filter(c -> c.getStatus() == Claim.ClaimStatus.IN_PROGRESS).count());
         summary.put("resolved", claims.stream().filter(c -> c.getStatus() == Claim.ClaimStatus.RESOLVED).count());
         summary.put("closed", claims.stream().filter(c -> c.getStatus() == Claim.ClaimStatus.CLOSED).count());

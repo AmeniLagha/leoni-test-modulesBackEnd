@@ -234,7 +234,7 @@ public class ClaimService {
 
             // ✅ Notification à la nouvelle personne assignée (individuelle)
             if (dto.getAssignedTo() != null && !dto.getAssignedTo().isEmpty()) {
-                String subject = "🔔 Réclamation assignée - #" + updated.getId();
+                String subject = "🔔 Réclamation assignée - #" + updated.getTitle();
                 String message = String.format(
                         "Bonjour,\n\n" +
                                 "Une réclamation vous a été assignée.\n\n" +
