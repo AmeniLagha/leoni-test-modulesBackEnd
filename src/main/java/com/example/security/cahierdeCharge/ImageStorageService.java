@@ -43,14 +43,32 @@ public class ImageStorageService {
         return uploadDir + "/" + subFolder + "/" + filename;
     }
 
-    /**
-     * Récupère une image depuis un chemin complet
-     */
     public byte[] getImage(String fullPath) throws IOException {
-        Path filePath = Paths.get(fullPath);
+        // fullPath doit être comme "claims/filename.jpg"
+        // Nettoyer le chemin au cas où
+        String cleanPath = fullPath;
+        if (cleanPath.startsWith("./")) {
+            cleanPath = cleanPath.substring(2);
+        }
+        if (cleanPath.startsWith("uploads/")) {
+            cleanPath = cleanPath.substring(8); // enlever "uploads/"
+        }
+
+        // Construire le chemin complet
+        Path filePath = Paths.get(uploadDir, cleanPath);
+
+        System.out.println("=== DÉBOGAGE IMAGE ===");
+        System.out.println("fullPath original: " + fullPath);
+        System.out.println("cleanPath: " + cleanPath);
+        System.out.println("Chemin complet: " + filePath.toAbsolutePath());
+        System.out.println("Fichier existe: " + Files.exists(filePath));
+
+        if (!Files.exists(filePath)) {
+            throw new IOException("Fichier non trouvé: " + filePath.toAbsolutePath());
+        }
+
         return Files.readAllBytes(filePath);
     }
-
     /**
      * Supprime une image
      */

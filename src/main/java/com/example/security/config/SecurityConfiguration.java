@@ -29,7 +29,7 @@ public class SecurityConfiguration {
 
     private static final String[] WHITE_LIST_URL = {
             "/api/v1/auth/**",
-            
+
             "/v2/api-docs",
             "/v3/api-docs",
             "/v3/api-docs/**",
@@ -50,7 +50,8 @@ public class SecurityConfiguration {
             "/uploads/**",
             "/api/v1/sites",           // ✅ AJOUTER CETTE LIGNE
             "/api/v1/health",
-            "/api/v1/compliance/test-mail"
+            "/api/v1/compliance/test-mail",
+            "/api/v1/claims/debug-all-images"
 
 
 
@@ -86,7 +87,7 @@ public class SecurityConfiguration {
                         .requestMatchers(GET, "/api/v1/users/me").authenticated()
                         .requestMatchers(GET,  "/api/v1/users/project-emails").authenticated()
                         .requestMatchers(GET,"/api/v1/charge-sheets/stats").authenticated()
-                        
+                        .requestMatchers(GET,"api/v1/users/check-matricule").authenticated()
 
                         .requestMatchers(GET, "/api/v1/users/getUsers").hasAuthority(AJOUTE_USER_LISTE.getPermission())
                         .requestMatchers(POST, "/api/v1/auth/register").hasAuthority(AJOUTE_USER.getPermission())

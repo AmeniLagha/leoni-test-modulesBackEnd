@@ -1,5 +1,7 @@
 package com.example.security.cahierdeCharge;
 
+import com.example.security.reclamation.Claim;
+import com.example.security.reclamation.ClaimRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ChargeSheetImageController {
 
     private final ChargeSheetService chargeSheetService;
     private final ChargeSheetItemRepository itemRepository;
+    private final ClaimRepository claimRepository;
     private final ImageStorageService imageStorageService;
 
     private static final String CHARGE_SHEET_IMAGE_FOLDER = "charge-sheets";
@@ -134,7 +137,48 @@ public class ChargeSheetImageController {
             return ResponseEntity.status(500).build();
         }
     }
+    @GetMapping("/{id}/image")
+    @Operation(summary = "Afficher image", description = "Afficher l’image d’une réclamation")
+    @PreAuthorize("hasAuthority('claim:read')")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
+        try {
+            Claim claim = claimRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Claim not found"));
 
+            String imagePath = claim.getImagePath();
+            System.out.println("🔍 Récupération image pour claim " + id + ": " + imagePath);
+
+            if (imagePath == null || imagePath.isEmpty()) {
+                System.out.println("⚠️ Aucun chemin d'image trouvé");
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] imageData = imageStorageService.getImage(imagePath);
+
+            String contentType = "image/jpeg";
+            if (imagePath.toLowerCase().endsWith(".png")) {
+                contentType = "image/png";
+            } else if (imagePath.toLowerCase().endsWith(".gif")) {
+                contentType = "image/gif";
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.setContentLength(imageData.length);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(imageData);
+
+        } catch (IOException e) {
+            System.err.println("❌ Erreur récupération image: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println("❌ Erreur générale: " + e.getMessage());
+            return ResponseEntity.status(500).build();
+        }
+    }
     /**
      * Supprime l'image d'un item spécifique
      */

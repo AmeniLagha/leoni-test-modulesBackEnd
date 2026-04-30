@@ -189,10 +189,10 @@ public class TechnicalFileDto {
 
         private Long id;
         private String reference;
-
         private String createdBy;
         private LocalDate createdAt;
-
+        @JsonProperty("xCode")
+        private String xCode;
         private String updatedBy;
         private LocalDate updatedAt;
 

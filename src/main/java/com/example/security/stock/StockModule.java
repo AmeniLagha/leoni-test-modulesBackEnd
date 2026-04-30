@@ -43,6 +43,7 @@ public class StockModule {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id")
     @JsonIgnoreProperties({"projets", "active", "description"})
+    @JsonIgnore
     private Site site;
 
     @Column(name = "item_number")

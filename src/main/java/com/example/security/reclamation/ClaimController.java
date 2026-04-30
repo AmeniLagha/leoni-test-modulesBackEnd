@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -309,4 +314,49 @@ public class ClaimController {
         Map<String, Object> variation = service.getVariationBetweenMonths(project, month1, month2);
         return ResponseEntity.ok(variation);
     }
+    @GetMapping("/debug-all-images")
+    public ResponseEntity<Map<String, Object>> debugAllImages() {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> claimsWithImages = new ArrayList<>();
+
+        List<Claim> allClaims = repository.findAll();
+        for (Claim claim : allClaims) {
+            Map<String, Object> claimInfo = new HashMap<>();
+            claimInfo.put("id", claim.getId());
+            claimInfo.put("title", claim.getTitle());
+            claimInfo.put("imagePath", claim.getImagePath());
+
+            if (claim.getImagePath() != null && !claim.getImagePath().isEmpty()) {
+                // Vérifier si le fichier existe
+                Path filePath = Paths.get("uploads", claim.getImagePath());
+                claimInfo.put("fullPath", filePath.toAbsolutePath().toString());
+                claimInfo.put("fileExists", Files.exists(filePath));
+            }
+
+            claimsWithImages.add(claimInfo);
+        }
+
+        result.put("claimsWithImages", claimsWithImages);
+
+        // Lister tous les fichiers dans uploads/claims - avec vérification
+        Path claimsDir = Paths.get("uploads/claims");
+        List<String> files = new ArrayList<>();
+        if (Files.exists(claimsDir) && Files.isDirectory(claimsDir)) {
+            try {
+                Files.list(claimsDir).forEach(p -> files.add(p.getFileName().toString()));
+            } catch (IOException e) {
+                files.add("Erreur de lecture: " + e.getMessage());
+            }
+        } else {
+            files.add("Dossier non trouvé: " + claimsDir.toAbsolutePath().toString());
+        }
+        result.put("filesInUploadsClaims", files);
+
+        // Ajouter le chemin absolu du dossier pour debug
+        result.put("uploadsAbsolutePath", Paths.get("uploads").toAbsolutePath().toString());
+        result.put("uploadsExists", Files.exists(Paths.get("uploads")));
+
+        return ResponseEntity.ok(result);
+    }
+
 }
