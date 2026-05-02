@@ -11,7 +11,6 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN rm -f src/main/resources/application-dev.properties
 
-# 🔥 SKIP LES TESTS PENDANT LE BUILD DOCKER
 RUN mvn clean package -DskipTests -Pdocker -Dfile.encoding=UTF-8
 
 # Étape 2: Exécution avec JRE
@@ -23,6 +22,7 @@ RUN mkdir -p /app/uploads
 
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
 
+# 🔥 Exposer le bon port (8081)
 EXPOSE 8081
 
 ENV SPRING_PROFILES_ACTIVE=docker
