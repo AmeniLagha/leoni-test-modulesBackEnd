@@ -54,7 +54,7 @@ jobs:
 
   # ==================== TESTS SELENIUM (End-to-End) ====================
   selenium-tests:
-    needs: build-and-test
+    needs: build-and-test  # ← Dépend de la réussite des tests JUnit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
           path: target/cucumber-reports/
           retention-days: 7
 
-  # ==================== DOCKER BUILD & RELEASE ====================
+    # ==================== DOCKER BUILD & RELEASE ====================
   docker-build:
     needs: selenium-tests
     runs-on: ubuntu-latest
@@ -116,18 +116,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image with SigNoz
+      - name: Build Docker image (no cache)
         run: |
-          docker build \
-            --build-arg SIGNOZ_INGESTION_KEY=${{ secrets.SIGNOZ_INGESTION_KEY }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
-            .
+          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} .
 
       - name: Push Docker images
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
 
   # ==================== DEPLOY ====================
   deploy:
