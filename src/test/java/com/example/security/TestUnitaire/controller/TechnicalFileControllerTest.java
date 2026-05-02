@@ -31,6 +31,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -99,8 +100,13 @@ class TechnicalFileControllerTest {
     private TechnicalFile testTechnicalFile;
     private TechnicalFileItem testTechnicalFileItem;
 
+    private String uniqueId;
+
     @BeforeEach
     void setUp() {
+        // Générer un ID unique pour cette exécution
+        uniqueId = UUID.randomUUID().toString().substring(0, 8);
+
         // Nettoyage
         historyRepository.deleteAll();
         technicalFileItemRepository.deleteAll();
@@ -112,25 +118,25 @@ class TechnicalFileControllerTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site
+        // Création site avec nom UNIQUE
         testSite = new Site();
-        testSite.setName("MH1");
+        testSite.setName("MH1_" + uniqueId);  // ← Nom unique
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet
+        // Création projet avec nom UNIQUE
         testProjet = new Projet();
-        testProjet.setName("FORD");
+        testProjet.setName("FORD_" + uniqueId);  // ← Nom unique
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
         // Création utilisateurs
-        ppUser = createUser("pp@test.com", "pp123", Role.PP, 10001);
-        mcUser = createUser("mc@test.com", "mc123", Role.MC, 10002);
-        mpUser = createUser("mp@test.com", "mp123", Role.MP, 10003);
-        ptUser = createUser("pt@test.com", "pt123", Role.PT, 10004);
-        ingUser = createUser("ing@test.com", "ing123", Role.ING, 10005);
-        adminUser = createUser("admin@test.com", "admin123", Role.ADMIN, 10000);
+        ppUser = createUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
+        mcUser = createUser("mc_" + uniqueId + "@test.com", "mc123", Role.MC, 10002);
+        mpUser = createUser("mp_" + uniqueId + "@test.com", "mp123", Role.MP, 10003);
+        ptUser = createUser("pt_" + uniqueId + "@test.com", "pt123", Role.PT, 10004);
+        ingUser = createUser("ing_" + uniqueId + "@test.com", "ing123", Role.ING, 10005);
+        adminUser = createUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
 
         // Génération des tokens
         ppToken = jwtService.generateToken(ppUser);
@@ -147,11 +153,11 @@ class TechnicalFileControllerTest {
         saveToken(ingUser, ingToken);
         saveToken(adminUser, adminToken);
 
-        // Création cahier de test
+        // Création cahier de test avec projet unique
         testChargeSheet = ChargeSheet.builder()
-                .plant("MH1")
-                .project("FORD")
-                .orderNumber("ORD-001")
+                .plant("MH1_" + uniqueId)
+                .project("FORD_" + uniqueId)
+                .orderNumber("ORD-001_" + uniqueId)
                 .status(ChargeSheetStatus.VALIDATED_PT)
                 .createdBy(ingUser.getEmail())
                 .createdAt(LocalDate.now())
@@ -161,7 +167,7 @@ class TechnicalFileControllerTest {
         // Création item de test
         testItem = ChargeSheetItem.builder()
                 .chargeSheet(testChargeSheet)
-                .itemNumber("1")
+                .itemNumber("1_" + uniqueId)
                 .quantityOfTestModules(5)
                 .itemStatus("TECH_FILLED")
                 .createdBy(ingUser.getEmail())
@@ -171,30 +177,25 @@ class TechnicalFileControllerTest {
 
         // Création dossier technique
         testTechnicalFile = TechnicalFile.builder()
-                .reference("TF-001")
+                .reference("TF-001_" + uniqueId)
                 .createdBy(ppUser.getEmail())
                 .createdAt(LocalDate.now())
                 .build();
         testTechnicalFile = technicalFileRepository.save(testTechnicalFile);
 
-        // ✅ SUPPRIME L'INITIALISATION DE LA COLLECTION
-        // if (testTechnicalFile.getTechnicalFileItems() == null) {
-        //     testTechnicalFile.setTechnicalFileItems(new ArrayList<>());
-        // }
-
-        // Création item dossier technique - SANS ajouter à la collection manuellement
+        // Création item dossier technique
         testTechnicalFileItem = TechnicalFileItem.builder()
                 .technicalFile(testTechnicalFile)
                 .chargeSheetItem(testItem)
                 .technicianName("John Doe")
-                .position("Position 1")
+                .position("Position 1_" + uniqueId)
                 .validationStatus(TechnicalFileItemStatus.DRAFT)
                 .createdBy(ppUser.getEmail())
                 .createdAt(LocalDate.now())
                 .build();
         testTechnicalFileItem = technicalFileItemRepository.save(testTechnicalFileItem);
 
-        // ✅ AJOUTER L'ITEM À LA COLLECTION DU DOSSIER TECHNIQUE
+        // Ajouter l'item à la collection du dossier technique
         if (testTechnicalFile.getTechnicalFileItems() == null) {
             testTechnicalFile.setTechnicalFileItems(new ArrayList<>());
         }
@@ -215,6 +216,8 @@ class TechnicalFileControllerTest {
                 .build();
         return userRepository.save(user);
     }
+
+
 
     private void saveToken(User user, String token) {
         Token tokenEntity = Token.builder()
@@ -288,7 +291,7 @@ class TechnicalFileControllerTest {
         mockMvc.perform(get("/api/v1/technical-files/" + testTechnicalFile.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reference").value("TF-001"));
+                .andExpect(jsonPath("$.reference").value("TF-001_" + uniqueId));
     }
 
     // ==================== PUT /api/v1/technical-files/{id} ====================
