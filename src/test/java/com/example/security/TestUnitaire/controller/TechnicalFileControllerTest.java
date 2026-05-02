@@ -1,10 +1,8 @@
 package com.example.security.TestUnitaire.controller;
 
-import com.example.security.auth.AuthenticationService;
 import com.example.security.cahierdeCharge.*;
 import com.example.security.config.JwtService;
 import com.example.security.fichierTechnique.*;
-import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistory;
 import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistoryRepository;
 import com.example.security.projet.Projet;
 import com.example.security.projet.ProjetRepository;
@@ -384,13 +382,24 @@ class TechnicalFileControllerTest {
 
     @Test
     void validateItem_AsMc_ShouldValidateAfterPp() throws Exception {
-        // ✅ D'abord valider par PP via l'API
-        mockMvc.perform(put("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/validate")
-                        .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+        // Créer un item déjà validé par PP
+        TechnicalFileItem preValidatedItem = TechnicalFileItem.builder()
+                .technicalFile(testTechnicalFile)
+                .chargeSheetItem(testItem)
+                .technicianName("Pre Validated")
+                .position("Position X")
+                .validationStatus(TechnicalFileItemStatus.VALIDATED_PP)  // ← DÉJÀ VALIDÉ
+                .createdBy(ppUser.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+        preValidatedItem = technicalFileItemRepository.save(preValidatedItem);
 
-        // ✅ Ensuite valider par MC via l'API
-        mockMvc.perform(put("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/validate")
+        // Ajouter au dossier
+        testTechnicalFile.getTechnicalFileItems().add(preValidatedItem);
+        technicalFileRepository.save(testTechnicalFile);
+
+        // Valider par MC
+        mockMvc.perform(put("/api/v1/technical-files/items/" + preValidatedItem.getId() + "/validate")
                         .header("Authorization", "Bearer " + mcToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.validationStatus").value("VALIDATED_MC"));
