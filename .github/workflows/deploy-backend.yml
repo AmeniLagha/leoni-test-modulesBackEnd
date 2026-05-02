@@ -54,7 +54,7 @@ jobs:
 
   # ==================== TESTS SELENIUM (End-to-End) ====================
   selenium-tests:
-    needs: build-and-test
+    needs: build-and-test  # ← Dépend de la réussite des tests JUnit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +103,7 @@ jobs:
 
   # ==================== DOCKER BUILD & RELEASE ====================
   docker-build:
-    needs: selenium-tests
+    needs: selenium-tests  # ← Dépend de la réussite des tests Selenium
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
@@ -116,18 +116,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image with SigNoz
-        run: |
-          docker build \
-            --build-arg SIGNOZ_INGESTION_KEY=${{ secrets.SIGNOZ_INGESTION_KEY }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
-            .
-
-      - name: Push Docker images
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # ==================== DEPLOY ====================
   deploy:
