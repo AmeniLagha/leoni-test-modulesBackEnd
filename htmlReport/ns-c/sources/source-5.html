@@ -1,0 +1,108 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ClaimRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.reclamation</a>
+</div>
+
+<h1>Coverage Summary for Class: ClaimRepository (com.example.security.reclamation)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ClaimRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.reclamation;
+&nbsp;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface ClaimRepository extends JpaRepository&lt;Claim, Long&gt; {
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByChargeSheetId(Long chargeSheetId);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByReportedBy(String reportedBy);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByAssignedTo(String assignedTo);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByStatus(Claim.ClaimStatus status);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByPriority(Claim.Priority priority);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByCategory(String category);
+&nbsp;
+&nbsp;    List&lt;Claim&gt; findByRelatedToAndRelatedId(String relatedTo, Long relatedId);
+&nbsp;    // Compter les réclamations par mois pour tous les projets (Admin)
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) as month, COUNT(c.id) as count &quot; +
+&nbsp;            &quot;FROM claim c &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForAllProjects();
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(c.reported_date, &#39;%Y-%m&#39;) as month, COUNT(c.id) as count &quot; +
+&nbsp;            &quot;FROM claim c &quot; +
+&nbsp;            &quot;JOIN charge_sheet cs ON c.charge_sheet_id = cs.id &quot; +
+&nbsp;            &quot;WHERE cs.project = :project &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(c.reported_date, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(c.reported_date, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForProject(@Param(&quot;project&quot;) String project);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

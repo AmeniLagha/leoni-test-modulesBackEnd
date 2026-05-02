@@ -1,0 +1,166 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ReceptionHistoryRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.reception</a>
+</div>
+
+<h1>Coverage Summary for Class: ReceptionHistoryRepository (com.example.security.reception)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ReceptionHistoryRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.reception;
+&nbsp;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
+&nbsp;import java.time.LocalDate;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface ReceptionHistoryRepository extends JpaRepository&lt;ReceptionHistory, Long&gt; {
+&nbsp;
+&nbsp;    List&lt;ReceptionHistory&gt; findByChargeSheetId(Long chargeSheetId);
+&nbsp;
+&nbsp;    List&lt;ReceptionHistory&gt; findByChargeSheetIdOrderByCreatedAtDesc(Long chargeSheetId);
+&nbsp;
+&nbsp;    List&lt;ReceptionHistory&gt; findByItemId(Long itemId);
+&nbsp;
+&nbsp;    @Query(&quot;SELECT r FROM ReceptionHistory r WHERE r.item.id = :itemId ORDER BY r.createdAt ASC&quot;)
+&nbsp;    List&lt;ReceptionHistory&gt; findByItemIdOrderByCreatedAtAsc(@Param(&quot;itemId&quot;) Long itemId);
+&nbsp;
+&nbsp;    @Query(&quot;SELECT SUM(r.quantityReceived) FROM ReceptionHistory r WHERE r.item.id = :itemId&quot;)
+&nbsp;    Integer sumQuantityReceivedByItemId(@Param(&quot;itemId&quot;) Long itemId);
+&nbsp;
+&nbsp;    List&lt;ReceptionHistory&gt; findByItemIdOrderByReceptionDateDesc(Long itemId);
+&nbsp;    // ✅ Statistiques par mois - CORRIGÉ
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT 
+&nbsp;            FUNCTION(&#39;YEAR&#39;, r.receptionDate) as year,
+&nbsp;            FUNCTION(&#39;MONTH&#39;, r.receptionDate) as month,
+&nbsp;            SUM(r.quantityReceived) as totalReceived,
+&nbsp;            COUNT(DISTINCT r.item.id) as numberOfItems,
+&nbsp;            COUNT(DISTINCT r.chargeSheet.id) as numberOfSheets
+&nbsp;        FROM ReceptionHistory r
+&nbsp;        WHERE r.receptionDate BETWEEN :startDate AND :endDate
+&nbsp;        GROUP BY FUNCTION(&#39;YEAR&#39;, r.receptionDate), FUNCTION(&#39;MONTH&#39;, r.receptionDate)
+&nbsp;        ORDER BY FUNCTION(&#39;YEAR&#39;, r.receptionDate) DESC, FUNCTION(&#39;MONTH&#39;, r.receptionDate) DESC
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Object[]&gt; getMonthlyReceptionStats(@Param(&quot;startDate&quot;) LocalDate startDate,
+&nbsp;                                            @Param(&quot;endDate&quot;) LocalDate endDate);
+&nbsp;
+&nbsp;    // ✅ Statistiques par mois avec filtre projet et site - CORRIGÉ
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT 
+&nbsp;            FUNCTION(&#39;YEAR&#39;, r.receptionDate) as year,
+&nbsp;            FUNCTION(&#39;MONTH&#39;, r.receptionDate) as month,
+&nbsp;            SUM(r.quantityReceived) as totalReceived,
+&nbsp;            COUNT(DISTINCT r.item.id) as numberOfItems,
+&nbsp;            COUNT(DISTINCT r.chargeSheet.id) as numberOfSheets
+&nbsp;        FROM ReceptionHistory r
+&nbsp;        WHERE r.receptionDate BETWEEN :startDate AND :endDate
+&nbsp;        AND (:project IS NULL OR r.chargeSheet.project = :project)
+&nbsp;        AND (:site IS NULL OR r.chargeSheet.plant = :site)
+&nbsp;        GROUP BY FUNCTION(&#39;YEAR&#39;, r.receptionDate), FUNCTION(&#39;MONTH&#39;, r.receptionDate)
+&nbsp;        ORDER BY FUNCTION(&#39;YEAR&#39;, r.receptionDate) DESC, FUNCTION(&#39;MONTH&#39;, r.receptionDate) DESC
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Object[]&gt; getMonthlyReceptionStatsFiltered(@Param(&quot;startDate&quot;) LocalDate startDate,
+&nbsp;                                                    @Param(&quot;endDate&quot;) LocalDate endDate,
+&nbsp;                                                    @Param(&quot;project&quot;) String project,
+&nbsp;                                                    @Param(&quot;site&quot;) String site);
+&nbsp;
+&nbsp;    // ✅ Quantité totale reçue par mois pour chaque item - CORRIGÉ
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT 
+&nbsp;            FUNCTION(&#39;YEAR&#39;, r.receptionDate) as year,
+&nbsp;            FUNCTION(&#39;MONTH&#39;, r.receptionDate) as month,
+&nbsp;            r.item.id as itemId,
+&nbsp;            r.item.itemNumber as itemNumber,
+&nbsp;            SUM(r.quantityReceived) as quantityReceived
+&nbsp;        FROM ReceptionHistory r
+&nbsp;        WHERE r.receptionDate BETWEEN :startDate AND :endDate
+&nbsp;        GROUP BY FUNCTION(&#39;YEAR&#39;, r.receptionDate), FUNCTION(&#39;MONTH&#39;, r.receptionDate), r.item.id, r.item.itemNumber
+&nbsp;        ORDER BY FUNCTION(&#39;YEAR&#39;, r.receptionDate) DESC, FUNCTION(&#39;MONTH&#39;, r.receptionDate) DESC, quantityReceived DESC
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Object[]&gt; getItemMonthlyReceptionStats(@Param(&quot;startDate&quot;) LocalDate startDate,
+&nbsp;                                                @Param(&quot;endDate&quot;) LocalDate endDate);
+&nbsp;
+&nbsp;    // ✅ Quantité totale reçue (globale)
+&nbsp;    @Query(&quot;SELECT COALESCE(SUM(r.quantityReceived), 0) FROM ReceptionHistory r&quot;)
+&nbsp;    Long getTotalQuantityReceived();
+&nbsp;
+&nbsp;    // ✅ Quantité totale reçue par projet
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT r.chargeSheet.project, COALESCE(SUM(r.quantityReceived), 0)
+&nbsp;        FROM ReceptionHistory r
+&nbsp;        GROUP BY r.chargeSheet.project
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Object[]&gt; getTotalQuantityByProject();
+&nbsp;
+&nbsp;    // ✅ Quantité totale reçue par site
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT r.chargeSheet.plant, COALESCE(SUM(r.quantityReceived), 0)
+&nbsp;        FROM ReceptionHistory r
+&nbsp;        GROUP BY r.chargeSheet.plant
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Object[]&gt; getTotalQuantityBySite();
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

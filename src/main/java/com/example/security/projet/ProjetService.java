@@ -4,8 +4,11 @@ package com.example.security.projet;
 import com.example.security.site.Site;
 import com.example.security.site.SiteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,7 +27,7 @@ public class ProjetService {
 
     public List<ProjetDto> getProjetsBySite(Long siteId) {
         Site site = siteRepository.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
         return site.getProjets().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -32,14 +35,14 @@ public class ProjetService {
 
     public ProjetDto getProjetById(Long id) {
         Projet projet = projetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Projet non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé"));
         return convertToDto(projet);
     }
 
     @Transactional
     public ProjetDto createProjet(ProjetDto dto) {
         if (projetRepository.findByName(dto.getName()).isPresent()) {
-            throw new RuntimeException("Un projet avec ce nom existe déjà");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un projet avec ce nom existe déjà");
         }
 
         Projet projet = Projet.builder()
@@ -60,11 +63,11 @@ public class ProjetService {
     @Transactional
     public ProjetDto updateProjet(Long id, ProjetDto dto) {
         Projet projet = projetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Projet non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé"));
 
         if (dto.getName() != null && !dto.getName().equals(projet.getName())) {
             if (projetRepository.findByName(dto.getName()).isPresent()) {
-                throw new RuntimeException("Un projet avec ce nom existe déjà");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Un projet avec ce nom existe déjà");
             }
             projet.setName(dto.getName());
         }
@@ -87,7 +90,7 @@ public class ProjetService {
     @Transactional
     public void deleteProjet(Long id) {
         Projet projet = projetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Projet non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé"));
         projetRepository.delete(projet);
     }
 
@@ -104,7 +107,7 @@ public class ProjetService {
     // ProjetService.java - Ajouter cette méthode
     public List<ProjetDto> getProjetsBySiteName(String siteName) {
         Site site = siteRepository.findByName(siteName)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé: " + siteName));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé: " + siteName));
 
         return site.getProjets().stream()
                 .filter(Projet::isActive)

@@ -16,10 +16,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -38,19 +40,19 @@ public class AuthenticationService {
 
     public AuthenticationResponse register(RegisterRequest request) {
         if (repository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email déjà utilisé");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
         }
 
         // Vérifier si le matricule existe déjà
         if (repository.existsByMatricule(request.getMatricule())) {
-            throw new RuntimeException("Matricule déjà utilisé");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Matricule déjà utilisé"); // ✅ Modifié
         }
         Site site = siteRepository.findByName(request.getSiteName())
-                .orElseThrow(() -> new RuntimeException("Site non trouvé: " + request.getSiteName()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé: " + request.getSiteName()));
         Set<Projet> projets = new HashSet<>();
         for (String projetName : request.getProjets()) {
             Projet projet = projetRepository.findByName(projetName)
-                    .orElseThrow(() -> new RuntimeException("Projet non trouvé: " + projetName));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé: " + projetName));
             projets.add(projet);
         }
         var user = User.builder()
@@ -86,10 +88,10 @@ public class AuthenticationService {
         // ✅ Vérification du site SEULEMENT si l'utilisateur n'est pas ADMIN
         if (user.getRole() != Role.ADMIN) {
             if (request.getSiteName() == null || request.getSiteName().isEmpty()) {
-                throw new RuntimeException("Veuillez sélectionner un site");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Veuillez sélectionner un site");
             }
             if (user.getSite() == null || !user.getSite().getName().equals(request.getSiteName())) {
-                throw new RuntimeException("Vous n'avez pas accès à ce site");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'avez pas accès à ce site");
             }
         }
         // Si ADMIN → pas de vérification de site, il voit tout

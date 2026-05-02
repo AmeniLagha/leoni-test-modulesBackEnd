@@ -1,0 +1,948 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > GlobalNotificationService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.email</a>
+</div>
+
+<h1>Coverage Summary for Class: GlobalNotificationService (com.example.security.email)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">GlobalNotificationService</td>
+<td class="coverageStat">
+  <span class="percent">
+    5,6%
+  </span>
+  <span class="absValue">
+    (2/36)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (2/250)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">GlobalNotificationService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    5,6%
+  </span>
+  <span class="absValue">
+    (2/36)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (2/250)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.email;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheet;
+&nbsp;import com.example.security.reclamation.Claim;
+&nbsp;import com.example.security.user.UserRepository;
+&nbsp;import jakarta.mail.MessagingException;
+&nbsp;import jakarta.mail.internet.MimeMessage;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import lombok.extern.slf4j.Slf4j;
+&nbsp;import org.springframework.mail.SimpleMailMessage;
+&nbsp;import org.springframework.mail.javamail.JavaMailSender;
+&nbsp;import org.springframework.mail.javamail.MimeMessageHelper;
+&nbsp;import org.springframework.scheduling.annotation.Async;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;
+<b class="fc">&nbsp;@Slf4j</b>
+&nbsp;@Service
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class GlobalNotificationService {
+&nbsp;
+&nbsp;    private final JavaMailSender mailSender;
+&nbsp;    private final UserRepository userRepository;
+&nbsp;
+&nbsp;    @Async
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public void sendNotificationToAllUsers(String subject, String message) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;String&gt; allUserEmails = userRepository.findAllActiveUserEmails();</b>
+&nbsp;
+<b class="nc">&nbsp;            if (allUserEmails.isEmpty()) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Aucun utilisateur actif trouvé pour envoyer la notification&quot;);</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Envoi de notification à {} utilisateurs: {}&quot;, allUserEmails.size(), subject);</b>
+&nbsp;
+<b class="nc">&nbsp;            SimpleMailMessage email = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;            email.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;            email.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;            email.setText(message);</b>
+&nbsp;
+&nbsp;            // Envoyer à chaque utilisateur individuellement
+<b class="nc">&nbsp;            for (String recipient : allUserEmails) {</b>
+&nbsp;                try {
+<b class="nc">&nbsp;                    email.setTo(recipient);</b>
+<b class="nc">&nbsp;                    mailSender.send(email);</b>
+<b class="nc">&nbsp;                    log.debug(&quot;Notification envoyée à: {}&quot;, recipient);</b>
+<b class="nc">&nbsp;                    Thread.sleep(50); // Petit délai pour éviter le spam</b>
+&nbsp;                } catch (InterruptedException e) {
+<b class="nc">&nbsp;                    Thread.currentThread().interrupt();</b>
+<b class="nc">&nbsp;                    log.error(&quot;Interruption lors de l&#39;envoi à {}&quot;, recipient, e);</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                    log.error(&quot;Erreur lors de l&#39;envoi à {}: {}&quot;, recipient, e.getMessage());</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification envoyée avec succès à tous les utilisateurs&quot;);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur lors de l&#39;envoi de la notification globale: {}&quot;, e.getMessage(), e);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyChargeSheetCreated(Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = &quot;Nouveau Cahier des Charges&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;📋 **NOUVEAU CAHIER DES CHARGES CRÉÉ**\n\n&quot; +
+&nbsp;                        &quot;Un nouveau cahier des charges a été créé dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Cahier:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Créé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous au système pour consulter le nouveau cahier des charges.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyChargeSheetUpdated(Long chargeSheetId, String actionType, String performedBy, String role) {
+<b class="nc">&nbsp;        String subject = &quot;Cahier des Charges &quot; + actionType;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;📋 **CAHIER DES CHARGES %s**\n\n&quot; +
+&nbsp;                        &quot;Un cahier des charges a été %s dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Cahier:** %d\n&quot; +
+&nbsp;                        &quot;🔧 **Action:** %s\n&quot; +
+&nbsp;                        &quot;👤 **Effectué par:** %s (%s)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications apportées.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                actionType, actionType.toLowerCase(), chargeSheetId, actionType, performedBy, role, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyComplianceCreated(Long complianceId, Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = &quot;Nouvelle Fiche de Conformité&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;✅ **NOUVELLE FICHE DE CONFORMITÉ CRÉÉE**\n\n&quot; +
+&nbsp;                        &quot;Une nouvelle fiche de conformité a été créée dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Conformité:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Créé par:** %s (PP)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour consulter la fiche de conformité.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyComplianceUpdated(Long complianceId, Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = &quot;Fiche de Conformité Modifiée&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;✅ **FICHE DE CONFORMITÉ MODIFIÉE**\n\n&quot; +
+&nbsp;                        &quot;Une fiche de conformité a été modifiée dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Conformité:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Modifié par:** %s (PP)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyTechnicalFileCreated(Long technicalFileId, Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = &quot;Nouveau Dossier Technique&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🔧 **NOUVEAU DOSSIER TECHNIQUE CRÉÉ**\n\n&quot; +
+&nbsp;                        &quot;Un nouveau dossier technique a été créé dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Dossier:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Créé par:** %s (PP)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour consulter le dossier technique.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                technicalFileId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyTechnicalFileUpdated(Long technicalFileId, Long chargeSheetId, String performedBy, String role) {
+<b class="nc">&nbsp;        String subject = &quot;Dossier Technique Modifié&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🔧 **DOSSIER TECHNIQUE MODIFIÉ**\n\n&quot; +
+&nbsp;                        &quot;Un dossier technique a été modifié dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Dossier:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Modifié par:** %s (%s)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note importante:**\n&quot; +
+&nbsp;                        &quot;Cette modification peut affecter les opérations de maintenance.\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                technicalFileId, chargeSheetId, performedBy, role, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyClaimCreated(Long claimId, String claimTitle, Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = &quot;Nouvelle Réclamation: &quot; + claimTitle;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🚨 **NOUVELLE RÉCLAMATION CRÉÉE**\n\n&quot; +
+&nbsp;                        &quot;Une nouvelle réclamation a été créée dans le système.\n\n&quot; +
+&nbsp;                        &quot;📌 **Titre:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Réclamation:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Signalé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Action requise:**\n&quot; +
+&nbsp;                        &quot;Veuillez examiner cette réclamation dans les plus brefs délais.\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour traiter la réclamation.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyClaimUpdated(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String action) {
+<b class="nc">&nbsp;        String subject = &quot;Réclamation &quot; + action + &quot;: &quot; + claimTitle;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🚨 **RÉCLAMATION %s**\n\n&quot; +
+&nbsp;                        &quot;Une réclamation a été %s dans le système.\n\n&quot; +
+&nbsp;                        &quot;📌 **Titre:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Réclamation:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Traité par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les détails.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                action, action.toLowerCase(), claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyDocumentDeleted(String documentType, Long documentId, Long chargeSheetId, String performedBy) {
+<b class="nc">&nbsp;        String subject = documentType + &quot; Supprimé(e)&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🗑️ **%s SUPPRIMÉ(E)**\n\n&quot; +
+&nbsp;                        &quot;Un %s a été supprimé du système.\n\n&quot; +
+&nbsp;                        &quot;📄 **Type de document:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID du document:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Supprimé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note:**\n&quot; +
+&nbsp;                        &quot;Cette action est définitive et ne peut pas être annulée.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                documentType, documentType.toLowerCase(), documentType, documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToAllUsers(subject, message);</b>
+&nbsp;    }
+&nbsp;    @Async
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public void sendNotificationToProjectUsers(String subject, String message, String projet) {
+&nbsp;        try {
+&nbsp;
+<b class="nc">&nbsp;            List&lt;String&gt; emails = userRepository.findActiveUserEmailsByProjet(projet);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (emails.isEmpty()) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Aucun utilisateur trouvé pour le projet {}&quot;, projet);</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            SimpleMailMessage email = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;            email.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;            email.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;            email.setText(message);</b>
+&nbsp;
+<b class="nc">&nbsp;            for (String recipient : emails) {</b>
+<b class="nc">&nbsp;                email.setTo(recipient);</b>
+<b class="nc">&nbsp;                mailSender.send(email);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification envoyée au projet {}&quot;, projet);</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur notification projet {}&quot;, projet, e);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    public void notifyChargeSheetCreatedDetailed(ChargeSheet chargeSheet) {
+<b class="nc">&nbsp;        String subject = &quot;Nouveau Cahier des Charges&quot;;</b>
+&nbsp;
+&nbsp;        // On récupère le nombre d&#39;items
+<b class="nc">&nbsp;        int numberOfItems = chargeSheet.getItems().size();</b>
+&nbsp;
+&nbsp;        // On prépare le message avec les 5 premiers champs principaux
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;📋 **NOUVEAU CAHIER DES CHARGES CRÉÉ**\n\n&quot; +
+&nbsp;                        &quot;ID : %d\n&quot; +
+&nbsp;                        &quot;Plant : %s\n&quot; +
+&nbsp;                        &quot;Projet : %s\n&quot; +
+&nbsp;                        &quot;Harness Ref : %s\n&quot; +
+&nbsp;                        &quot;Issued By : %s\n&quot; +
+&nbsp;                        &quot;Nombre d&#39;items : %d\n\n&quot; +
+&nbsp;                        &quot;Connectez-vous au système pour plus de détails.&quot;,
+<b class="nc">&nbsp;                chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                chargeSheet.getPlant(),</b>
+<b class="nc">&nbsp;                chargeSheet.getProject(),</b>
+<b class="nc">&nbsp;                chargeSheet.getHarnessRef(),</b>
+<b class="nc">&nbsp;                chargeSheet.getIssuedBy(),</b>
+<b class="nc">&nbsp;                numberOfItems</b>
+&nbsp;        );
+&nbsp;
+&nbsp;        // Envoi aux utilisateurs du projet
+<b class="nc">&nbsp;        sendNotificationToProjectUsers(subject, message, chargeSheet.getProject());</b>
+&nbsp;    }
+&nbsp;    @Async
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public void sendHtmlNotificationToProjectUsers(String subject, String htmlMessage, String projet) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;String&gt; emails = userRepository.findActiveUserEmailsByProjet(projet);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (emails.isEmpty()) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Aucun utilisateur trouvé pour le projet {}&quot;, projet);</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            for (String recipient : emails) {</b>
+<b class="nc">&nbsp;                MimeMessage message = mailSender.createMimeMessage();</b>
+<b class="nc">&nbsp;                MimeMessageHelper helper = new MimeMessageHelper(message, &quot;utf-8&quot;);</b>
+<b class="nc">&nbsp;                helper.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;                helper.setTo(recipient);</b>
+<b class="nc">&nbsp;                helper.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;                helper.setText(htmlMessage, true); // true = HTML</b>
+&nbsp;
+<b class="nc">&nbsp;                mailSender.send(message);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification HTML envoyée au projet {}&quot;, projet);</b>
+&nbsp;
+&nbsp;        } catch (MessagingException e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur lors de l&#39;envoi HTML pour le projet {}&quot;, projet, e);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    public void notifyChargeSheetCreatedTable(ChargeSheet chargeSheet) {
+<b class="nc">&nbsp;        String subject = &quot;Nouveau Cahier des Charges&quot;;</b>
+&nbsp;
+<b class="nc">&nbsp;        int numberOfItems = chargeSheet.getItems().size();</b>
+&nbsp;
+&nbsp;        // Construction du tableau HTML
+<b class="nc">&nbsp;        String htmlMessage = &quot;&lt;html&gt;&lt;body&gt;&quot;</b>
+&nbsp;                + &quot;&lt;h3&gt;📋 NOUVEAU CAHIER DES CHARGES CRÉÉ&lt;/h3&gt;&quot;
+&nbsp;                + &quot;&lt;table border=&#39;1&#39; cellpadding=&#39;5&#39; cellspacing=&#39;0&#39;&gt;&quot;
+&nbsp;                + &quot;&lt;tr&gt;&lt;th&gt;Champ&lt;/th&gt;&lt;th&gt;Valeur&lt;/th&gt;&lt;/tr&gt;&quot;
+<b class="nc">&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;ID&lt;/td&gt;&lt;td&gt;&quot; + chargeSheet.getId() + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;</b>
+<b class="nc">&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;Plant&lt;/td&gt;&lt;td&gt;&quot; + chargeSheet.getPlant() + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;</b>
+<b class="nc">&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;Projet&lt;/td&gt;&lt;td&gt;&quot; + chargeSheet.getProject() + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;</b>
+<b class="nc">&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;Harness Ref&lt;/td&gt;&lt;td&gt;&quot; + chargeSheet.getHarnessRef() + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;</b>
+<b class="nc">&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;Issued By&lt;/td&gt;&lt;td&gt;&quot; + chargeSheet.getIssuedBy() + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;</b>
+&nbsp;                + &quot;&lt;tr&gt;&lt;td&gt;Nombre d&#39;items&lt;/td&gt;&lt;td&gt;&quot; + numberOfItems + &quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+&nbsp;                + &quot;&lt;/table&gt;&quot;
+&nbsp;                + &quot;&lt;p&gt;Connectez-vous au système pour plus de détails.&lt;/p&gt;&quot;
+&nbsp;                + &quot;&lt;/body&gt;&lt;/html&gt;&quot;;
+&nbsp;
+<b class="nc">&nbsp;        sendHtmlNotificationToProjectUsers(subject, htmlMessage, chargeSheet.getProject());</b>
+&nbsp;    }
+&nbsp;    @Async
+&nbsp;    public void sendNotificationToOneUser(String subject, String message, String emailTo) {
+&nbsp;        try {
+<b class="nc">&nbsp;            SimpleMailMessage email = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;            email.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;            email.setTo(emailTo);</b>
+<b class="nc">&nbsp;            email.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;            email.setText(message);</b>
+&nbsp;
+<b class="nc">&nbsp;            mailSender.send(email);</b>
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification envoyée à {}&quot;, emailTo);</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur envoi email à {}: {}&quot;, emailTo, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    public void notifyClaimAssigned(Claim claim, String performedBy) {
+<b class="nc">&nbsp;        if (claim.getAssignedTo() == null) return;</b>
+&nbsp;
+<b class="nc">&nbsp;        String subject = &quot;Réclamation assignée: &quot; + claim.getTitle();</b>
+&nbsp;
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;Une réclamation vous a été assignée.\n\n&quot; +
+&nbsp;                        &quot;Titre: %s\n&quot; +
+&nbsp;                        &quot;ID: %d\n&quot; +
+&nbsp;                        &quot;Assigné par: %s\n&quot; +
+&nbsp;                        &quot;Date: %s\n\n&quot; +
+&nbsp;                        &quot;Veuillez traiter cette réclamation.&quot;,
+<b class="nc">&nbsp;                claim.getTitle(),</b>
+<b class="nc">&nbsp;                claim.getId(),</b>
+&nbsp;                performedBy,
+<b class="nc">&nbsp;                java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToOneUser(subject, message, claim.getAssignedTo());</b>
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Envoie une notification système (email) à un utilisateur spécifique
+&nbsp;     * @param toEmail Email du destinataire
+&nbsp;     * @param message Contenu du message
+&nbsp;     * @param type Type de notification (ex: TECHNICAL_FILE_REMINDER)
+&nbsp;     */
+&nbsp;    @Async
+&nbsp;    public void sendSystemNotification(String toEmail, String message, String type) {
+&nbsp;        try {
+<b class="nc">&nbsp;            SimpleMailMessage mailMessage = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;            mailMessage.setTo(toEmail);</b>
+<b class="nc">&nbsp;            mailMessage.setSubject(&quot;🔔 LEONI System Notification - &quot; + type);</b>
+<b class="nc">&nbsp;            mailMessage.setText(message);</b>
+<b class="nc">&nbsp;            mailMessage.setFrom(&quot;noreply@leoni.com&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            mailSender.send(mailMessage);</b>
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;✅ System notification sent to {} (type: {})&quot;, toEmail, type);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;❌ Failed to send system notification to {}: {}&quot;, toEmail, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Envoie une notification système avec template HTML
+&nbsp;     */
+&nbsp;    @Async
+&nbsp;    public void sendSystemNotificationHtml(String toEmail, String message, String type) {
+&nbsp;        try {
+<b class="nc">&nbsp;            MimeMessage mimeMessage = mailSender.createMimeMessage();</b>
+<b class="nc">&nbsp;            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, &quot;UTF-8&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            helper.setTo(toEmail);</b>
+<b class="nc">&nbsp;            helper.setSubject(&quot;🔔 LEONI System Notification - &quot; + type);</b>
+<b class="nc">&nbsp;            helper.setFrom(&quot;noreply@leoni.com&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            String htmlContent = buildSystemNotificationHtml(message, type);</b>
+<b class="nc">&nbsp;            helper.setText(htmlContent, true);</b>
+&nbsp;
+<b class="nc">&nbsp;            mailSender.send(mimeMessage);</b>
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;✅ HTML system notification sent to {} (type: {})&quot;, toEmail, type);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;❌ Failed to send HTML system notification: {}&quot;, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Construit le template HTML pour les notifications système
+&nbsp;     */
+&nbsp;    private String buildSystemNotificationHtml(String message, String type) {
+<b class="nc">&nbsp;        String color = getColorForType(type);</b>
+<b class="nc">&nbsp;        String icon = getIconForType(type);</b>
+&nbsp;
+&nbsp;        // Version sans text block pour éviter l&#39;erreur
+<b class="nc">&nbsp;        StringBuilder html = new StringBuilder();</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;!DOCTYPE html&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;html&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;head&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;    &lt;style&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        body { font-family: Arial, sans-serif; background-color: #0A0E1A; margin: 0; padding: 20px; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0F1525 0%, #0A0E1A 100%); border-radius: 20px; overflow: hidden; border: 1px solid rgba(0, 212, 255, 0.2); }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .header { background: linear-gradient(135deg, #00D4FF, #0052CC); padding: 20px; text-align: center; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .header h1 { color: white; margin: 0; font-size: 24px; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .content { padding: 30px; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .message { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; white-space: pre-line; color: #E0E0E0; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .type-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; background-color: &quot;).append(color).append(&quot;; color: white; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .footer { background: rgba(0, 0, 0, 0.3); padding: 15px; text-align: center; font-size: 12px; color: #666; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        .icon { font-size: 48px; text-align: center; margin-bottom: 10px; }\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;    &lt;/style&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;/head&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;body&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;    &lt;div class=\&quot;container\&quot;&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;div class=\&quot;header\&quot;&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;h1&gt;🔔 LEONI System Notification&lt;/h1&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;div class=\&quot;content\&quot;&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;div class=\&quot;icon\&quot;&gt;&quot;).append(icon).append(&quot;&lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;div class=\&quot;type-badge\&quot;&gt;&quot;).append(type).append(&quot;&lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;div class=\&quot;message\&quot;&gt;&quot;).append(message.replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)).append(&quot;&lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;div class=\&quot;footer\&quot;&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;p&gt;© 2026 LEONI Group - Industrial Intelligence Platform&lt;/p&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;            &lt;p&gt;Ce message est généré automatiquement, merci de ne pas y répondre.&lt;/p&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;        &lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;    &lt;/div&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;/body&gt;\n&quot;);</b>
+<b class="nc">&nbsp;        html.append(&quot;&lt;/html&gt;&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        return html.toString();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private String getColorForType(String type) {
+<b class="nc">&nbsp;        if (type.contains(&quot;REMINDER&quot;)) return &quot;#FFA500&quot;;</b>
+<b class="nc">&nbsp;        if (type.contains(&quot;GLOBAL&quot;)) return &quot;#00D4FF&quot;;</b>
+<b class="nc">&nbsp;        return &quot;#00FF88&quot;;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private String getIconForType(String type) {
+<b class="nc">&nbsp;        if (type.contains(&quot;REMINDER&quot;)) return &quot;⚠️&quot;;</b>
+<b class="nc">&nbsp;        if (type.contains(&quot;GLOBAL&quot;)) return &quot;📊&quot;;</b>
+<b class="nc">&nbsp;        return &quot;🔔&quot;;</b>
+&nbsp;    }
+&nbsp;    @Async
+&nbsp;    public void sendHtmlNotificationToOneUser(String subject, String htmlMessage, String emailTo) {
+&nbsp;        try {
+<b class="nc">&nbsp;            MimeMessage message = mailSender.createMimeMessage();</b>
+<b class="nc">&nbsp;            MimeMessageHelper helper = new MimeMessageHelper(message, true, &quot;UTF-8&quot;);</b>
+<b class="nc">&nbsp;            helper.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;            helper.setTo(emailTo);</b>
+<b class="nc">&nbsp;            helper.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;            helper.setText(htmlMessage, true);</b>
+&nbsp;
+<b class="nc">&nbsp;            mailSender.send(message);</b>
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;📧 HTML notification envoyée à {}&quot;, emailTo);</b>
+&nbsp;
+&nbsp;        } catch (MessagingException e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur lors de l&#39;envoi HTML à {}: {}&quot;, emailTo, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Envoie une notification HTML aux utilisateurs d&#39;un projet ET d&#39;un site spécifique
+&nbsp;     * @param subject Sujet de l&#39;email
+&nbsp;     * @param htmlMessage Message HTML
+&nbsp;     * @param projet Nom du projet
+&nbsp;     * @param site Nom du site (plant)
+&nbsp;     */
+&nbsp;    @Async
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public void sendHtmlNotificationToProjectAndSiteUsers(String subject, String htmlMessage, String projet, String site) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;String&gt; emails = userRepository.findEmailsByProjectAndSite(projet, site);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (emails.isEmpty()) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Aucun utilisateur trouvé pour le projet {} et le site {}&quot;, projet, site);</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            for (String recipient : emails) {</b>
+<b class="nc">&nbsp;                MimeMessage message = mailSender.createMimeMessage();</b>
+<b class="nc">&nbsp;                MimeMessageHelper helper = new MimeMessageHelper(message, true, &quot;utf-8&quot;);</b>
+<b class="nc">&nbsp;                helper.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;                helper.setTo(recipient);</b>
+<b class="nc">&nbsp;                helper.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;                helper.setText(htmlMessage, true);</b>
+<b class="nc">&nbsp;                mailSender.send(message);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification HTML envoyée à {} utilisateur(s) du projet {} et site {}&quot;, emails.size(), projet, site);</b>
+&nbsp;
+&nbsp;        } catch (MessagingException e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur lors de l&#39;envoi HTML pour le projet {} et site {}: {}&quot;, projet, site, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Envoie une notification texte aux utilisateurs d&#39;un projet ET d&#39;un site spécifique
+&nbsp;     */
+&nbsp;    @Async
+&nbsp;    @Transactional(readOnly = true)
+&nbsp;    public void sendNotificationToProjectAndSiteUsers(String subject, String message, String projet, String site) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;String&gt; emails = userRepository.findEmailsByProjectAndSite(projet, site);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (emails.isEmpty()) {</b>
+<b class="nc">&nbsp;                log.warn(&quot;Aucun utilisateur trouvé pour le projet {} et le site {}&quot;, projet, site);</b>
+&nbsp;                return;
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            for (String recipient : emails) {</b>
+<b class="nc">&nbsp;                MimeMessage mimeMessage = mailSender.createMimeMessage();</b>
+<b class="nc">&nbsp;                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, &quot;UTF-8&quot;);</b>
+<b class="nc">&nbsp;                helper.setFrom(&quot;noreply@leoni-system.com&quot;);</b>
+<b class="nc">&nbsp;                helper.setTo(recipient);</b>
+<b class="nc">&nbsp;                helper.setSubject(&quot;[Système Leoni] &quot; + subject);</b>
+<b class="nc">&nbsp;                helper.setText(message, false); // false = TEXTE BRUT</b>
+<b class="nc">&nbsp;                mailSender.send(mimeMessage);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            log.info(&quot;Notification envoyée à {} utilisateur(s) du projet {} et site {}&quot;, emails.size(), projet, site);</b>
+&nbsp;
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            log.error(&quot;Erreur notification projet {} et site {}: {}&quot;, projet, site, e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Notification de mise à jour du cahier - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyChargeSheetUpdatedToProjectAndSite(Long chargeSheetId, String actionType, String performedBy, String role, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Cahier des Charges &quot; + actionType;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;📋 **CAHIER DES CHARGES %s**\n\n&quot; +
+&nbsp;                        &quot;Un cahier des charges a été %s dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Cahier:** %d\n&quot; +
+&nbsp;                        &quot;🔧 **Action:** %s\n&quot; +
+&nbsp;                        &quot;👤 **Effectué par:** %s (%s)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications apportées.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                actionType, actionType.toLowerCase(), chargeSheetId, actionType, performedBy, role, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de suppression de document - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyDocumentDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = documentType + &quot; Supprimé(e)&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🗑️ **%s SUPPRIMÉ(E)**\n\n&quot; +
+&nbsp;                        &quot;Un %s a été supprimé du système.\n\n&quot; +
+&nbsp;                        &quot;📄 **Type de document:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID du document:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Supprimé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note:**\n&quot; +
+&nbsp;                        &quot;Cette action est définitive et ne peut pas être annulée.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                documentType, documentType.toLowerCase(), documentType, documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Notification de création de conformité - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyComplianceCreatedToProjectAndSite(Long complianceId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Nouvelle Fiche de Conformité&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;✅ **NOUVELLE FICHE DE CONFORMITÉ CRÉÉE**\n\n&quot; +
+&nbsp;                        &quot;Une nouvelle fiche de conformité a été créée dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Conformité:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Créé par:** %s (PP)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour consulter la fiche de conformité.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de mise à jour de conformité - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyComplianceUpdatedToProjectAndSite(Long complianceId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Fiche de Conformité Modifiée&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;✅ **FICHE DE CONFORMITÉ MODIFIÉE**\n\n&quot; +
+&nbsp;                        &quot;Une fiche de conformité a été modifiée dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Conformité:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Modifié par:** %s (PP)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de suppression de conformité - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyComplianceDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = documentType + &quot; Supprimé(e)&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🗑️ **%s SUPPRIMÉ(E)**\n\n&quot; +
+&nbsp;                        &quot;Une fiche de conformité a été supprimée du système.\n\n&quot; +
+&nbsp;                        &quot;📄 **Type de document:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la conformité:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Supprimé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note:**\n&quot; +
+&nbsp;                        &quot;Cette action est définitive et ne peut pas être annulée.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                documentType, documentType.toLowerCase(), documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;    // Dans GlobalNotificationService.java
+&nbsp;    public void notifyTechnicalFileCreatedToProjectAndSite(Long technicalFileId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Nouveau Dossier Technique&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🔧 **NOUVEAU DOSSIER TECHNIQUE CRÉÉ**\n\n&quot; +
+&nbsp;                        &quot;Un nouveau dossier technique a été créé dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Dossier:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Créé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour consulter le dossier technique.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                technicalFileId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void notifyTechnicalFileUpdatedToProjectAndSite(Long technicalFileId, Long chargeSheetId, String performedBy, String role, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Dossier Technique Modifié&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🔧 **DOSSIER TECHNIQUE MODIFIÉ**\n\n&quot; +
+&nbsp;                        &quot;Un dossier technique a été modifié dans le système.\n\n&quot; +
+&nbsp;                        &quot;🔢 **ID du Dossier:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Modifié par:** %s (%s)\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note importante:**\n&quot; +
+&nbsp;                        &quot;Cette modification peut affecter les opérations de maintenance.\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les modifications.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                technicalFileId, chargeSheetId, performedBy, role, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;    // Dans GlobalNotificationService.java - Ajoutez ces méthodes
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de création de réclamation - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyClaimCreatedToProjectAndSite(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Nouvelle Réclamation: &quot; + claimTitle;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🚨 **NOUVELLE RÉCLAMATION CRÉÉE**\n\n&quot; +
+&nbsp;                        &quot;Une nouvelle réclamation a été créée dans le système.\n\n&quot; +
+&nbsp;                        &quot;📌 **Titre:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Réclamation:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Signalé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Action requise:**\n&quot; +
+&nbsp;                        &quot;Veuillez examiner cette réclamation dans les plus brefs délais.\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour traiter la réclamation.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de mise à jour de réclamation - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyClaimUpdatedToProjectAndSite(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String action, String projet, String site) {
+<b class="nc">&nbsp;        String subject = &quot;Réclamation &quot; + action + &quot;: &quot; + claimTitle;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🚨 **RÉCLAMATION %s**\n\n&quot; +
+&nbsp;                        &quot;Une réclamation a été %s dans le système.\n\n&quot; +
+&nbsp;                        &quot;📌 **Titre:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la Réclamation:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Traité par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;🔗 **Accès rapide:**\n&quot; +
+&nbsp;                        &quot;Connectez-vous pour voir les détails.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                action, action.toLowerCase(), claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Notification de suppression de réclamation - uniquement projet + site
+&nbsp;     */
+&nbsp;    public void notifyClaimDeletedToProjectAndSite(String documentType, Long documentId, Long chargeSheetId, String performedBy, String projet, String site) {
+<b class="nc">&nbsp;        String subject = documentType + &quot; Supprimée&quot;;</b>
+<b class="nc">&nbsp;        String message = String.format(</b>
+&nbsp;                &quot;Bonjour,\n\n&quot; +
+&nbsp;                        &quot;🗑️ **%s SUPPRIMÉE**\n\n&quot; +
+&nbsp;                        &quot;Une réclamation a été supprimée du système.\n\n&quot; +
+&nbsp;                        &quot;📄 **Type de document:** %s\n&quot; +
+&nbsp;                        &quot;🔢 **ID de la réclamation:** %d\n&quot; +
+&nbsp;                        &quot;📋 **ID du Cahier associé:** %d\n&quot; +
+&nbsp;                        &quot;👤 **Supprimé par:** %s\n&quot; +
+&nbsp;                        &quot;🕐 **Date:** %s\n\n&quot; +
+&nbsp;                        &quot;⚠️ **Note:**\n&quot; +
+&nbsp;                        &quot;Cette action est définitive et ne peut pas être annulée.\n\n&quot; +
+&nbsp;                        &quot;Cordialement,\n&quot; +
+&nbsp;                        &quot;Système de Gestion Leoni&quot;,
+<b class="nc">&nbsp;                documentType, documentType.toLowerCase(), documentId, chargeSheetId, performedBy, java.time.LocalDateTime.now()</b>
+&nbsp;        );
+&nbsp;
+<b class="nc">&nbsp;        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

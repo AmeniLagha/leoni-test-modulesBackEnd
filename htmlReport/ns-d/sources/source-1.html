@@ -1,0 +1,201 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > Site</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.site</a>
+</div>
+
+<h1>Coverage Summary for Class: Site (com.example.security.site)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Site</td>
+<td class="coverageStat">
+  <span class="percent">
+    44,4%
+  </span>
+  <span class="absValue">
+    (4/9)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/42)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    50%
+  </span>
+  <span class="absValue">
+    (5/10)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">Site$HibernateInstantiator$lqwu9tos</td>
+  </tr>
+  <tr>
+    <td class="name">Site$HibernateProxy$jwzGQ7Ti</td>
+  </tr>
+  <tr>
+    <td class="name">Site$SiteBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    40%
+  </span>
+  <span class="absValue">
+    (4/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/44)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    45,5%
+  </span>
+  <span class="absValue">
+    (5/11)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;// Site.java
+&nbsp;package com.example.security.site;
+&nbsp;
+&nbsp;import com.example.security.projet.Projet;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Entity
+&nbsp;@Table(name = &quot;site&quot;)
+<b class="pc">&nbsp;@Data</b>
+<b class="pc">&nbsp;@Builder</b>
+<b class="fc">&nbsp;@NoArgsConstructor</b>
+<b class="nc">&nbsp;@AllArgsConstructor</b>
+&nbsp;public class Site {
+&nbsp;
+&nbsp;    @Id
+&nbsp;    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<b class="nc">&nbsp;    private Long id;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;name&quot;, nullable = false, unique = true, length = 100)
+<b class="fc">&nbsp;    private String name;  // &quot;Manzel Hayet&quot;, &quot;LTN1&quot;, &quot;LTN2&quot;, &quot;Mateur&quot;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;description&quot;, length = 255)
+<b class="nc">&nbsp;    private String description;</b>
+<b class="fc">&nbsp;    @Column(name = &quot;active&quot;)</b>
+<b class="nc">&nbsp;    private boolean active = true;</b>
+&nbsp;    // ✅ Relation ManyToMany avec Projet
+&nbsp;    @ManyToMany(mappedBy = &quot;sites&quot;, fetch = FetchType.LAZY)
+&nbsp;    @Builder.Default
+<b class="nc">&nbsp;    private List&lt;Projet&gt; projets = new ArrayList&lt;&gt;();</b>
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

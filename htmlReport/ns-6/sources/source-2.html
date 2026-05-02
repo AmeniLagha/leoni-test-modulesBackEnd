@@ -1,0 +1,361 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ComplianceController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.conformité</a>
+</div>
+
+<h1>Coverage Summary for Class: ComplianceController (com.example.security.conformité)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ComplianceController</td>
+<td class="coverageStat">
+  <span class="percent">
+    6,2%
+  </span>
+  <span class="absValue">
+    (1/16)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    2,6%
+  </span>
+  <span class="absValue">
+    (1/38)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ComplianceController$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    6,2%
+  </span>
+  <span class="absValue">
+    (1/16)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    2,6%
+  </span>
+  <span class="absValue">
+    (1/38)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.conformité;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetItem;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetItemRepository;
+&nbsp;import com.example.security.user.User;
+&nbsp;import io.swagger.v3.oas.annotations.Operation;
+&nbsp;import io.swagger.v3.oas.annotations.tags.Tag;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.mail.SimpleMailMessage;
+&nbsp;import org.springframework.mail.javamail.JavaMailSender;
+&nbsp;import org.springframework.security.access.prepost.PreAuthorize;
+&nbsp;import org.springframework.security.core.Authentication;
+&nbsp;import org.springframework.security.core.context.SecurityContextHolder;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Map;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/api/v1/compliance&quot;)
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;@Tag(name = &quot;Conformité&quot;, description = &quot;Gestion des fiches de conformité des items&quot;)
+&nbsp;public class ComplianceController {
+&nbsp;
+&nbsp;    private final ComplianceService service;
+&nbsp;    private final ChargeSheetItemRepository chargeSheetItemRepository;
+&nbsp;    private final CompliancePreparationService compliancePreparationService;
+&nbsp;    private final ComplianceRepository complianceRepository;
+&nbsp;    private final JavaMailSender mailSender;
+&nbsp;    @GetMapping(&quot;/test-mail&quot;)
+&nbsp;    public ResponseEntity&lt;String&gt; testMail() {
+&nbsp;        try {
+<b class="nc">&nbsp;            SimpleMailMessage message = new SimpleMailMessage();</b>
+<b class="nc">&nbsp;            message.setTo(&quot;laghaamani3@gmail.com&quot;); // Change par ton email</b>
+<b class="nc">&nbsp;            message.setSubject(&quot;Test depuis Clever Cloud&quot;);</b>
+<b class="nc">&nbsp;            message.setText(&quot;Si tu reçois ce mail, la configuration email fonctionne !&quot;);</b>
+<b class="nc">&nbsp;            mailSender.send(message);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(&quot;Email envoyé avec succès !&quot;);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(500).body(&quot;Erreur: &quot; + e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    // PP: Créer une conformité
+&nbsp;    @PostMapping
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Créer une conformité&quot;,
+&nbsp;            description = &quot;Créer une fiche de conformité pour un item&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Compliance&gt; createCompliance(@RequestBody ComplianceDto.CreateDto dto) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.createCompliance(dto));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // PP: Mettre à jour une conformité
+&nbsp;    @PutMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Modifier une conformité&quot;,
+&nbsp;            description = &quot;Mettre à jour les informations d’une fiche de conformité&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Compliance&gt; updateCompliance(
+&nbsp;            @PathVariable Long id,
+&nbsp;            @RequestBody ComplianceDto.UpdateDto dto) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.updateCompliance(id, dto));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // PP, MC, MP: Lire une conformité
+&nbsp;    @GetMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Consulter une conformité&quot;,
+&nbsp;            description = &quot;Récupérer une fiche de conformité par son ID&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Compliance&gt; getCompliance(@PathVariable Long id) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.getComplianceById(id));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // Tous: Lister les conformités par cahier des charges
+&nbsp;    @GetMapping(&quot;/charge-sheet/{chargeSheetId}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Conformités par cahier&quot;,
+&nbsp;            description = &quot;Lister toutes les conformités associées à un cahier de charges&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;Compliance&gt;&gt; getComplianceByChargeSheet(
+&nbsp;            @PathVariable Long chargeSheetId) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.getComplianceByChargeSheetId(chargeSheetId));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // Tous: Lister les conformités par item
+&nbsp;    @GetMapping(&quot;/item/{itemId}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Conformités par item&quot;,
+&nbsp;            description = &quot;Lister toutes les conformités associées à un item&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;Compliance&gt;&gt; getComplianceByItem(@PathVariable Long itemId) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(complianceRepository.findByItemId(itemId));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // Admin: Lister toutes les conformités
+&nbsp;    @GetMapping
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Lister toutes les conformités&quot;,
+&nbsp;            description = &quot;Afficher toutes les fiches de conformité&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;Compliance&gt;&gt; getAllCompliance() {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.getAllCompliance());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Supprimer une conformité&quot;,
+&nbsp;            description = &quot;Supprimer une fiche de conformité&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Void&gt; deleteCompliance(@PathVariable Long id) {
+<b class="nc">&nbsp;        service.deleteCompliance(id);</b>
+<b class="nc">&nbsp;        return ResponseEntity.noContent().build();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping(&quot;/create-for-item/{itemId}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Créer conformités pour item&quot;,
+&nbsp;            description = &quot;Créer automatiquement plusieurs fiches de conformité pour un item&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;Compliance&gt;&gt; createForItem(@PathVariable Long itemId) {
+<b class="nc">&nbsp;        ChargeSheetItem item = chargeSheetItemRepository.findById(itemId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Compliance&gt; created = service.createComplianceForItem(item);</b>
+<b class="nc">&nbsp;        return ResponseEntity.ok(created);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/display&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Affichage enrichi&quot;,
+&nbsp;            description = &quot;Afficher les conformités avec des informations enrichies pour le frontend&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;ComplianceDisplayDto&gt;&gt; getAllComplianceForDisplay() {
+<b class="nc">&nbsp;        return ResponseEntity.ok(service.getAllComplianceForDisplay());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Préparer les données pour la création de fiches de conformité
+&nbsp;     * Renvoie le nombre de fiches à créer basé sur les quantités reçues
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/prepare/{itemId}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Préparer conformité&quot;,
+&nbsp;            description = &quot;Préparer les fiches de conformité selon les quantités reçues&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;ComplianceDto.PrepareComplianceDto&gt;&gt; prepareComplianceForItem(
+&nbsp;            @PathVariable Long itemId) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(compliancePreparationService.prepareComplianceForItem(itemId));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Créer les fiches de conformité pour les quantités reçues
+&nbsp;     */
+&nbsp;    @PostMapping(&quot;/create-for-received/{itemId}&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Créer conformités reçues&quot;,
+&nbsp;            description = &quot;Créer des fiches de conformité en fonction des quantités reçues&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;List&lt;Compliance&gt;&gt; createComplianceForReceivedQuantity(
+&nbsp;            @PathVariable Long itemId,
+&nbsp;            @RequestParam int numberOfSheets) {
+<b class="nc">&nbsp;        return ResponseEntity.ok(compliancePreparationService.createComplianceForReceivedQuantity(itemId, numberOfSheets));</b>
+&nbsp;    }
+&nbsp;// Dans ComplianceController.java - Ajoutez ces méthodes
+&nbsp;
+&nbsp;    @GetMapping(&quot;/stats/monthly-variation&quot;)
+&nbsp;    @Operation(summary = &quot;Variation mensuelle des conformités&quot;,
+&nbsp;            description = &quot;Calcule la variation entre deux mois spécifiques&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getMonthlyVariation(
+&nbsp;            @RequestParam String month1,
+&nbsp;            @RequestParam String month2,
+&nbsp;            @RequestParam(required = false) String project) {
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        String userProject = (project != null &amp;&amp; !project.isEmpty()) ? project : null;</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; variation = service.getVariationBetweenMonths(userProject, month1, month2);</b>
+<b class="nc">&nbsp;        return ResponseEntity.ok(variation);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/stats/last-two-months&quot;)
+&nbsp;    @Operation(summary = &quot;Variation deux derniers mois des conformités&quot;,
+&nbsp;            description = &quot;Calcule automatiquement la variation entre les deux derniers mois disponibles&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getLastTwoMonthsVariation(
+&nbsp;            @RequestParam(required = false) String project) {
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        String userProject = (project != null &amp;&amp; !project.isEmpty()) ? project : null;</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; variation = service.getLastTwoMonthsVariation(userProject);</b>
+<b class="nc">&nbsp;        return ResponseEntity.ok(variation);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/stats/monthly-stats&quot;)
+&nbsp;    @Operation(summary = &quot;Statistiques mensuelles des conformités&quot;,
+&nbsp;            description = &quot;Nombre de fiches de conformité créées par mois&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;compliance:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;MonthlyComplianceStatsDto&gt; getMonthlyComplianceStats(
+&nbsp;            @RequestParam(required = false) String project,
+&nbsp;            @RequestParam(defaultValue = &quot;6&quot;) int months) {
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        String userProject = (project != null &amp;&amp; !project.isEmpty()) ? project : null;</b>
+&nbsp;
+<b class="nc">&nbsp;        MonthlyComplianceStatsDto stats = service.getMonthlyComplianceStats(userProject, months);</b>
+<b class="nc">&nbsp;        return ResponseEntity.ok(stats);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

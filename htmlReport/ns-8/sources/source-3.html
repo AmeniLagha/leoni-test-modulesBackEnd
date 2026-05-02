@@ -1,0 +1,277 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TechnicalFile</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.fichierTechnique</a>
+</div>
+
+<h1>Coverage Summary for Class: TechnicalFile (com.example.security.fichierTechnique)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TechnicalFile</td>
+<td class="coverageStat">
+  <span class="percent">
+    10%
+  </span>
+  <span class="absValue">
+    (2/20)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    8,3%
+  </span>
+  <span class="absValue">
+    (2/24)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">TechnicalFile$HibernateInstantiator$JyGQ6yFr</td>
+  </tr>
+  <tr>
+    <td class="name">TechnicalFile$HibernateProxy$Vlg6Ck9s</td>
+  </tr>
+  <tr>
+    <td class="name">TechnicalFile$TechnicalFileBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    9,5%
+  </span>
+  <span class="absValue">
+    (2/21)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    8%
+  </span>
+  <span class="absValue">
+    (2/25)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.fichierTechnique;
+&nbsp;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnore;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import org.hibernate.envers.Audited;
+&nbsp;
+&nbsp;import java.time.LocalDate;
+&nbsp;import java.util.ArrayList;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Objects;
+&nbsp;
+&nbsp;@Entity
+&nbsp;@Table(name = &quot;technical_file&quot;)
+<b class="pc">&nbsp;@Builder</b>
+<b class="fc">&nbsp;@NoArgsConstructor</b>
+<b class="nc">&nbsp;@AllArgsConstructor</b>
+&nbsp;@Audited
+&nbsp;@JsonIgnoreProperties({&quot;hibernateLazyInitializer&quot;, &quot;handler&quot;})
+&nbsp;public class TechnicalFile {
+&nbsp;
+&nbsp;    @Id
+&nbsp;    @GeneratedValue(strategy = GenerationType.IDENTITY)
+&nbsp;    private Long id;
+&nbsp;
+&nbsp;    @Column(name = &quot;reference&quot;, length = 100)
+&nbsp;    private String reference;
+&nbsp;    @Column(name = &quot;created_by&quot;, length = 100)
+&nbsp;    private String createdBy;
+&nbsp;
+&nbsp;    @Column(name = &quot;created_at&quot;)
+&nbsp;    private LocalDate createdAt;
+&nbsp;
+&nbsp;    @Column(name = &quot;updated_by&quot;, length = 100)
+&nbsp;    private String updatedBy;
+&nbsp;
+&nbsp;    @Column(name = &quot;updated_at&quot;)
+&nbsp;    private LocalDate updatedAt;
+&nbsp;    @JsonIgnore
+&nbsp;    @OneToMany(mappedBy = &quot;technicalFile&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+&nbsp;    @Builder.Default
+&nbsp;    private List&lt;TechnicalFileItem&gt; technicalFileItems = new ArrayList&lt;&gt;();
+&nbsp;
+&nbsp;    // getters setters
+&nbsp;
+<b class="nc">&nbsp;    public Long getId() { return id; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public void setId(Long id) { this.id = id; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public String getReference() { return reference; }</b>
+&nbsp;
+<b class="nc">&nbsp;    public void setReference(String reference) { this.reference = reference; }</b>
+&nbsp;
+&nbsp;    public List&lt;TechnicalFileItem&gt; getTechnicalFileItems() {
+<b class="nc">&nbsp;        return technicalFileItems;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setTechnicalFileItems(List&lt;TechnicalFileItem&gt; technicalFileItems) {
+<b class="nc">&nbsp;        this.technicalFileItems = technicalFileItems;</b>
+&nbsp;    }
+&nbsp;    public String getCreatedBy() {
+<b class="nc">&nbsp;        return createdBy;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setCreatedBy(String createdBy) {
+<b class="nc">&nbsp;        this.createdBy = createdBy;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public LocalDate getCreatedAt() {
+<b class="nc">&nbsp;        return createdAt;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setCreatedAt(LocalDate createdAt) {
+<b class="nc">&nbsp;        this.createdAt = createdAt;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getUpdatedBy() {
+<b class="nc">&nbsp;        return updatedBy;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setUpdatedBy(String updatedBy) {
+<b class="nc">&nbsp;        this.updatedBy = updatedBy;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public LocalDate getUpdatedAt() {
+<b class="nc">&nbsp;        return updatedAt;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void setUpdatedAt(LocalDate updatedAt) {
+<b class="nc">&nbsp;        this.updatedAt = updatedAt;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public void addTechnicalFileItem(TechnicalFileItem item) {
+<b class="nc">&nbsp;        technicalFileItems.add(item);</b>
+<b class="nc">&nbsp;        item.setTechnicalFile(this);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public int hashCode() {
+<b class="nc">&nbsp;        return Objects.hashCode(id);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean equals(Object obj) {
+<b class="nc">&nbsp;        if (this == obj) return true;</b>
+<b class="nc">&nbsp;        if (obj == null || getClass() != obj.getClass()) return false;</b>
+<b class="nc">&nbsp;        TechnicalFile that = (TechnicalFile) obj;</b>
+<b class="nc">&nbsp;        return Objects.equals(id, that.id);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

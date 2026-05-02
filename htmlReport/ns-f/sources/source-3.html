@@ -1,0 +1,97 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TokenRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.token</a>
+</div>
+
+<h1>Coverage Summary for Class: TokenRepository (com.example.security.token)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">TokenRepository$MockitoMock$UGaVXqlW</td>
+  </tr>
+  <tr>
+    <td class="name">TokenRepository$MockitoMock$UGaVXqlW$auxiliary$5BU80tmg</td>
+  </tr>
+  <tr>
+    <td class="name">TokenRepository$MockitoMock$UGaVXqlW$auxiliary$dLPlM8TL</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.token;
+&nbsp;
+&nbsp;import jakarta.transaction.Transactional;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;public interface TokenRepository  extends JpaRepository&lt;Token, Integer&gt; {
+&nbsp;    @Query(value = &quot;&quot;&quot;    
+&nbsp;      select t from Token t inner join User u\s
+&nbsp;      on t.user.id = u.id\s
+&nbsp;      where u.id = :id and (t.expired = false or t.revoked = false)\s
+&nbsp;      &quot;&quot;&quot;)
+&nbsp;    List&lt;Token&gt; findAllValidTokenByUser(Integer id);
+&nbsp;
+&nbsp;    Optional&lt;Token&gt; findByToken(String token);
+&nbsp;    // Supprimer tous les tokens d&#39;un utilisateur
+&nbsp;    @Transactional
+&nbsp;    void deleteByUserId(Integer userId);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

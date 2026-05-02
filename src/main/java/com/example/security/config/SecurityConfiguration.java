@@ -51,7 +51,9 @@ public class SecurityConfiguration {
             "/api/v1/sites",           // ✅ AJOUTER CETTE LIGNE
             "/api/v1/health",
             "/api/v1/compliance/test-mail",
-            "/api/v1/claims/debug-all-images"
+            "/api/v1/claims/debug-all-images",
+            "/api/v1/users/check-email",      // ← AJOUTE CETTE LIGNE
+            "/api/v1/users/check-matricule",
 
 
 

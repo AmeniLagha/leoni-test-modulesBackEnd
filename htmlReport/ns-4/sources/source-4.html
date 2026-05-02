@@ -1,0 +1,351 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ChargeSheetImageController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.cahierdeCharge</a>
+</div>
+
+<h1>Coverage Summary for Class: ChargeSheetImageController (com.example.security.cahierdeCharge)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ChargeSheetImageController</td>
+<td class="coverageStat">
+  <span class="percent">
+    20%
+  </span>
+  <span class="absValue">
+    (1/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1,2%
+  </span>
+  <span class="absValue">
+    (1/83)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ChargeSheetImageController$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    20%
+  </span>
+  <span class="absValue">
+    (1/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1,2%
+  </span>
+  <span class="absValue">
+    (1/83)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.cahierdeCharge;
+&nbsp;
+&nbsp;import com.example.security.reclamation.Claim;
+&nbsp;import com.example.security.reclamation.ClaimRepository;
+&nbsp;import io.swagger.v3.oas.annotations.Operation;
+&nbsp;import io.swagger.v3.oas.annotations.tags.Tag;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.http.ContentDisposition;
+&nbsp;import org.springframework.http.HttpHeaders;
+&nbsp;import org.springframework.http.MediaType;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.security.access.prepost.PreAuthorize;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;import org.springframework.web.multipart.MultipartFile;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.util.HashMap;
+&nbsp;import java.util.Map;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/api/v1/charge-sheets&quot;)
+&nbsp;@Tag(name = &quot;Gestion des images&quot;, description = &quot;Upload, consultation et suppression des images des items&quot;)
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class ChargeSheetImageController {
+&nbsp;
+&nbsp;    private final ChargeSheetService chargeSheetService;
+&nbsp;    private final ChargeSheetItemRepository itemRepository;
+&nbsp;    private final ClaimRepository claimRepository;
+&nbsp;    private final ImageStorageService imageStorageService;
+&nbsp;
+&nbsp;    private static final String CHARGE_SHEET_IMAGE_FOLDER = &quot;charge-sheets&quot;;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Upload une image pour un item spécifique
+&nbsp;     */
+&nbsp;    @PostMapping(&quot;/{sheetId}/items/{itemId}/upload-image&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Uploader une image&quot;,
+&nbsp;            description = &quot;Permet d’ajouter une image (ex: connecteur réel) à un item spécifique d’un cahier de charges&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;charge_sheet:basic:write&#39;) or hasAuthority(&#39;charge_sheet:tech:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; uploadItemImage(
+&nbsp;            @PathVariable Long sheetId,
+&nbsp;            @PathVariable Long itemId,
+&nbsp;            @RequestParam(&quot;file&quot;) MultipartFile file) {
+&nbsp;
+&nbsp;        try {
+&nbsp;            // Vérifier que l&#39;item appartient bien au sheet
+<b class="nc">&nbsp;            ChargeSheetItem item = itemRepository.findById(itemId)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;            if (!item.getChargeSheet().getId().equals(sheetId)) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Item does not belong to this charge sheet&quot;));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // Sauvegarder l&#39;image dans le dossier spécifique &quot;charge-sheets&quot;
+<b class="nc">&nbsp;            String imagePath = imageStorageService.saveImage(file, CHARGE_SHEET_IMAGE_FOLDER);</b>
+&nbsp;
+&nbsp;            // Mettre à jour l&#39;item avec le chemin de l&#39;image
+<b class="nc">&nbsp;            item.setRealConnectorPicture(imagePath);</b>
+<b class="nc">&nbsp;            itemRepository.save(item);</b>
+&nbsp;
+<b class="nc">&nbsp;            Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            response.put(&quot;filename&quot;, imagePath.substring(imagePath.lastIndexOf(&quot;/&quot;) + 1));</b>
+<b class="nc">&nbsp;            response.put(&quot;path&quot;, imagePath);</b>
+<b class="nc">&nbsp;            response.put(&quot;message&quot;, &quot;Image uploaded successfully&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
+&nbsp;
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            Map&lt;String, String&gt; error = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            error.put(&quot;error&quot;, &quot;Failed to upload image: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(500).body(error);</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            Map&lt;String, String&gt; error = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            error.put(&quot;error&quot;, &quot;Unexpected error: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(500).body(error);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Récupère l&#39;image d&#39;un item spécifique
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/{sheetId}/items/{itemId}/image&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Afficher une image&quot;,
+&nbsp;            description = &quot;Récupérer et afficher l’image associée à un item&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;charge_sheet:all:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;byte[]&gt; getItemImage(
+&nbsp;            @PathVariable Long sheetId,
+&nbsp;            @PathVariable Long itemId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            ChargeSheetItem item = itemRepository.findById(itemId)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;            if (!item.getChargeSheet().getId().equals(sheetId)) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.notFound().build();</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            String imagePath = item.getRealConnectorPicture();</b>
+&nbsp;
+<b class="nc">&nbsp;            if (imagePath == null || imagePath.isEmpty()) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.notFound().build();</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            byte[] imageData = imageStorageService.getImage(imagePath);</b>
+&nbsp;
+&nbsp;            // Déterminer le type MIME à partir de l&#39;extension
+<b class="nc">&nbsp;            String contentType = &quot;image/jpeg&quot;;</b>
+<b class="nc">&nbsp;            String lowerPath = imagePath.toLowerCase();</b>
+<b class="nc">&nbsp;            if (lowerPath.endsWith(&quot;.png&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/png&quot;;</b>
+<b class="nc">&nbsp;            } else if (lowerPath.endsWith(&quot;.gif&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/gif&quot;;</b>
+<b class="nc">&nbsp;            } else if (lowerPath.endsWith(&quot;.bmp&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/bmp&quot;;</b>
+<b class="nc">&nbsp;            } else if (lowerPath.endsWith(&quot;.webp&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/webp&quot;;</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // Extraire le nom du fichier pour le Content-Disposition
+<b class="nc">&nbsp;            String filename = imagePath.substring(imagePath.lastIndexOf(&quot;/&quot;) + 1);</b>
+&nbsp;
+<b class="nc">&nbsp;            HttpHeaders headers = new HttpHeaders();</b>
+<b class="nc">&nbsp;            headers.setContentType(MediaType.parseMediaType(contentType));</b>
+<b class="nc">&nbsp;            headers.setContentDisposition(ContentDisposition.builder(&quot;inline&quot;).filename(filename).build());</b>
+<b class="nc">&nbsp;            headers.setContentLength(imageData.length);</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok()</b>
+<b class="nc">&nbsp;                    .headers(headers)</b>
+<b class="nc">&nbsp;                    .body(imageData);</b>
+&nbsp;
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            return ResponseEntity.notFound().build();</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(500).build();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    @GetMapping(&quot;/{id}/image&quot;)
+&nbsp;    @Operation(summary = &quot;Afficher image&quot;, description = &quot;Afficher l’image d’une réclamation&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;claim:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;byte[]&gt; getImage(@PathVariable Long id) {
+&nbsp;        try {
+<b class="nc">&nbsp;            Claim claim = claimRepository.findById(id)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;            String imagePath = claim.getImagePath();</b>
+<b class="nc">&nbsp;            System.out.println(&quot;🔍 Récupération image pour claim &quot; + id + &quot;: &quot; + imagePath);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (imagePath == null || imagePath.isEmpty()) {</b>
+<b class="nc">&nbsp;                System.out.println(&quot;⚠️ Aucun chemin d&#39;image trouvé&quot;);</b>
+<b class="nc">&nbsp;                return ResponseEntity.notFound().build();</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            byte[] imageData = imageStorageService.getImage(imagePath);</b>
+&nbsp;
+<b class="nc">&nbsp;            String contentType = &quot;image/jpeg&quot;;</b>
+<b class="nc">&nbsp;            if (imagePath.toLowerCase().endsWith(&quot;.png&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/png&quot;;</b>
+<b class="nc">&nbsp;            } else if (imagePath.toLowerCase().endsWith(&quot;.gif&quot;)) {</b>
+<b class="nc">&nbsp;                contentType = &quot;image/gif&quot;;</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            HttpHeaders headers = new HttpHeaders();</b>
+<b class="nc">&nbsp;            headers.setContentType(MediaType.parseMediaType(contentType));</b>
+<b class="nc">&nbsp;            headers.setContentLength(imageData.length);</b>
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok()</b>
+<b class="nc">&nbsp;                    .headers(headers)</b>
+<b class="nc">&nbsp;                    .body(imageData);</b>
+&nbsp;
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur récupération image: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            e.printStackTrace();</b>
+<b class="nc">&nbsp;            return ResponseEntity.notFound().build();</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur générale: &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(500).build();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    /**
+&nbsp;     * Supprime l&#39;image d&#39;un item spécifique
+&nbsp;     */
+&nbsp;    @DeleteMapping(&quot;/{sheetId}/items/{itemId}/image&quot;)
+&nbsp;    @Operation(
+&nbsp;            summary = &quot;Supprimer une image&quot;,
+&nbsp;            description = &quot;Supprimer l’image associée à un item d’un cahier de charges&quot;
+&nbsp;    )
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;charge_sheet:basic:write&#39;) or hasAuthority(&#39;charge_sheet:tech:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; deleteItemImage(
+&nbsp;            @PathVariable Long sheetId,
+&nbsp;            @PathVariable Long itemId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            ChargeSheetItem item = itemRepository.findById(itemId)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;            if (!item.getChargeSheet().getId().equals(sheetId)) {</b>
+<b class="nc">&nbsp;                return ResponseEntity.badRequest().body(Map.of(&quot;error&quot;, &quot;Item does not belong to this charge sheet&quot;));</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            String imagePath = item.getRealConnectorPicture();</b>
+<b class="nc">&nbsp;            if (imagePath != null &amp;&amp; !imagePath.isEmpty()) {</b>
+<b class="nc">&nbsp;                imageStorageService.deleteImage(imagePath);</b>
+<b class="nc">&nbsp;                item.setRealConnectorPicture(null);</b>
+<b class="nc">&nbsp;                itemRepository.save(item);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            return ResponseEntity.ok(Map.of(&quot;message&quot;, &quot;Image deleted successfully&quot;));</b>
+&nbsp;
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(500).body(Map.of(&quot;error&quot;, e.getMessage()));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(500).body(Map.of(&quot;error&quot;, &quot;Unexpected error: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

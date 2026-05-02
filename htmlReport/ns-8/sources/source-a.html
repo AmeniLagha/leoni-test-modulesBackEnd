@@ -1,0 +1,1152 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TechnicalFileService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.fichierTechnique</a>
+</div>
+
+<h1>Coverage Summary for Class: TechnicalFileService (com.example.security.fichierTechnique)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TechnicalFileService</td>
+<td class="coverageStat">
+  <span class="percent">
+    2,5%
+  </span>
+  <span class="absValue">
+    (1/40)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/134)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,2%
+  </span>
+  <span class="absValue">
+    (1/562)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">TechnicalFileService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    2,5%
+  </span>
+  <span class="absValue">
+    (1/40)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/134)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,2%
+  </span>
+  <span class="absValue">
+    (1/562)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.fichierTechnique;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheet;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetItem;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetItemRepository;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetStatus;
+&nbsp;import com.example.security.email.GlobalNotificationService;
+&nbsp;import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistory;
+&nbsp;import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistoryRepository;
+&nbsp;import com.example.security.stock.StockModuleRepository;
+&nbsp;import com.example.security.user.User;
+&nbsp;import jakarta.persistence.EntityManager;
+&nbsp;import jakarta.persistence.PersistenceContext;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.hibernate.envers.*;
+&nbsp;import org.hibernate.envers.query.AuditEntity;
+&nbsp;import org.springframework.security.core.Authentication;
+&nbsp;import org.springframework.security.core.context.SecurityContextHolder;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.time.LocalDate;
+&nbsp;import java.time.LocalDateTime;
+&nbsp;import java.util.*;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;@Service
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class TechnicalFileService {
+&nbsp;
+&nbsp;    private final TechnicalFileRepository repository;
+&nbsp;    private final TechnicalFileItemRepository technicalFileItemRepository;
+&nbsp;    private final GlobalNotificationService notificationService;
+&nbsp;    private final ChargeSheetItemRepository chargeSheetItemRepository;
+&nbsp;    private final TechnicalFileHistoryRepository historyRepository;
+&nbsp;    private final StockModuleRepository stockModuleRepository;
+&nbsp;
+&nbsp;    @PersistenceContext
+&nbsp;    private EntityManager entityManager;
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    CREATE TECHNICAL FILE
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public TechnicalFile createTechnicalFile(TechnicalFileDto.CreateDto dto) {
+&nbsp;        try {
+&nbsp;
+<b class="nc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="nc">&nbsp;            if (dto.getItems() == null || dto.getItems().isEmpty()) {</b>
+<b class="nc">&nbsp;                throw new RuntimeException(&quot;Un dossier technique doit contenir au moins un item&quot;);</b>
+&nbsp;            }
+<b class="nc">&nbsp;            Long firstItemId = dto.getItems().get(0).getChargeSheetItemId();</b>
+<b class="nc">&nbsp;            ChargeSheetItem firstChargeSheetItem = chargeSheetItemRepository.findById(firstItemId)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+<b class="nc">&nbsp;            ChargeSheet chargeSheet = firstChargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;            String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;            String site = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;            TechnicalFile technicalFile = new TechnicalFile();</b>
+<b class="nc">&nbsp;            technicalFile.setReference(dto.getReference());</b>
+<b class="nc">&nbsp;            technicalFile.setCreatedBy(currentUser.getEmail());</b>
+<b class="nc">&nbsp;            technicalFile.setCreatedAt(LocalDate.now());</b>
+&nbsp;
+<b class="nc">&nbsp;            TechnicalFile savedTechnicalFile = repository.save(technicalFile);</b>
+&nbsp;
+<b class="nc">&nbsp;            for (TechnicalFileDto.TechnicalFileItemDto itemDto : dto.getItems()) {</b>
+&nbsp;
+<b class="nc">&nbsp;                ChargeSheetItem chargeSheetItem = chargeSheetItemRepository</b>
+<b class="nc">&nbsp;                        .findById(itemDto.getChargeSheetItemId())</b>
+<b class="nc">&nbsp;                        .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;                TechnicalFileItem item = new TechnicalFileItem();</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setChargeSheetItem(chargeSheetItem);</b>
+<b class="nc">&nbsp;                item.setMaintenanceDate(itemDto.getMaintenanceDate());</b>
+<b class="nc">&nbsp;                item.setTechnicianName(itemDto.getTechnicianName());</b>
+<b class="nc">&nbsp;                item.setXCode(itemDto.getXCode());</b>
+<b class="nc">&nbsp;                item.setIndexValue(itemDto.getIndexValue());</b>
+<b class="nc">&nbsp;                item.setLeoniReferenceNumber(itemDto.getLeoniReferenceNumber());</b>
+<b class="nc">&nbsp;                item.setProducer(itemDto.getProducer());</b>
+<b class="nc">&nbsp;                item.setType(itemDto.getType());</b>
+<b class="nc">&nbsp;                item.setReferencePinePushBack(itemDto.getReferencePinePushBack());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setPosition(itemDto.getPosition());</b>
+<b class="nc">&nbsp;                item.setPinRigidityM1(itemDto.getPinRigidityM1());</b>
+<b class="nc">&nbsp;                item.setPinRigidityM2(itemDto.getPinRigidityM2());</b>
+<b class="nc">&nbsp;                item.setPinRigidityM3(itemDto.getPinRigidityM3());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setDisplacementPathM1(itemDto.getDisplacementPathM1());</b>
+<b class="nc">&nbsp;                item.setDisplacementPathM2(itemDto.getDisplacementPathM2());</b>
+<b class="nc">&nbsp;                item.setDisplacementPathM3(itemDto.getDisplacementPathM3());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setMaxSealingValueM1(itemDto.getMaxSealingValueM1());</b>
+<b class="nc">&nbsp;                item.setMaxSealingValueM2(itemDto.getMaxSealingValueM2());</b>
+<b class="nc">&nbsp;                item.setMaxSealingValueM3(itemDto.getMaxSealingValueM3());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setProgrammedSealingValueM1(itemDto.getProgrammedSealingValueM1());</b>
+<b class="nc">&nbsp;                item.setProgrammedSealingValueM2(itemDto.getProgrammedSealingValueM2());</b>
+<b class="nc">&nbsp;                item.setProgrammedSealingValueM3(itemDto.getProgrammedSealingValueM3());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setDetectionsM1(itemDto.getDetectionsM1());</b>
+<b class="nc">&nbsp;                item.setDetectionsM2(itemDto.getDetectionsM2());</b>
+<b class="nc">&nbsp;                item.setDetectionsM3(itemDto.getDetectionsM3());</b>
+&nbsp;
+<b class="nc">&nbsp;                item.setRemarks(itemDto.getRemarks());</b>
+<b class="nc">&nbsp;                item.setCreatedBy(currentUser.getEmail());</b>
+<b class="nc">&nbsp;                item.setCreatedAt(LocalDate.now());</b>
+<b class="nc">&nbsp;                item.setValidationStatus(TechnicalFileItemStatus.DRAFT);</b>
+<b class="nc">&nbsp;                savedTechnicalFile.addTechnicalFileItem(item);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            TechnicalFile result = repository.save(savedTechnicalFile);</b>
+&nbsp;
+&nbsp;            // ✅ Notification modifiée
+<b class="nc">&nbsp;            notificationService.notifyTechnicalFileCreatedToProjectAndSite(</b>
+<b class="nc">&nbsp;                    result.getId(),</b>
+<b class="nc">&nbsp;                    chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                    currentUser.getEmail(),</b>
+&nbsp;                    projet,
+&nbsp;                    site
+&nbsp;            );
+&nbsp;
+<b class="nc">&nbsp;            return result;</b>
+&nbsp;        } catch (Exception e) {
+&nbsp;            // Ici tu peux logger l&#39;erreur ou notifier
+<b class="nc">&nbsp;            System.err.println(&quot;Erreur lors de la création du dossier technique : &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;Impossible de créer le dossier technique. &quot; + e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    @Transactional
+&nbsp;    public TechnicalFileItem addItemToTechnicalFile(Long technicalFileId, TechnicalFileDto.AddItemDto dto) {
+&nbsp;        try {
+<b class="nc">&nbsp;            TechnicalFile tf = repository.findById(technicalFileId)</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Technical file not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;            ChargeSheetItem chargeSheetItem = chargeSheetItemRepository.findById(dto.getChargeSheetItemId())</b>
+<b class="nc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;ChargeSheetItem not found&quot;));</b>
+&nbsp;            // ✅ Récupérer les infos projet et site
+<b class="nc">&nbsp;            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;            String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;            String site = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="nc">&nbsp;            TechnicalFileItem item = new TechnicalFileItem();</b>
+<b class="nc">&nbsp;            item.setChargeSheetItem(chargeSheetItem);</b>
+<b class="nc">&nbsp;            item.setMaintenanceDate(dto.getMaintenanceDate());</b>
+<b class="nc">&nbsp;            item.setTechnicianName(dto.getTechnicianName());</b>
+<b class="nc">&nbsp;            item.setXCode(dto.getXCode());</b>
+<b class="nc">&nbsp;            item.setIndexValue(dto.getIndexValue());</b>
+<b class="nc">&nbsp;            item.setLeoniReferenceNumber(dto.getLeoniReferenceNumber());</b>
+<b class="nc">&nbsp;            item.setProducer(dto.getProducer());</b>
+<b class="nc">&nbsp;            item.setType(dto.getType());</b>
+<b class="nc">&nbsp;            item.setReferencePinePushBack(dto.getReferencePinePushBack());</b>
+<b class="nc">&nbsp;            item.setPosition(dto.getPosition());</b>
+<b class="nc">&nbsp;            item.setPinRigidityM1(dto.getPinRigidityM1());</b>
+<b class="nc">&nbsp;            item.setPinRigidityM2(dto.getPinRigidityM2());</b>
+<b class="nc">&nbsp;            item.setPinRigidityM3(dto.getPinRigidityM3());</b>
+<b class="nc">&nbsp;            item.setDisplacementPathM1(dto.getDisplacementPathM1());</b>
+<b class="nc">&nbsp;            item.setDisplacementPathM2(dto.getDisplacementPathM2());</b>
+<b class="nc">&nbsp;            item.setDisplacementPathM3(dto.getDisplacementPathM3());</b>
+<b class="nc">&nbsp;            item.setMaxSealingValueM1(dto.getMaxSealingValueM1());</b>
+<b class="nc">&nbsp;            item.setMaxSealingValueM2(dto.getMaxSealingValueM2());</b>
+<b class="nc">&nbsp;            item.setMaxSealingValueM3(dto.getMaxSealingValueM3());</b>
+<b class="nc">&nbsp;            item.setProgrammedSealingValueM1(dto.getProgrammedSealingValueM1());</b>
+<b class="nc">&nbsp;            item.setProgrammedSealingValueM2(dto.getProgrammedSealingValueM2());</b>
+<b class="nc">&nbsp;            item.setProgrammedSealingValueM3(dto.getProgrammedSealingValueM3());</b>
+<b class="nc">&nbsp;            item.setDetectionsM1(dto.getDetectionsM1());</b>
+<b class="nc">&nbsp;            item.setDetectionsM2(dto.getDetectionsM2());</b>
+<b class="nc">&nbsp;            item.setDetectionsM3(dto.getDetectionsM3());</b>
+<b class="nc">&nbsp;            item.setRemarks(dto.getRemarks());</b>
+<b class="nc">&nbsp;            item.setValidationStatus(TechnicalFileItemStatus.DRAFT);</b>
+<b class="nc">&nbsp;            item.setCreatedBy(currentUser.getEmail());</b>
+<b class="nc">&nbsp;            item.setCreatedAt(LocalDate.now());</b>
+&nbsp;
+<b class="nc">&nbsp;            tf.addTechnicalFileItem(item);</b>
+&nbsp;
+<b class="nc">&nbsp;            repository.save(tf);</b>
+<b class="nc">&nbsp;            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(</b>
+&nbsp;                    technicalFileId,
+<b class="nc">&nbsp;                    chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                    currentUser.getEmail(),</b>
+&nbsp;                    &quot;PP&quot;,
+&nbsp;                    projet,
+&nbsp;                    site
+&nbsp;            );
+<b class="nc">&nbsp;            return item;</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            System.err.println(&quot;Erreur lors de l&#39;ajout d&#39;un item : &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;Impossible d&#39;ajouter l&#39;item au dossier technique. &quot; + e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;    public List&lt;TechnicalFileDto.ListDto&gt; getAllTechnicalFilesList() {
+<b class="nc">&nbsp;        return repository.findAll().stream()</b>
+<b class="nc">&nbsp;                .map(tf -&gt; TechnicalFileDto.ListDto.builder()</b>
+<b class="nc">&nbsp;                        .id(tf.getId())</b>
+<b class="nc">&nbsp;                        .reference(tf.getReference())</b>
+<b class="nc">&nbsp;                        .itemCount(tf.getTechnicalFileItems().size())</b>
+<b class="nc">&nbsp;                        .build())</b>
+<b class="nc">&nbsp;                .toList();</b>
+&nbsp;    }
+&nbsp;    public TechnicalFileItem getTechnicalFileItemById(Long itemId) {
+<b class="nc">&nbsp;        return technicalFileItemRepository.findById(itemId)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Technical file item not found&quot;));</b>
+&nbsp;    }
+&nbsp;    @Transactional
+&nbsp;    public TechnicalFileItem updateTechnicalFileItem(Long itemId, TechnicalFileDto.UpdateItemDto dto) {
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        TechnicalFileItem item = getTechnicalFileItemById(itemId);</b>
+<b class="nc">&nbsp;        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();</b>
+<b class="nc">&nbsp;        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;        updateItemFields(item, dto, currentUser.getEmail());</b>
+&nbsp;        // ✅ Notification modifiée
+<b class="nc">&nbsp;        notificationService.notifyTechnicalFileUpdatedToProjectAndSite(</b>
+<b class="nc">&nbsp;                item.getTechnicalFileId(),</b>
+<b class="nc">&nbsp;                chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                currentUser.getEmail(),</b>
+&nbsp;                &quot;PP&quot;,
+&nbsp;                projet,
+&nbsp;                site
+&nbsp;        );
+<b class="nc">&nbsp;        return item;</b>
+&nbsp;    }
+&nbsp;    @Transactional
+&nbsp;    public void deleteTechnicalFileItem(Long itemId) {
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        TechnicalFileItem item = getTechnicalFileItemById(itemId);</b>
+&nbsp;        // ✅ Récupérer les infos projet et site
+<b class="nc">&nbsp;        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();</b>
+<b class="nc">&nbsp;        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
+&nbsp;
+<b class="nc">&nbsp;        technicalFileItemRepository.delete(item);</b>
+&nbsp;        // ✅ Notification modifiée
+<b class="nc">&nbsp;        notificationService.notifyDocumentDeletedToProjectAndSite(</b>
+&nbsp;                &quot;Item de Dossier Technique&quot;,
+&nbsp;                itemId,
+<b class="nc">&nbsp;                chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                currentUser.getEmail(),</b>
+&nbsp;                projet,
+&nbsp;                site
+&nbsp;        );
+&nbsp;    }
+&nbsp;    public List&lt;Map&lt;String, Object&gt;&gt; getHistoryAudited(Long technicalFileId) {
+<b class="nc">&nbsp;        AuditReader reader = AuditReaderFactory.get(entityManager);</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Object[]&gt; revisions = reader.createQuery()</b>
+<b class="nc">&nbsp;                .forRevisionsOfEntity(TechnicalFile.class, false, true)</b>
+<b class="nc">&nbsp;                .add(AuditEntity.id().eq(technicalFileId))</b>
+<b class="nc">&nbsp;                .getResultList();</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; historyList = new ArrayList&lt;&gt;();</b>
+&nbsp;
+<b class="nc">&nbsp;        for (int i = 0; i &lt; revisions.size(); i++) {</b>
+<b class="nc">&nbsp;            TechnicalFile entity = (TechnicalFile) revisions.get(i)[0];</b>
+<b class="nc">&nbsp;            CustomRevisionEntity rev = (CustomRevisionEntity) revisions.get(i)[1];</b>
+<b class="nc">&nbsp;            RevisionType type = (RevisionType) revisions.get(i)[2];</b>
+&nbsp;
+<b class="nc">&nbsp;            if (i &gt; 0) {</b>
+<b class="nc">&nbsp;                TechnicalFile previousEntity = (TechnicalFile) revisions.get(i-1)[0];</b>
+&nbsp;
+&nbsp;                // Comparer les champs du dossier
+<b class="nc">&nbsp;                if (!Objects.equals(previousEntity.getReference(), entity.getReference())) {</b>
+<b class="nc">&nbsp;                    Map&lt;String, Object&gt; changeMap = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;fieldName&quot;, &quot;reference&quot;);</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;oldValue&quot;, previousEntity.getReference());</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;newValue&quot;, entity.getReference());</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;modifiedBy&quot;, rev.getUsername());</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;modifiedAt&quot;, new Date(rev.getTimestamp()));</b>
+<b class="nc">&nbsp;                    changeMap.put(&quot;type&quot;, type.name());</b>
+<b class="nc">&nbsp;                    historyList.add(changeMap);</b>
+&nbsp;                }
+&nbsp;            } else {
+<b class="nc">&nbsp;                Map&lt;String, Object&gt; creationMap = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;fieldName&quot;, &quot;CREATION&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;oldValue&quot;, &quot;-&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;newValue&quot;, &quot;Dossier créé&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;modifiedBy&quot;, rev.getUsername());</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;modifiedAt&quot;, new Date(rev.getTimestamp()));</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;type&quot;, &quot;ADD&quot;);</b>
+<b class="nc">&nbsp;                historyList.add(creationMap);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return historyList;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;Map&lt;String, Object&gt;&gt; getItemHistoryAudited(Long itemId) {
+<b class="nc">&nbsp;        AuditReader reader = AuditReaderFactory.get(entityManager);</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Object[]&gt; revisions = reader.createQuery()</b>
+<b class="nc">&nbsp;                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)</b>
+<b class="nc">&nbsp;                .add(AuditEntity.id().eq(itemId))</b>
+<b class="nc">&nbsp;                .getResultList();</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; historyList = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // Trier les révisions par date (optionnel)
+<b class="nc">&nbsp;        revisions.sort((a, b) -&gt; {</b>
+<b class="nc">&nbsp;            CustomRevisionEntity revA = (CustomRevisionEntity) a[1];</b>
+<b class="nc">&nbsp;            CustomRevisionEntity revB = (CustomRevisionEntity) b[1];</b>
+<b class="nc">&nbsp;            return Long.compare(revA.getTimestamp(), revB.getTimestamp());</b>
+&nbsp;        });
+&nbsp;
+<b class="nc">&nbsp;        for (int i = 0; i &lt; revisions.size(); i++) {</b>
+<b class="nc">&nbsp;            TechnicalFileItem entity = (TechnicalFileItem) revisions.get(i)[0];</b>
+<b class="nc">&nbsp;            CustomRevisionEntity rev = (CustomRevisionEntity) revisions.get(i)[1];</b>
+<b class="nc">&nbsp;            RevisionType type = (RevisionType) revisions.get(i)[2];</b>
+&nbsp;
+<b class="nc">&nbsp;            if (i &gt; 0) {</b>
+<b class="nc">&nbsp;                TechnicalFileItem previousEntity = (TechnicalFileItem) revisions.get(i-1)[0];</b>
+<b class="nc">&nbsp;                compareFields(historyList, previousEntity, entity, rev, type);</b>
+&nbsp;            } else {
+&nbsp;                // Première version (création)
+<b class="nc">&nbsp;                Map&lt;String, Object&gt; creationMap = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;fieldName&quot;, &quot;CREATION&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;oldValue&quot;, &quot;-&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;newValue&quot;, &quot;Item créé&quot;);</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;modifiedBy&quot;, rev.getUsername());</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;modifiedAt&quot;, new Date(rev.getTimestamp()));</b>
+<b class="nc">&nbsp;                creationMap.put(&quot;type&quot;, &quot;ADD&quot;);</b>
+<b class="nc">&nbsp;                historyList.add(creationMap);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return historyList;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private void compareFields(List&lt;Map&lt;String, Object&gt;&gt; historyList,
+&nbsp;                               TechnicalFileItem oldItem,
+&nbsp;                               TechnicalFileItem newItem,
+&nbsp;                               CustomRevisionEntity rev,
+&nbsp;                               RevisionType type) {
+&nbsp;
+&nbsp;        // Liste de tous les champs à comparer avec leurs getters
+<b class="nc">&nbsp;        Map&lt;String, java.util.function.Function&lt;TechnicalFileItem, String&gt;&gt; fieldGetters = new LinkedHashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // ===== CHAMPS DE BASE =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maintenanceDate&quot;, item -&gt; item.getMaintenanceDate() != null ?</b>
+<b class="nc">&nbsp;                item.getMaintenanceDate().toString() : null);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;technicianName&quot;, TechnicalFileItem::getTechnicianName);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;xCode&quot;, TechnicalFileItem::getXCode);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;leoniReferenceNumber&quot;, TechnicalFileItem::getLeoniReferenceNumber);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;indexValue&quot;, item -&gt; item.getIndexValue() != null ?</b>
+<b class="nc">&nbsp;                item.getIndexValue().toString() : null);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;producer&quot;, TechnicalFileItem::getProducer);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;type&quot;, TechnicalFileItem::getType);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;referencePinePushBack&quot;, TechnicalFileItem::getReferencePinePushBack);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;position&quot;, TechnicalFileItem::getPosition);</b>
+&nbsp;
+&nbsp;        // ===== RAIDURE DES PINS =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM1&quot;, TechnicalFileItem::getPinRigidityM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM2&quot;, TechnicalFileItem::getPinRigidityM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM3&quot;, TechnicalFileItem::getPinRigidityM3);</b>
+&nbsp;
+&nbsp;        // ===== DÉPLACEMENT =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM1&quot;, TechnicalFileItem::getDisplacementPathM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM2&quot;, TechnicalFileItem::getDisplacementPathM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM3&quot;, TechnicalFileItem::getDisplacementPathM3);</b>
+&nbsp;
+&nbsp;        // ===== MAX SEALING =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM1&quot;, TechnicalFileItem::getMaxSealingValueM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM2&quot;, TechnicalFileItem::getMaxSealingValueM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM3&quot;, TechnicalFileItem::getMaxSealingValueM3);</b>
+&nbsp;
+&nbsp;        // ===== PROGRAMMED SEALING =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM1&quot;, TechnicalFileItem::getProgrammedSealingValueM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM2&quot;, TechnicalFileItem::getProgrammedSealingValueM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM3&quot;, TechnicalFileItem::getProgrammedSealingValueM3);</b>
+&nbsp;
+&nbsp;        // ===== DÉTECTIONS =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM1&quot;, TechnicalFileItem::getDetectionsM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM2&quot;, TechnicalFileItem::getDetectionsM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM3&quot;, TechnicalFileItem::getDetectionsM3);</b>
+&nbsp;
+&nbsp;        // ===== REMARQUES =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;remarks&quot;, TechnicalFileItem::getRemarks);</b>
+&nbsp;
+&nbsp;        // ===== MÉTADONNÉES =====
+<b class="nc">&nbsp;        fieldGetters.put(&quot;createdBy&quot;, TechnicalFileItem::getCreatedBy);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;createdAt&quot;, item -&gt; item.getCreatedAt() != null ?</b>
+<b class="nc">&nbsp;                item.getCreatedAt().toString() : null);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;updatedBy&quot;, TechnicalFileItem::getUpdatedBy);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;updatedAt&quot;, item -&gt; item.getUpdatedAt() != null ?</b>
+<b class="nc">&nbsp;                item.getUpdatedAt().toString() : null);</b>
+&nbsp;
+&nbsp;        // Parcourir tous les champs et comparer les valeurs
+<b class="nc">&nbsp;        for (Map.Entry&lt;String, java.util.function.Function&lt;TechnicalFileItem, String&gt;&gt; entry : fieldGetters.entrySet()) {</b>
+<b class="nc">&nbsp;            String fieldName = entry.getKey();</b>
+<b class="nc">&nbsp;            String oldVal = entry.getValue().apply(oldItem);</b>
+<b class="nc">&nbsp;            String newVal = entry.getValue().apply(newItem);</b>
+&nbsp;
+&nbsp;            // Si les valeurs sont différentes, ajouter à l&#39;historique
+<b class="nc">&nbsp;            if (!Objects.equals(oldVal, newVal)) {</b>
+<b class="nc">&nbsp;                Map&lt;String, Object&gt; changeMap = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;fieldName&quot;, fieldName);</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;oldValue&quot;, oldVal != null ? oldVal : &quot;-&quot;);</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;newValue&quot;, newVal != null ? newVal : &quot;-&quot;);</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;modifiedBy&quot;, rev.getUsername());</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;modifiedAt&quot;, new Date(rev.getTimestamp()));</b>
+<b class="nc">&nbsp;                changeMap.put(&quot;type&quot;, type.name());</b>
+<b class="nc">&nbsp;                historyList.add(changeMap);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;Map&lt;String, Object&gt;&gt; getFullHistoryAudited(Long id) {
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; fullHistory = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // Historique du dossier
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; fileHistory = getHistoryAudited(id);</b>
+<b class="nc">&nbsp;        fullHistory.addAll(fileHistory);</b>
+&nbsp;
+&nbsp;        // Historique des items
+<b class="nc">&nbsp;        TechnicalFile tf = getTechnicalFileById(id);</b>
+<b class="nc">&nbsp;        for (TechnicalFileItem item : tf.getTechnicalFileItems()) {</b>
+<b class="nc">&nbsp;            List&lt;Map&lt;String, Object&gt;&gt; itemHistory = getItemHistoryAudited(item.getId());</b>
+<b class="nc">&nbsp;            fullHistory.addAll(itemHistory);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Trier par date
+<b class="nc">&nbsp;        fullHistory.sort((a, b) -&gt; {</b>
+<b class="nc">&nbsp;            Date dateA = (Date) a.get(&quot;modifiedAt&quot;);</b>
+<b class="nc">&nbsp;            Date dateB = (Date) b.get(&quot;modifiedAt&quot;);</b>
+<b class="nc">&nbsp;            return dateA.compareTo(dateB);</b>
+&nbsp;        });
+&nbsp;
+<b class="nc">&nbsp;        return fullHistory;</b>
+&nbsp;    }
+&nbsp;    // ✅ Historique d&#39;un item
+&nbsp;    public List&lt;TechnicalFileHistory&gt; getItemHistory(Long itemId) {
+&nbsp;        // Si vous avez un historique spécifique pour les items
+<b class="nc">&nbsp;        return historyRepository.findByTechnicalFileItemId(itemId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    UPDATE TECHNICAL FILE
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public TechnicalFile updateTechnicalFile(Long id, TechnicalFileDto.UpdateDto dto) {
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="nc">&nbsp;        TechnicalFile tf = repository.findById(id)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Technical file not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        String user = currentUser.getEmail();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (dto.getReference() != null) {</b>
+<b class="nc">&nbsp;            saveHistory(id,null,&quot;reference&quot;,tf.getReference(),dto.getReference(),user);</b>
+<b class="nc">&nbsp;            tf.setReference(dto.getReference());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (dto.getItems() != null) {</b>
+&nbsp;
+<b class="nc">&nbsp;            for (TechnicalFileDto.UpdateItemDto itemDto : dto.getItems()) {</b>
+&nbsp;
+<b class="nc">&nbsp;                TechnicalFileItem item = technicalFileItemRepository</b>
+<b class="nc">&nbsp;                        .findById(itemDto.getTechnicalFileItemId())</b>
+<b class="nc">&nbsp;                        .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;                updateItemFields(item,itemDto,user);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        tf.setUpdatedBy(user);</b>
+<b class="nc">&nbsp;        tf.setUpdatedAt(LocalDate.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        return repository.save(tf);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    UPDATE ITEM FIELDS
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    private void updateItemFields(TechnicalFileItem item,
+&nbsp;                                  TechnicalFileDto.UpdateItemDto dto,
+&nbsp;                                  String user) {
+&nbsp;        // ✅ Récupérer les infos projet et site avant modification
+<b class="nc">&nbsp;        ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();</b>
+<b class="nc">&nbsp;        ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
+&nbsp;
+&nbsp;        // Variable pour savoir si des modifications ont été faites
+<b class="nc">&nbsp;        boolean hasChanges = false;</b>
+&nbsp;
+<b class="nc">&nbsp;        if(dto.getTechnicianName()!=null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(),item.getId(),</b>
+<b class="nc">&nbsp;                    &quot;technicianName&quot;,item.getTechnicianName(),dto.getTechnicianName(),user);</b>
+<b class="nc">&nbsp;            item.setTechnicianName(dto.getTechnicianName());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if(dto.getXCode()!=null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(),item.getId(),</b>
+<b class="nc">&nbsp;                    &quot;xCode&quot;,item.getXCode(),dto.getXCode(),user);</b>
+<b class="nc">&nbsp;            item.setXCode(dto.getXCode());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if(dto.getPosition()!=null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(),item.getId(),</b>
+<b class="nc">&nbsp;                    &quot;position&quot;,item.getPosition(),dto.getPosition(),user);</b>
+<b class="nc">&nbsp;            item.setPosition(dto.getPosition());</b>
+&nbsp;        }
+<b class="nc">&nbsp;        if(dto.getIndexValue() != null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(), item.getId(),</b>
+&nbsp;                    &quot;indexValue&quot;,
+<b class="nc">&nbsp;                    item.getIndexValue() != null ? item.getIndexValue().toString() : null,</b>
+<b class="nc">&nbsp;                    dto.getIndexValue().toString(),</b>
+&nbsp;                    user);
+<b class="nc">&nbsp;            item.setIndexValue(dto.getIndexValue());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if(dto.getPinRigidityM1()!=null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(),item.getId(),</b>
+<b class="nc">&nbsp;                    &quot;pinRigidityM1&quot;,item.getPinRigidityM1(),dto.getPinRigidityM1(),user);</b>
+<b class="nc">&nbsp;            item.setPinRigidityM1(dto.getPinRigidityM1());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if(dto.getRemarks()!=null){</b>
+<b class="nc">&nbsp;            saveHistory(item.getTechnicalFileId(),item.getId(),</b>
+<b class="nc">&nbsp;                    &quot;remarks&quot;,item.getRemarks(),dto.getRemarks(),user);</b>
+<b class="nc">&nbsp;            item.setRemarks(dto.getRemarks());</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        item.setUpdatedBy(user);</b>
+<b class="nc">&nbsp;        item.setUpdatedAt(LocalDate.now());</b>
+&nbsp;
+<b class="nc">&nbsp;        technicalFileItemRepository.save(item);</b>
+&nbsp;        // ✅ Envoyer une notification seulement si des modifications ont été faites
+<b class="nc">&nbsp;        if (hasChanges) {</b>
+&nbsp;            // Récupérer l&#39;utilisateur courant pour l&#39;email
+<b class="nc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="nc">&nbsp;            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(</b>
+<b class="nc">&nbsp;                    item.getTechnicalFileId(),</b>
+<b class="nc">&nbsp;                    chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                    currentUser.getEmail(),</b>
+&nbsp;                    &quot;PP&quot;,
+&nbsp;                    projet,
+&nbsp;                    site
+&nbsp;            );
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    SAVE HISTORY
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    private void saveHistory(Long technicalFileId,
+&nbsp;                             Long itemId,
+&nbsp;                             String field,
+&nbsp;                             String oldVal,
+&nbsp;                             String newVal,
+&nbsp;                             String user){
+&nbsp;
+<b class="nc">&nbsp;        if(Objects.equals(oldVal,newVal)) return;</b>
+&nbsp;
+<b class="nc">&nbsp;        TechnicalFileHistory h = TechnicalFileHistory.builder()</b>
+<b class="nc">&nbsp;                .technicalFileId(technicalFileId)</b>
+<b class="nc">&nbsp;                .technicalFileItemId(itemId)</b>
+<b class="nc">&nbsp;                .fieldName(field)</b>
+<b class="nc">&nbsp;                .oldValue(oldVal)</b>
+<b class="nc">&nbsp;                .newValue(newVal)</b>
+<b class="nc">&nbsp;                .modifiedBy(user)</b>
+<b class="nc">&nbsp;                .modifiedAt(LocalDate.now())</b>
+<b class="nc">&nbsp;                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;        historyRepository.save(h);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    DELETE TECHNICAL FILE
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public void deleteTechnicalFile(Long id){
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="nc">&nbsp;        TechnicalFile tf = repository.findById(id)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Technical file not found&quot;));</b>
+&nbsp;        // ✅ Récupérer les infos projet et site (premier item)
+<b class="nc">&nbsp;        String projet = null;</b>
+<b class="nc">&nbsp;        String site = null;</b>
+<b class="nc">&nbsp;        Long chargeSheetId = null;</b>
+&nbsp;
+<b class="nc">&nbsp;        if (tf.getTechnicalFileItems() != null &amp;&amp; !tf.getTechnicalFileItems().isEmpty()) {</b>
+<b class="nc">&nbsp;            TechnicalFileItem firstItem = tf.getTechnicalFileItems().iterator().next();</b>
+<b class="nc">&nbsp;            ChargeSheetItem chargeSheetItem = firstItem.getChargeSheetItem();</b>
+<b class="nc">&nbsp;            if (chargeSheetItem != null) {</b>
+<b class="nc">&nbsp;                ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;                if (chargeSheet != null) {</b>
+<b class="nc">&nbsp;                    projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;                    site = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;                    chargeSheetId = chargeSheet.getId();</b>
+&nbsp;                }
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        repository.delete(tf);</b>
+&nbsp;
+&nbsp;        // ✅ Notification modifiée
+<b class="nc">&nbsp;        notificationService.notifyDocumentDeletedToProjectAndSite(</b>
+&nbsp;                &quot;Dossier Technique&quot;,
+&nbsp;                id,
+&nbsp;                chargeSheetId,
+<b class="nc">&nbsp;                currentUser.getEmail(),</b>
+&nbsp;                projet,
+&nbsp;                site
+&nbsp;        );
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    GET FILE
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    public TechnicalFile getTechnicalFileById(Long id){
+&nbsp;
+<b class="nc">&nbsp;        TechnicalFile tf = repository.findById(id)</b>
+<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Technical file not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;        tf.getTechnicalFileItems().size();</b>
+&nbsp;
+<b class="nc">&nbsp;        return tf;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    GET ALL FILES
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    public List&lt;TechnicalFileDto.ResponseDto&gt; getAllTechnicalFilesWithItems(){
+&nbsp;
+<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;        String userRole = currentUser.getRole().name();</b>
+<b class="nc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();</b>
+<b class="nc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
+<b class="nc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
+<b class="nc">&nbsp;                List.of();</b>
+<b class="nc">&nbsp;        String userSite = currentUser.getSiteName();  // ✅ AJOUTER</b>
+&nbsp;
+&nbsp;        List&lt;TechnicalFile&gt; allFiles;
+&nbsp;
+<b class="nc">&nbsp;        if (userRole.equals(&quot;ADMIN&quot;)) {</b>
+&nbsp;            // ADMIN voit tout
+<b class="nc">&nbsp;            allFiles = repository.findAll();</b>
+&nbsp;        }
+&nbsp;        else {
+&nbsp;            // ✅ Pour les autres rôles, récupérer les dossiers liés au projet
+<b class="nc">&nbsp;            allFiles = new ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;            for (String project : userProjects) {</b>
+<b class="nc">&nbsp;                allFiles.addAll(repository.findByProject(project));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // ✅ Filtrer par site (plant du chargeSheet)
+<b class="nc">&nbsp;            allFiles = allFiles.stream()</b>
+<b class="nc">&nbsp;                    .filter(tf -&gt; {</b>
+<b class="nc">&nbsp;                        if (tf.getTechnicalFileItems() == null) return false;</b>
+<b class="nc">&nbsp;                        return tf.getTechnicalFileItems().stream().anyMatch(item -&gt; {</b>
+<b class="nc">&nbsp;                            ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();</b>
+<b class="nc">&nbsp;                            if (chargeSheetItem == null) return false;</b>
+<b class="nc">&nbsp;                            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;                            if (chargeSheet == null) return false;</b>
+<b class="nc">&nbsp;                            String plant = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;                            return plant != null &amp;&amp; plant.equals(userSite);</b>
+&nbsp;                        });
+&nbsp;                    })
+<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
+&nbsp;
+&nbsp;            // ✅ Appliquer les filtres de statut selon le rôle
+<b class="nc">&nbsp;            switch (userRole) {</b>
+&nbsp;                case &quot;ING&quot;:
+&nbsp;                    // ING voit tous les dossiers de son projet ET site
+&nbsp;                    break;
+&nbsp;                case &quot;PT&quot;:
+<b class="nc">&nbsp;                    allFiles = allFiles.stream()</b>
+<b class="nc">&nbsp;                            .filter(tf -&gt; {</b>
+<b class="nc">&nbsp;                                if (tf.getTechnicalFileItems() == null) return false;</b>
+<b class="nc">&nbsp;                                return tf.getTechnicalFileItems().stream().anyMatch(item -&gt; {</b>
+<b class="nc">&nbsp;                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();</b>
+<b class="nc">&nbsp;                                    return cs != null &amp;&amp; List.of(</b>
+&nbsp;                                            ChargeSheetStatus.VALIDATED_ING,
+&nbsp;                                            ChargeSheetStatus.TECH_FILLED,
+&nbsp;                                            ChargeSheetStatus.VALIDATED_PT,
+&nbsp;                                            ChargeSheetStatus.SENT_TO_SUPPLIER,
+&nbsp;                                            ChargeSheetStatus.COMPLETED
+<b class="nc">&nbsp;                                    ).contains(cs.getStatus());</b>
+&nbsp;                                });
+&nbsp;                            })
+<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
+&nbsp;                    break;
+&nbsp;                case &quot;PP&quot;:
+<b class="nc">&nbsp;                    allFiles = allFiles.stream()</b>
+<b class="nc">&nbsp;                            .filter(tf -&gt; {</b>
+<b class="nc">&nbsp;                                if (tf.getTechnicalFileItems() == null) return false;</b>
+<b class="nc">&nbsp;                                return tf.getTechnicalFileItems().stream().anyMatch(item -&gt; {</b>
+<b class="nc">&nbsp;                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();</b>
+<b class="nc">&nbsp;                                    return cs != null &amp;&amp; List.of(</b>
+&nbsp;                                            ChargeSheetStatus.VALIDATED_PT,
+&nbsp;                                            ChargeSheetStatus.SENT_TO_SUPPLIER,
+&nbsp;                                            ChargeSheetStatus.COMPLETED
+<b class="nc">&nbsp;                                    ).contains(cs.getStatus());</b>
+&nbsp;                                });
+&nbsp;                            })
+<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
+&nbsp;                    break;
+&nbsp;                case &quot;MC&quot;:
+&nbsp;                case &quot;MP&quot;:
+<b class="nc">&nbsp;                    allFiles = allFiles.stream()</b>
+<b class="nc">&nbsp;                            .filter(tf -&gt; {</b>
+<b class="nc">&nbsp;                                if (tf.getTechnicalFileItems() == null) return false;</b>
+<b class="nc">&nbsp;                                return tf.getTechnicalFileItems().stream().anyMatch(item -&gt; {</b>
+<b class="nc">&nbsp;                                    ChargeSheet cs = item.getChargeSheetItem().getChargeSheet();</b>
+<b class="nc">&nbsp;                                    return cs != null &amp;&amp; cs.getStatus() == ChargeSheetStatus.COMPLETED;</b>
+&nbsp;                                });
+&nbsp;                            })
+<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
+&nbsp;                    break;
+&nbsp;                default:
+<b class="nc">&nbsp;                    allFiles = List.of();</b>
+&nbsp;                    break;
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+&nbsp;        // Log pour debug
+<b class="nc">&nbsp;        System.out.println(&quot;📋 Dossiers techniques pour site &#39;&quot; + userSite + &quot;&#39;: &quot; + allFiles.size());</b>
+&nbsp;
+<b class="nc">&nbsp;        return allFiles.stream()</b>
+<b class="nc">&nbsp;                .map(this::mapToResponseDto)</b>
+<b class="nc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /*
+&nbsp;    =========================
+&nbsp;    MAP DTO
+&nbsp;    =========================
+&nbsp;     */
+&nbsp;
+&nbsp;    private TechnicalFileDto.ResponseDto mapToResponseDto(TechnicalFile tf){
+<b class="nc">&nbsp;        List&lt;TechnicalFileDto.ResponseItemDto&gt; items =</b>
+<b class="nc">&nbsp;                tf.getTechnicalFileItems()</b>
+<b class="nc">&nbsp;                        .stream()</b>
+<b class="nc">&nbsp;                        .map(item -&gt; TechnicalFileDto.ResponseItemDto.builder()</b>
+<b class="nc">&nbsp;                                .id(item.getId())</b>
+<b class="nc">&nbsp;                                .chargeSheetItemId(item.getChargeSheetItem().getId())</b>
+<b class="nc">&nbsp;                                .itemNumber(item.getChargeSheetItem().getItemNumber())</b>
+&nbsp;                                // GÉNÉRAL
+<b class="nc">&nbsp;                                .position(item.getPosition())</b>
+<b class="nc">&nbsp;                                .maintenanceDate(item.getMaintenanceDate())</b>
+<b class="nc">&nbsp;                                .technicianName(item.getTechnicianName())</b>
+&nbsp;                                // CODE D&#39;IDENTITÉ
+<b class="nc">&nbsp;                                .xCode(item.getXCode())</b>
+<b class="nc">&nbsp;                                .leoniReferenceNumber(item.getLeoniReferenceNumber())</b>
+<b class="nc">&nbsp;                                .indexValue(item.getIndexValue())</b>
+<b class="nc">&nbsp;                                .producer(item.getProducer())</b>
+<b class="nc">&nbsp;                                .type(item.getType())</b>
+<b class="nc">&nbsp;                                .referencePinePushBack(item.getReferencePinePushBack())</b>
+&nbsp;                                // RAIDEUR
+<b class="nc">&nbsp;                                .pinRigidityM1(item.getPinRigidityM1())</b>
+<b class="nc">&nbsp;                                .pinRigidityM2(item.getPinRigidityM2())</b>
+<b class="nc">&nbsp;                                .pinRigidityM3(item.getPinRigidityM3())</b>
+&nbsp;                                // DÉPLACEMENT
+<b class="nc">&nbsp;                                .displacementPathM1(item.getDisplacementPathM1())</b>
+<b class="nc">&nbsp;                                .displacementPathM2(item.getDisplacementPathM2())</b>
+<b class="nc">&nbsp;                                .displacementPathM3(item.getDisplacementPathM3())</b>
+&nbsp;                                // MAX SEALING
+<b class="nc">&nbsp;                                .maxSealingValueM1(item.getMaxSealingValueM1())</b>
+<b class="nc">&nbsp;                                .maxSealingValueM2(item.getMaxSealingValueM2())</b>
+<b class="nc">&nbsp;                                .maxSealingValueM3(item.getMaxSealingValueM3())</b>
+&nbsp;                                // PROGRAMMED SEALING
+<b class="nc">&nbsp;                                .programmedSealingValueM1(item.getProgrammedSealingValueM1())</b>
+<b class="nc">&nbsp;                                .programmedSealingValueM2(item.getProgrammedSealingValueM2())</b>
+<b class="nc">&nbsp;                                .programmedSealingValueM3(item.getProgrammedSealingValueM3())</b>
+&nbsp;                                // DÉTECTIONS
+<b class="nc">&nbsp;                                .detectionsM1(item.getDetectionsM1())</b>
+<b class="nc">&nbsp;                                .detectionsM2(item.getDetectionsM2())</b>
+<b class="nc">&nbsp;                                .detectionsM3(item.getDetectionsM3())</b>
+<b class="nc">&nbsp;                                .remarks(item.getRemarks())</b>
+&nbsp;                                // ✅ AJOUTER CES LIGNES
+<b class="nc">&nbsp;                                .validationStatus(item.getValidationStatus() != null ? item.getValidationStatus().name() : &quot;DRAFT&quot;)</b>
+<b class="nc">&nbsp;                                .validationStatusDisplay(item.getValidationStatus() != null ? item.getValidationStatus().getDisplayName() : &quot;Brouillon&quot;)</b>
+<b class="nc">&nbsp;                                .validatedByPp(item.getValidatedByPp())</b>
+<b class="nc">&nbsp;                                .validatedAtPp(item.getValidatedAtPp() != null ? item.getValidatedAtPp().toString() : null)</b>
+<b class="nc">&nbsp;                                .validatedByMc(item.getValidatedByMc())</b>
+<b class="nc">&nbsp;                                .validatedAtMc(item.getValidatedAtMc() != null ? item.getValidatedAtMc().toString() : null)</b>
+<b class="nc">&nbsp;                                .validatedByMp(item.getValidatedByMp())</b>
+<b class="nc">&nbsp;                                .validatedAtMp(item.getValidatedAtMp() != null ? item.getValidatedAtMp().toString() : null)</b>
+<b class="nc">&nbsp;                                .build())</b>
+<b class="nc">&nbsp;                        .toList();</b>
+&nbsp;
+<b class="nc">&nbsp;        return TechnicalFileDto.ResponseDto.builder()</b>
+<b class="nc">&nbsp;                .id(tf.getId())</b>
+<b class="nc">&nbsp;                .reference(tf.getReference())</b>
+<b class="nc">&nbsp;                .createdBy(tf.getCreatedBy())</b>
+<b class="nc">&nbsp;                .createdAt(tf.getCreatedAt())</b>
+<b class="nc">&nbsp;                .updatedBy(tf.getUpdatedBy())</b>
+<b class="nc">&nbsp;                .updatedAt(tf.getUpdatedAt())</b>
+<b class="nc">&nbsp;                .items(items)</b>
+<b class="nc">&nbsp;                .build();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ==================== VALIDATION DES ITEMS ====================
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public TechnicalFileItem validateItem(Long itemId, String role) {
+&nbsp;        try {
+<b class="nc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="nc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
+<b class="nc">&nbsp;            TechnicalFileItem item = getTechnicalFileItemById(itemId);</b>
+&nbsp;            // ✅ Récupérer les infos projet et site
+<b class="nc">&nbsp;            ChargeSheetItem chargeSheetItem = item.getChargeSheetItem();</b>
+<b class="nc">&nbsp;            ChargeSheet chargeSheet = chargeSheetItem.getChargeSheet();</b>
+<b class="nc">&nbsp;            String projet = chargeSheet.getProject();</b>
+<b class="nc">&nbsp;            String site = chargeSheet.getPlant();</b>
+<b class="nc">&nbsp;            TechnicalFileItemStatus currentStatus = item.getValidationStatus();</b>
+&nbsp;
+&nbsp;            // Vérifier si le rôle peut valider ce statut
+<b class="nc">&nbsp;            if (!currentStatus.canBeValidatedBy(role)) {</b>
+<b class="nc">&nbsp;                throw new RuntimeException(</b>
+<b class="nc">&nbsp;                        String.format(&quot;Impossible de valider cet item avec le rôle %s (statut actuel: %s)&quot;,</b>
+<b class="nc">&nbsp;                                role, currentStatus.getDisplayName())</b>
+&nbsp;                );
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            switch (role) {</b>
+&nbsp;                case &quot;PP&quot;:
+<b class="nc">&nbsp;                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_PP);</b>
+<b class="nc">&nbsp;                    item.setValidatedByPp(currentUser.getEmail());</b>
+<b class="nc">&nbsp;                    item.setValidatedAtPp(LocalDateTime.now());</b>
+&nbsp;                    break;
+&nbsp;
+&nbsp;                case &quot;MC&quot;:
+<b class="nc">&nbsp;                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MC);</b>
+<b class="nc">&nbsp;                    item.setValidatedByMc(currentUser.getEmail());</b>
+<b class="nc">&nbsp;                    item.setValidatedAtMc(LocalDateTime.now());</b>
+&nbsp;                    break;
+&nbsp;
+&nbsp;                case &quot;MP&quot;:
+<b class="nc">&nbsp;                    item.setValidationStatus(TechnicalFileItemStatus.VALIDATED_MP);</b>
+<b class="nc">&nbsp;                    item.setValidatedByMp(currentUser.getEmail());</b>
+<b class="nc">&nbsp;                    item.setValidatedAtMp(LocalDateTime.now());</b>
+&nbsp;                    break;
+&nbsp;
+&nbsp;                default:
+<b class="nc">&nbsp;                    throw new RuntimeException(&quot;Rôle non reconnu pour la validation: &quot; + role);</b>
+&nbsp;            }
+&nbsp;
+<b class="nc">&nbsp;            item.setUpdatedBy(currentUser.getEmail());</b>
+<b class="nc">&nbsp;            item.setUpdatedAt(LocalDate.now());</b>
+&nbsp;
+&nbsp;            // Sauvegarder l&#39;historique
+<b class="nc">&nbsp;            saveHistory(</b>
+<b class="nc">&nbsp;                    item.getTechnicalFileId(),</b>
+<b class="nc">&nbsp;                    item.getId(),</b>
+&nbsp;                    &quot;validationStatus&quot;,
+<b class="nc">&nbsp;                    currentStatus.name(),</b>
+<b class="nc">&nbsp;                    item.getValidationStatus().name(),</b>
+<b class="nc">&nbsp;                    currentUser.getEmail()</b>
+&nbsp;            );
+<b class="nc">&nbsp;            TechnicalFileItem saved = technicalFileItemRepository.save(item);</b>
+&nbsp;            // ✅ Notification modifiée
+<b class="nc">&nbsp;            notificationService.notifyTechnicalFileUpdatedToProjectAndSite(</b>
+<b class="nc">&nbsp;                    item.getTechnicalFileId(),</b>
+<b class="nc">&nbsp;                    chargeSheet.getId(),</b>
+<b class="nc">&nbsp;                    currentUser.getEmail(),</b>
+&nbsp;                    role,
+&nbsp;                    projet,
+&nbsp;                    site
+&nbsp;            );
+&nbsp;
+<b class="nc">&nbsp;            return saved;</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            System.err.println(&quot;Erreur lors de la validation de l&#39;item : &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;Impossible de valider l&#39;item. &quot; + e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    // Vérifier si un utilisateur peut valider un item
+&nbsp;    public boolean canValidateItem(Long itemId, String role) {
+&nbsp;        try {
+<b class="nc">&nbsp;            TechnicalFileItem item = getTechnicalFileItemById(itemId);</b>
+<b class="nc">&nbsp;            return item.getValidationStatus().canBeValidatedBy(role);</b>
+&nbsp;        }
+&nbsp;        catch (Exception e) {
+<b class="nc">&nbsp;            System.err.println(&quot;Erreur lors de la validation de l&#39;item : &quot; + e.getMessage());</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;    }
+&nbsp;    // TechnicalFileService.java - Ajouter cette méthode
+&nbsp;
+&nbsp;    public Map&lt;String, Object&gt; getFirstAndCurrentVersions(Long itemId) {
+<b class="nc">&nbsp;        AuditReader reader = AuditReaderFactory.get(entityManager);</b>
+&nbsp;
+&nbsp;        // Récupérer la première version (création)
+<b class="nc">&nbsp;        List&lt;Object[]&gt; firstRevision = reader.createQuery()</b>
+<b class="nc">&nbsp;                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)</b>
+<b class="nc">&nbsp;                .add(AuditEntity.id().eq(itemId))</b>
+<b class="nc">&nbsp;                .addOrder(AuditEntity.revisionNumber().asc())</b>
+<b class="nc">&nbsp;                .setMaxResults(1)</b>
+<b class="nc">&nbsp;                .getResultList();</b>
+&nbsp;
+&nbsp;        // Récupérer la dernière version (actuelle)
+<b class="nc">&nbsp;        List&lt;Object[]&gt; lastRevision = reader.createQuery()</b>
+<b class="nc">&nbsp;                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)</b>
+<b class="nc">&nbsp;                .add(AuditEntity.id().eq(itemId))</b>
+<b class="nc">&nbsp;                .addOrder(AuditEntity.revisionNumber().desc())</b>
+<b class="nc">&nbsp;                .setMaxResults(1)</b>
+<b class="nc">&nbsp;                .getResultList();</b>
+&nbsp;
+<b class="nc">&nbsp;        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (!firstRevision.isEmpty()) {</b>
+<b class="nc">&nbsp;            TechnicalFileItem firstEntity = (TechnicalFileItem) firstRevision.get(0)[0];</b>
+<b class="nc">&nbsp;            CustomRevisionEntity firstRev = (CustomRevisionEntity) firstRevision.get(0)[1];</b>
+<b class="nc">&nbsp;            result.put(&quot;firstVersion&quot;, Map.of(</b>
+&nbsp;                    &quot;entity&quot;, firstEntity,
+<b class="nc">&nbsp;                    &quot;revisionNumber&quot;, firstRev.getRevisionNumber(),</b>
+<b class="nc">&nbsp;                    &quot;modifiedBy&quot;, firstRev.getUsername(),</b>
+<b class="nc">&nbsp;                    &quot;modifiedAt&quot;, new Date(firstRev.getTimestamp())</b>
+&nbsp;            ));
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        if (!lastRevision.isEmpty()) {</b>
+<b class="nc">&nbsp;            TechnicalFileItem lastEntity = (TechnicalFileItem) lastRevision.get(0)[0];</b>
+<b class="nc">&nbsp;            CustomRevisionEntity lastRev = (CustomRevisionEntity) lastRevision.get(0)[1];</b>
+<b class="nc">&nbsp;            result.put(&quot;currentVersion&quot;, Map.of(</b>
+&nbsp;                    &quot;entity&quot;, lastEntity,
+<b class="nc">&nbsp;                    &quot;revisionNumber&quot;, lastRev.getRevisionNumber(),</b>
+<b class="nc">&nbsp;                    &quot;modifiedBy&quot;, lastRev.getUsername(),</b>
+<b class="nc">&nbsp;                    &quot;modifiedAt&quot;, new Date(lastRev.getTimestamp())</b>
+&nbsp;            ));
+&nbsp;        }
+&nbsp;
+&nbsp;        // Calculer les différences entre les deux versions
+<b class="nc">&nbsp;        if (!firstRevision.isEmpty() &amp;&amp; !lastRevision.isEmpty()) {</b>
+<b class="nc">&nbsp;            TechnicalFileItem first = (TechnicalFileItem) firstRevision.get(0)[0];</b>
+<b class="nc">&nbsp;            TechnicalFileItem last = (TechnicalFileItem) lastRevision.get(0)[0];</b>
+<b class="nc">&nbsp;            result.put(&quot;differences&quot;, getDifferencesBetweenVersions(first, last));</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return result;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private List&lt;Map&lt;String, Object&gt;&gt; getDifferencesBetweenVersions(TechnicalFileItem oldItem, TechnicalFileItem newItem) {
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; differences = new ArrayList&lt;&gt;();</b>
+&nbsp;
+&nbsp;        // Liste des champs à comparer
+<b class="nc">&nbsp;        Map&lt;String, java.util.function.Function&lt;TechnicalFileItem, String&gt;&gt; fieldGetters = new LinkedHashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;position&quot;, TechnicalFileItem::getPosition);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;technicianName&quot;, TechnicalFileItem::getTechnicianName);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;xCode&quot;, TechnicalFileItem::getXCode);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;indexValue&quot;, item -&gt; item.getIndexValue() != null ? item.getIndexValue().toString() : null);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM1&quot;, TechnicalFileItem::getPinRigidityM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM2&quot;, TechnicalFileItem::getPinRigidityM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;pinRigidityM3&quot;, TechnicalFileItem::getPinRigidityM3);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM1&quot;, TechnicalFileItem::getDisplacementPathM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM2&quot;, TechnicalFileItem::getDisplacementPathM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;displacementPathM3&quot;, TechnicalFileItem::getDisplacementPathM3);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM1&quot;, TechnicalFileItem::getMaxSealingValueM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM2&quot;, TechnicalFileItem::getMaxSealingValueM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;maxSealingValueM3&quot;, TechnicalFileItem::getMaxSealingValueM3);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM1&quot;, TechnicalFileItem::getProgrammedSealingValueM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM2&quot;, TechnicalFileItem::getProgrammedSealingValueM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;programmedSealingValueM3&quot;, TechnicalFileItem::getProgrammedSealingValueM3);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM1&quot;, TechnicalFileItem::getDetectionsM1);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM2&quot;, TechnicalFileItem::getDetectionsM2);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;detectionsM3&quot;, TechnicalFileItem::getDetectionsM3);</b>
+<b class="nc">&nbsp;        fieldGetters.put(&quot;validationStatus&quot;, item -&gt; {</b>
+<b class="nc">&nbsp;            if (item.getValidationStatus() == null) return null;</b>
+<b class="nc">&nbsp;            return item.getValidationStatus().name();</b>
+&nbsp;        });
+<b class="nc">&nbsp;        fieldGetters.put(&quot;remarks&quot;, TechnicalFileItem::getRemarks);</b>
+&nbsp;
+<b class="nc">&nbsp;        for (Map.Entry&lt;String, java.util.function.Function&lt;TechnicalFileItem, String&gt;&gt; entry : fieldGetters.entrySet()) {</b>
+<b class="nc">&nbsp;            String fieldName = entry.getKey();</b>
+<b class="nc">&nbsp;            String oldVal = entry.getValue().apply(oldItem);</b>
+<b class="nc">&nbsp;            String newVal = entry.getValue().apply(newItem);</b>
+&nbsp;
+<b class="nc">&nbsp;            if (!Objects.equals(oldVal, newVal)) {</b>
+<b class="nc">&nbsp;                Map&lt;String, Object&gt; diff = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;                diff.put(&quot;fieldName&quot;, fieldName);</b>
+<b class="nc">&nbsp;                diff.put(&quot;oldValue&quot;, oldVal != null ? oldVal : &quot;-&quot;);</b>
+<b class="nc">&nbsp;                diff.put(&quot;newValue&quot;, newVal != null ? newVal : &quot;-&quot;);</b>
+<b class="nc">&nbsp;                differences.add(diff);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        return differences;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

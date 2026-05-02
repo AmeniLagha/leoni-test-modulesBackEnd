@@ -8,26 +8,57 @@ on:
 
 jobs:
 
-  build:
+  # ==================== BUILD & UNIT TESTS ====================
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
-      - run: mvn clean package -DskipTests
+
+      # ✅ ÉTAPE 1 : Compilation
+      - name: Build
+        run: mvn clean compile
+
+      # ✅ ÉTAPE 2 : Exécuter les tests unitaires JUnit
+      - name: Run JUnit Unit Tests
+        run: mvn test
+        env:
+          SPRING_PROFILES_ACTIVE: test
+
+      # ✅ ÉTAPE 3 : Générer le rapport JaCoCo
+      - name: Generate JaCoCo Report
+        run: mvn jacoco:report
+
+      # ✅ ÉTAPE 4 : Upload rapport JaCoCo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          retention-days: 7
+
+      # ✅ ÉTAPE 5 : Package sans skip tests (les tests ont déjà été exécutés)
+      - name: Package
+        run: mvn package -DskipTests
+
+      # ✅ ÉTAPE 6 : Upload JAR
       - uses: actions/upload-artifact@v4
         with:
           name: backend-jar
           path: target/*.jar
 
+  # ==================== TESTS SELENIUM (End-to-End) ====================
   selenium-tests:
-    needs: build
+    needs: build-and-test  # ← Dépend de la réussite des tests JUnit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -51,21 +82,15 @@ jobs:
           done
 
       - name: Run Login Tests
-        run: mvn test -Dtest=LoginTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.admin.email=${{ secrets.TEST_ADMIN_EMAIL }} -Dtest.admin.password=${{ secrets.TEST_ADMIN_PASSWORD }}
-        env:
-          APP_URL: ${{ secrets.FRONTEND_URL }}
+        run: mvn test -Dtest=LoginTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true
         continue-on-error: true
 
       - name: Run Register Tests
-        run: mvn test -Dtest=RegisterTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.admin.email=${{ secrets.TEST_ADMIN_EMAIL }} -Dtest.admin.password=${{ secrets.TEST_ADMIN_PASSWORD }}
-        env:
-          APP_URL: ${{ secrets.FRONTEND_URL }}
+        run: mvn test -Dtest=RegisterTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true
         continue-on-error: true
 
       - name: Run ChargeSheet Tests
-        run: mvn test -Dtest=ChargeSheetTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true -Dtest.ing.email=${{ secrets.TEST_ING_EMAIL }} -Dtest.ing.password=${{ secrets.TEST_ING_PASSWORD }}
-        env:
-          APP_URL: ${{ secrets.FRONTEND_URL }}
+        run: mvn test -Dtest=ChargeSheetTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true
         continue-on-error: true
 
       - name: Upload Cucumber Reports
@@ -76,17 +101,21 @@ jobs:
           path: target/cucumber-reports/
           retention-days: 7
 
+  # ==================== DOCKER BUILD & RELEASE ====================
   docker-build:
-    needs: selenium-tests
+    needs: selenium-tests  # ← Dépend de la réussite des tests Selenium
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/setup-buildx-action@v3
+
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - uses: docker/build-push-action@v5
         with:
           context: .
@@ -97,6 +126,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ==================== DEPLOY ====================
   deploy:
     needs: docker-build
     runs-on: ubuntu-latest

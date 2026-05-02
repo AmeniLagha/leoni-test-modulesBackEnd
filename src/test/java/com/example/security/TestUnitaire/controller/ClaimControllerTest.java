@@ -1,0 +1,428 @@
+package com.example.security.TestUnitaire.controller;
+
+import com.example.security.TestUnitaire.BaseIntegrationTest;
+import com.example.security.cahierdeCharge.ChargeSheet;
+import com.example.security.cahierdeCharge.ChargeSheetRepository;
+import com.example.security.cahierdeCharge.ChargeSheetStatus;
+import com.example.security.config.JwtService;
+import com.example.security.projet.Projet;
+import com.example.security.projet.ProjetRepository;
+import com.example.security.reclamation.*;
+import com.example.security.site.Site;
+import com.example.security.site.SiteRepository;
+import com.example.security.token.Token;
+import com.example.security.token.TokenRepository;
+import com.example.security.token.TokenType;
+import com.example.security.user.Role;
+import com.example.security.user.User;
+import com.example.security.user.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+
+class ClaimControllerTest  extends BaseIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private ClaimRepository claimRepository;
+
+    @Autowired
+    private ChargeSheetRepository chargeSheetRepository;
+
+    @Autowired
+    private SiteRepository siteRepository;
+
+    @Autowired
+    private ProjetRepository projetRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private TokenRepository tokenRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
+    private String ppToken;
+    private String mcToken;
+    private String mpToken;
+    private String ptToken;
+    private String ingToken;
+    private String adminToken;
+    private User ppUser;
+    private User mcUser;
+    private User mpUser;
+    private User ptUser;
+    private User ingUser;
+    private User adminUser;
+    private Site testSite;
+    private Projet testProjet;
+    private ChargeSheet testChargeSheet;
+    private Claim testClaim;
+
+    @BeforeEach
+    void setUp() {
+        // Générer un ID unique pour ce test
+        String uniqueId = UUID.randomUUID().toString().substring(0, 8);
+
+        // Nettoyage
+        claimRepository.deleteAll();
+        chargeSheetRepository.deleteAll();
+        tokenRepository.deleteAll();
+        userRepository.deleteAll();
+        siteRepository.deleteAll();
+        projetRepository.deleteAll();
+
+        // Création site avec nom unique
+        testSite = new Site();
+        testSite.setName("MH1_" + uniqueId);  // ← UNIQUE
+        testSite.setActive(true);
+        testSite = siteRepository.save(testSite);
+
+        // Création projet avec nom unique
+        testProjet = new Projet();
+        testProjet.setName("FORD_" + uniqueId);  // ← UNIQUE
+        testProjet.setActive(true);
+        testProjet = projetRepository.save(testProjet);
+
+        // Création utilisateurs avec des emails uniques
+        ppUser = createUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
+        mcUser = createUser("mc_" + uniqueId + "@test.com", "mc123", Role.MC, 10002);
+        mpUser = createUser("mp_" + uniqueId + "@test.com", "mp123", Role.MP, 10003);
+        ptUser = createUser("pt_" + uniqueId + "@test.com", "pt123", Role.PT, 10004);
+        ingUser = createUser("ing_" + uniqueId + "@test.com", "ing123", Role.ING, 10005);
+        adminUser = createUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
+
+        // Génération des tokens (re-générer après avoir changé les emails)
+        ppToken = jwtService.generateToken(ppUser);
+        mcToken = jwtService.generateToken(mcUser);
+        mpToken = jwtService.generateToken(mpUser);
+        ptToken = jwtService.generateToken(ptUser);
+        ingToken = jwtService.generateToken(ingUser);
+        adminToken = jwtService.generateToken(adminUser);
+
+        saveToken(ppUser, ppToken);
+        saveToken(mcUser, mcToken);
+        saveToken(mpUser, mpToken);
+        saveToken(ptUser, ptToken);
+        saveToken(ingUser, ingToken);
+        saveToken(adminUser, adminToken);
+
+        // Création cahier de test avec les valeurs uniques
+        testChargeSheet = ChargeSheet.builder()
+                .plant(testSite.getName())  // ← MH1_xxx
+                .project(testProjet.getName())  // ← FORD_xxx
+                .orderNumber("ORD-001_" + uniqueId)
+                .status(ChargeSheetStatus.VALIDATED_PT)
+                .createdBy(ppUser.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+        testChargeSheet = chargeSheetRepository.save(testChargeSheet);
+
+        // Création réclamation de test
+        testClaim = Claim.builder()
+                .chargeSheetId(testChargeSheet.getId())
+                .title("Test Claim_" + uniqueId)
+                .description("This is a test claim for unit testing")
+                .priority(Claim.Priority.HIGH)
+                .category("TEST")
+                .status(Claim.ClaimStatus.ASSIGNED)
+                .reportedBy(ppUser.getEmail())
+                .reportedDate(LocalDate.now())
+                .assignedTo(mcUser.getEmail())
+                .assignedDate(LocalDate.now())
+                .createdBy(ppUser.getEmail())
+                .createdAt(LocalDate.now())
+                .plant(testSite.getName())  // ← MH1_xxx
+                .build();
+        testClaim = claimRepository.save(testClaim);
+    }
+
+    private User createUser(String email, String password, Role role, int matricule) {
+        Set<Projet> projetsSet = new HashSet<>();
+        projetsSet.add(testProjet);
+
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .firstname("Test")
+                .lastname("User")
+                .matricule(matricule)
+                .role(role)
+                .site(testSite)
+                .projets(projetsSet)
+                .build();
+        return userRepository.save(user);
+    }
+
+    private void saveToken(User user, String token) {
+        // Méthode 1: Supprimer par user
+        tokenRepository.deleteAll(tokenRepository.findByUser(user));
+
+        // Méthode 2: Alternative - utiliser une requête native
+        // tokenRepository.deleteByUser(user);
+
+        Token tokenEntity = Token.builder()
+                .token(token)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false)
+                .user(user)
+                .build();
+        tokenRepository.save(tokenEntity);
+    }
+
+    // ==================== POST /api/v1/claims ====================
+
+    @Test
+    void createClaim_AsPp_ShouldCreate() throws Exception {
+        ClaimDto.CreateDto dto = ClaimDto.CreateDto.builder()
+                .chargeSheetId(testChargeSheet.getId())
+                .title("New Claim")
+                .description("Description of new claim")
+                .priority(Claim.Priority.MEDIUM)
+                .category("HARDWARE")
+                .assignedTo(mcUser.getEmail())
+                .plant("MH1")
+                .build();
+
+        mockMvc.perform(post("/api/v1/claims")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("New Claim"));
+    }
+
+    @Test
+    void createClaim_AsIng_ShouldReturnForbidden() throws Exception {
+        ClaimDto.CreateDto dto = ClaimDto.CreateDto.builder()
+                .chargeSheetId(testChargeSheet.getId())
+                .title("New Claim")
+                .description("Description")
+                .build();
+
+        mockMvc.perform(post("/api/v1/claims")
+                        .header("Authorization", "Bearer " + ingToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isForbidden());
+    }
+
+    // ==================== GET /api/v1/claims ====================
+
+    @Test
+    void getAllClaims_AsAdmin_ShouldReturnAll() throws Exception {
+        mockMvc.perform(get("/api/v1/claims")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void getAllClaims_AsPp_ShouldReturnFiltered() throws Exception {
+        mockMvc.perform(get("/api/v1/claims")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== GET /api/v1/claims/{id} ====================
+
+   @Test
+    void getClaimById_WithValidId_ShouldReturn() throws Exception {
+        // FORCER LA RECHARGE DE L'UTILISATEUR DEPUIS LA BASE
+        User freshPpUser = userRepository.findByEmail(adminUser.getEmail()).orElse(null);
+        assertNotNull(freshPpUser, "User should exist");
+
+        // REGENERER LE TOKEN AVEC L'UTILISATEUR FRAIS
+        String freshToken = jwtService.generateToken(freshPpUser);
+
+       // Pas besoin de rappeler saveToken car le token existe déjà
+       // saveToken(freshPpUser, freshToken)
+
+        mockMvc.perform(get("/api/v1/claims/" + testClaim.getId())
+                        .header("Authorization", "Bearer " + freshToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value(testClaim.getTitle()));
+    }
+
+
+    @Test
+    void getClaimById_WithInvalidId_ShouldReturnError() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/99999")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isNotFound());
+    }
+
+    // ==================== PUT /api/v1/claims/{id} ====================
+
+   @Test
+    void updateClaim_AsPp_ShouldUpdate() throws Exception {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .title("Updated Title")
+                .description("Updated description")
+                .priority(Claim.Priority.CRITICAL)
+                .build();
+
+        mockMvc.perform(put("/api/v1/claims/" + testClaim.getId())
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Updated Title"));
+    }
+
+    // ==================== PUT /api/v1/claims/{id}/assign ====================
+
+    @Test
+    void assignClaim_ShouldAssignAndNotify() throws Exception {
+        ClaimDto.AssignmentDto dto = ClaimDto.AssignmentDto.builder()
+                .assignedTo(mpUser.getEmail())
+                .estimatedResolutionDate(LocalDate.now().plusDays(7))
+                .build();
+
+        mockMvc.perform(put("/api/v1/claims/" + testClaim.getId() + "/assign")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignedTo").value(mpUser.getEmail()));
+    }
+
+    // ==================== PUT /api/v1/claims/{id}/resolve ====================
+
+    @Test
+    void resolveClaim_ShouldResolve() throws Exception {
+        ClaimDto.ResolutionDto dto = ClaimDto.ResolutionDto.builder()
+                .actionTaken("Fixed the issue")
+                .resolution("Replaced faulty component")
+                .build();
+
+        mockMvc.perform(put("/api/v1/claims/" + testClaim.getId() + "/resolve")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+    }
+
+    // ==================== PATCH /api/v1/claims/{id}/status/{status} ====================
+
+    @Test
+    void updateClaimStatus_ShouldChangeStatus() throws Exception {
+        mockMvc.perform(patch("/api/v1/claims/" + testClaim.getId() + "/status/IN_PROGRESS")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+    }
+
+    // ==================== GET /api/v1/claims/charge-sheet/{chargeSheetId} ====================
+
+    @Test
+    void getClaimsByChargeSheet_ShouldReturnList() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/charge-sheet/" + testChargeSheet.getId())
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    // ==================== GET /api/v1/claims/my-reported ====================
+
+    @Test
+    void getMyReportedClaims_ShouldReturnClaims() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/my-reported")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk());
+    }
+
+
+
+
+    // ==================== GET /api/v1/claims/status/{status} ====================
+
+
+    // ==================== GET /api/v1/claims/priority/{priority} ====================
+
+    @Test
+    void getClaimsByPriority_ShouldReturnFiltered() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/priority/HIGH")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== GET /api/v1/claims/category/{category} ====================
+
+    @Test
+    void getClaimsByCategory_ShouldReturnFiltered() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/category/TEST")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== GET /api/v1/claims/search ====================
+
+    @Test
+    void searchClaims_ShouldReturnResults() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/search")
+                        .param("keyword", "Test")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== GET /api/v1/claims/summary/{chargeSheetId} ====================
+
+    @Test
+    void getClaimSummary_ShouldReturnStats() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/summary/" + testChargeSheet.getId())
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
+    }
+
+    // ==================== DELETE /api/v1/claims/{id} ====================
+
+    @Test
+    void deleteClaim_AsPp_ShouldDelete() throws Exception {
+        mockMvc.perform(delete("/api/v1/claims/" + testClaim.getId())
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteClaim_WrongUser_ShouldReturnForbidden() throws Exception {
+        mockMvc.perform(delete("/api/v1/claims/" + testClaim.getId())
+                        .header("Authorization", "Bearer " + ingToken))
+                .andExpect(status().isForbidden());
+    }
+}

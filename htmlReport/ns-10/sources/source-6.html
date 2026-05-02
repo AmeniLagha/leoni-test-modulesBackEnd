@@ -1,0 +1,289 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > User</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.user</a>
+</div>
+
+<h1>Coverage Summary for Class: User (com.example.security.user)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">User</td>
+<td class="coverageStat">
+  <span class="percent">
+    85,2%
+  </span>
+  <span class="absValue">
+    (23/27)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    4,1%
+  </span>
+  <span class="absValue">
+    (4/98)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    76,5%
+  </span>
+  <span class="absValue">
+    (26/34)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">User$HibernateInstantiator$uUjGVAW3</td>
+  </tr>
+  <tr>
+    <td class="name">User$HibernateProxy$wzTRsLay</td>
+  </tr>
+  <tr>
+    <td class="name">User$UserBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    85,7%
+  </span>
+  <span class="absValue">
+    (24/28)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    6%
+  </span>
+  <span class="absValue">
+    (6/100)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    77,1%
+  </span>
+  <span class="absValue">
+    (27/35)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.user;
+&nbsp;
+&nbsp;import com.example.security.projet.Projet;
+&nbsp;import com.example.security.site.Site;
+&nbsp;import com.example.security.token.Token;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import org.springframework.security.core.GrantedAuthority;
+&nbsp;import org.springframework.security.core.userdetails.UserDetails;
+&nbsp;import java.util.Collection;
+&nbsp;import java.util.HashSet;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Set;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+<b class="pc">&nbsp;@Data</b>
+<b class="fc">&nbsp;@Builder</b>
+<b class="fc">&nbsp;@NoArgsConstructor</b>
+<b class="fc">&nbsp;@AllArgsConstructor</b>
+&nbsp;@Entity
+&nbsp;@Table(name=&quot;_user&quot;)
+&nbsp;public class User implements UserDetails {
+&nbsp;    @Id
+&nbsp;    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<b class="fc">&nbsp;    private Integer id;</b>
+<b class="fc">&nbsp;    private String firstname;</b>
+<b class="fc">&nbsp;    private String lastname;</b>
+&nbsp;    private Integer matricule;
+&nbsp;    @ManyToMany(fetch = FetchType.EAGER)
+&nbsp;    @JoinTable(
+&nbsp;            name = &quot;user_projet&quot;,
+&nbsp;            joinColumns = @JoinColumn(name = &quot;user_id&quot;),
+&nbsp;            inverseJoinColumns = @JoinColumn(name = &quot;projet_id&quot;)
+&nbsp;    )
+&nbsp;    @Builder.Default
+&nbsp;    private Set&lt;Projet&gt; projets = new HashSet&lt;&gt;();
+<b class="fc">&nbsp;    private String email;</b>
+&nbsp;    private String password;
+&nbsp;    @Enumerated(EnumType.STRING)
+<b class="fc">&nbsp;    private  Role role;</b>
+&nbsp;    @OneToMany(mappedBy = &quot;user&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+<b class="nc">&nbsp;    private List&lt;Token&gt; tokens;</b>
+&nbsp;    @Override
+&nbsp;    public Collection&lt;? extends GrantedAuthority&gt; getAuthorities() {
+<b class="fc">&nbsp;        return role.getAuthorities();</b>
+&nbsp;    }
+&nbsp;    @ManyToOne(fetch = FetchType.EAGER)
+&nbsp;    @JoinColumn(name = &quot;site_id&quot;, nullable = false)
+&nbsp;    private Site site;
+&nbsp;    @Override
+&nbsp;    public String getPassword() {
+<b class="fc">&nbsp;        return password;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Integer getMatricule(){
+<b class="fc">&nbsp;        return matricule;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public String getUsername() {
+<b class="fc">&nbsp;        return email;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isAccountNonExpired() {
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isAccountNonLocked() {
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isCredentialsNonExpired() {
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Override
+&nbsp;    public boolean isEnabled() {
+<b class="fc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+<b class="fc">&nbsp;    public Site getSite() { return site; }</b>
+<b class="fc">&nbsp;    public void setSite(Site site) { this.site = site; }</b>
+&nbsp;
+&nbsp;    // Raccourci pour obtenir le nom du site
+&nbsp;    // User.java - Ajouter ces méthodes
+&nbsp;
+&nbsp;    public String getSiteName() {
+<b class="pc">&nbsp;        return site != null ? site.getName() : null;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Long getSiteId() {
+<b class="nc">&nbsp;        return site != null ? site.getId() : null;</b>
+&nbsp;    }
+&nbsp;    // Getters/Setters
+<b class="fc">&nbsp;    public Set&lt;Projet&gt; getProjets() { return projets; }</b>
+<b class="fc">&nbsp;    public void setProjets(Set&lt;Projet&gt; projets) { this.projets = projets; }</b>
+&nbsp;
+&nbsp;    // ✅ Raccourci pour obtenir les noms des projets
+&nbsp;    public String getProjetsNames() {
+<b class="nc">&nbsp;        if (projets == null || projets.isEmpty()) return null;</b>
+<b class="nc">&nbsp;        return projets.stream()</b>
+<b class="nc">&nbsp;                .map(Projet::getName)</b>
+<b class="nc">&nbsp;                .reduce((a, b) -&gt; a + &quot;, &quot; + b)</b>
+<b class="nc">&nbsp;                .orElse(null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Vérifier si l&#39;utilisateur a accès à un projet
+&nbsp;    public boolean hasProjet(String projetName) {
+<b class="nc">&nbsp;        return projets.stream().anyMatch(p -&gt; p.getName().equals(projetName));</b>
+&nbsp;    }
+&nbsp;    // User.java - Ajouter cette méthode
+&nbsp;    public List&lt;String&gt; getProjetNamesAsList() {
+<b class="pc">&nbsp;        if (projets == null || projets.isEmpty()) return List.of();</b>
+<b class="fc">&nbsp;        return projets.stream()</b>
+<b class="fc">&nbsp;                .map(Projet::getName)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

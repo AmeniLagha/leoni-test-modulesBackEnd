@@ -1,0 +1,538 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ChargeSheetItem</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.cahierdeCharge</a>
+</div>
+
+<h1>Coverage Summary for Class: ChargeSheetItem (com.example.security.cahierdeCharge)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ChargeSheetItem</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (1/121)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/942)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (1/121)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ChargeSheetItem$ChargeSheetItemBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+  </tr>
+  <tr>
+    <td class="name">ChargeSheetItem$HibernateInstantiator$UOybNQbw</td>
+  </tr>
+  <tr>
+    <td class="name">ChargeSheetItem$HibernateProxy$jYn15155</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (1/122)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/942)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0,8%
+  </span>
+  <span class="absValue">
+    (1/122)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.cahierdeCharge;
+&nbsp;
+&nbsp;import com.example.security.fichierTechnique.TechnicalFile;
+&nbsp;import com.example.security.reception.ReceptionHistory;
+&nbsp;import com.fasterxml.jackson.annotation.JsonIgnore;
+&nbsp;import jakarta.persistence.*;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import java.time.LocalDate;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Entity
+&nbsp;@Table(name = &quot;charge_sheet_item&quot;)
+<b class="nc">&nbsp;@Data</b>
+<b class="nc">&nbsp;@Builder</b>
+<b class="fc">&nbsp;@NoArgsConstructor</b>
+<b class="nc">&nbsp;@AllArgsConstructor</b>
+&nbsp;public class ChargeSheetItem {
+&nbsp;
+&nbsp;    @Id
+&nbsp;    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<b class="nc">&nbsp;    private Long id;</b>
+&nbsp;
+&nbsp;    @ManyToOne(fetch = FetchType.LAZY)
+&nbsp;    @JoinColumn(name = &quot;charge_sheet_id&quot;, nullable = false)
+&nbsp;    @JsonIgnore
+<b class="nc">&nbsp;    private ChargeSheet chargeSheet;</b>
+&nbsp;    @ManyToOne(fetch = FetchType.LAZY)
+&nbsp;    @JoinColumn(name = &quot;technical_file_id&quot;, nullable = true)
+&nbsp;    @JsonIgnore
+<b class="nc">&nbsp;    private TechnicalFile technicalFile;</b>
+&nbsp;
+&nbsp;    // === ITEM IDENTIFICATION ===
+&nbsp;    @Column(name = &quot;item_number&quot;, length = 10)
+<b class="nc">&nbsp;    private String itemNumber;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;samples_exist&quot;, length = 3)
+<b class="nc">&nbsp;    private String samplesExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;ways&quot;, length = 5)
+<b class="nc">&nbsp;    private String ways;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;housing_colour&quot;, length = 30)
+<b class="nc">&nbsp;    private String housingColour;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;test_module_exist_in_database&quot;, length = 3)
+<b class="nc">&nbsp;    private String testModuleExistInDatabase;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;housing_reference_leoni&quot;, length = 50)
+<b class="nc">&nbsp;    private String housingReferenceLeoni;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;housing_reference_supplier_customer&quot;, length = 100)
+<b class="nc">&nbsp;    private String housingReferenceSupplierCustomer;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;reference_seals_clips_cable_ties_cap&quot;, length = 100)
+<b class="nc">&nbsp;    private String referenceSealsClipsCableTiesCap;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;real_connector_picture&quot;, length = 255)
+<b class="nc">&nbsp;    private String realConnectorPicture;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;quantity_of_test_modules&quot;)
+<b class="nc">&nbsp;    private Integer quantityOfTestModules;</b>
+&nbsp;
+&nbsp;    // === STANDARD TEST CRITERIA ===
+&nbsp;    @Column(name = &quot;outside_housing_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String outsideHousingExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;inside_housing_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String insideHousingExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;mechanical_coding&quot;, length = 1)
+<b class="nc">&nbsp;    private String mechanicalCoding;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;electrical_coding&quot;, length = 1)
+<b class="nc">&nbsp;    private String electricalCoding;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cpa_exist_open&quot;, length = 1)
+<b class="nc">&nbsp;    private String cpaExistOpen;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cpa_exist_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String cpaExistClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cover_hood_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String coverHoodExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cover_hood_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String coverHoodClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cap_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String capExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;bayonet_cap_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String bayonetCapExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;bracket_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String bracketExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;bracket_open&quot;, length = 1)
+<b class="nc">&nbsp;    private String bracketOpen;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;bracket_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String bracketClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;latch_wing_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String latchWingExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;slider_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String sliderExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;slider_open&quot;, length = 1)
+<b class="nc">&nbsp;    private String sliderOpen;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;slider_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String sliderClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;secondary_lock_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String secondaryLockExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;secondary_lock_open&quot;, length = 1)
+<b class="nc">&nbsp;    private String secondaryLockOpen;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;secondary_lock_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String secondaryLockClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;offset_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String offsetTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;push_back_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String pushBackTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;terminal_orientation&quot;, length = 1)
+<b class="nc">&nbsp;    private String terminalOrientation;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;terminal_differentiation&quot;, length = 1)
+<b class="nc">&nbsp;    private String terminalDifferentiation;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;airbag_test_via_service_window&quot;, length = 1)
+<b class="nc">&nbsp;    private String airbagTestViaServiceWindow;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;leak_test_pressure&quot;, length = 1)
+<b class="nc">&nbsp;    private String leakTestPressure;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;leak_test_vacuum&quot;, length = 1)
+<b class="nc">&nbsp;    private String leakTestVacuum;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;seal_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String sealExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_tie_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableTieExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_tie_left&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableTieLeft;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_tie_right&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableTieRight;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_tie_middle&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableTieMiddle;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_tie_left_right&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableTieLeftRight;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;clip_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String clipExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;screw_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String screwExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;nut_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String nutExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;convoluted_conduit_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String convolutedConduitExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;convoluted_conduit_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String convolutedConduitClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;antenna_only_presence_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String antennaOnlyPresenceTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;antenna_only_contacting_of_shield&quot;, length = 1)
+<b class="nc">&nbsp;    private String antennaOnlyContactingOfShield;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;antenna_contacting_of_shield_and_core_wire&quot;, length = 1)
+<b class="nc">&nbsp;    private String antennaContactingOfShieldAndCoreWire;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;ring_terminal&quot;, length = 1)
+<b class="nc">&nbsp;    private String ringTerminal;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;diameter_inside&quot;, length = 20)
+<b class="nc">&nbsp;    private String diameterInside;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;diameter_outside&quot;, length = 20)
+<b class="nc">&nbsp;    private String diameterOutside;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;single_contact&quot;, length = 1)
+<b class="nc">&nbsp;    private String singleContact;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;heat_shrink_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String heatShrinkExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;open_shunts_airbag&quot;, length = 1)
+<b class="nc">&nbsp;    private String openShuntsAirbag;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;flow_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String flowTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;solid_metal_contour&quot;, length = 1)
+<b class="nc">&nbsp;    private String solidMetalContour;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;metal_contour_adjustable&quot;, length = 1)
+<b class="nc">&nbsp;    private String metalContourAdjustable;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;grommet_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String grommetExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;grommet_orientation&quot;, length = 20)
+<b class="nc">&nbsp;    private String grommetOrientation;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_channel_exist&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableChannelExist;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;cable_channel_closed&quot;, length = 1)
+<b class="nc">&nbsp;    private String cableChannelClosed;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;colour_detection_prepared&quot;, length = 1)
+<b class="nc">&nbsp;    private String colourDetectionPrepared;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;extra_led&quot;, length = 1)
+<b class="nc">&nbsp;    private String extraLED;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;spring&quot;, length = 1)
+<b class="nc">&nbsp;    private String spring;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;other_detection&quot;, length = 1)
+<b class="nc">&nbsp;    private String otherDetection;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;spacer_closing_unit&quot;, length = 1)
+<b class="nc">&nbsp;    private String spacerClosingUnit;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;leak_test_complex&quot;, length = 1)
+<b class="nc">&nbsp;    private String leakTestComplex;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;pin_straightness_check&quot;, length = 1)
+<b class="nc">&nbsp;    private String pinStraightnessCheck;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;presence_test_of_one_side_connected_shield&quot;, length = 1)
+<b class="nc">&nbsp;    private String presenceTestOfOneSideConnectedShield;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;contrast_detection_grey_value_sensor&quot;, length = 1)
+<b class="nc">&nbsp;    private String contrastDetectionGreyValueSensor;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;colour_detection&quot;, length = 1)
+<b class="nc">&nbsp;    private String colourDetection;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;attenuation_with_mode_scrambler&quot;, length = 1)
+<b class="nc">&nbsp;    private String attenuationWithModeScrambler;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;attenuation_without_mode_scrambler&quot;, length = 1)
+<b class="nc">&nbsp;    private String attenuationWithoutModeScrambler;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;insulation_resistance&quot;, length = 1)
+<b class="nc">&nbsp;    private String insulationResistance;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;high_voltage_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String highVoltageModule;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;kelvin_measurement_hv&quot;, length = 1)
+<b class="nc">&nbsp;    private String kelvinMeasurementHV;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;actuator_test_hv&quot;, length = 1)
+<b class="nc">&nbsp;    private String actuatorTestHV;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;charging_system_electrical&quot;, length = 1)
+<b class="nc">&nbsp;    private String chargingSystemElectrical;</b>
+&nbsp;
+&nbsp;    // TYPE OF TEST MODULE
+&nbsp;    @Column(name = &quot;ptu_pipe_test_unit&quot;, length = 1)
+<b class="nc">&nbsp;    private String ptuPipeTestUnit;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;gtu_grommet_test_unit&quot;, length = 1)
+<b class="nc">&nbsp;    private String gtuGrommetTestUnit;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;led_led_test_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String ledLEDTestModule;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;tig_terminal_insertion_guidance&quot;, length = 1)
+<b class="nc">&nbsp;    private String tigTerminalInsertionGuidance;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;lin_bus_functionality_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String linBusFunctionalityTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;can_bus_functionality_test&quot;, length = 1)
+<b class="nc">&nbsp;    private String canBusFunctionalityTest;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;esd_conform_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String esdConformModule;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;fixed_block&quot;, length = 1)
+<b class="nc">&nbsp;    private String fixedBlock;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;moving_block&quot;, length = 1)
+<b class="nc">&nbsp;    private String movingBlock;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;tilt_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String tiltModule;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;slide_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String slideModule;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;hand_adapter&quot;, length = 1)
+<b class="nc">&nbsp;    private String handAdapter;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;lsm_leoni_smart_module&quot;, length = 1)
+<b class="nc">&nbsp;    private String lsmLeoniSmartModule;</b>
+&nbsp;
+&nbsp;    // TEST SYSTEM
+&nbsp;    @Column(name = &quot;leoni_standard_test_table&quot;, length = 1)
+<b class="nc">&nbsp;    private String leoniStandardTestTable;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;metal_rails_fastening_system&quot;, length = 1)
+<b class="nc">&nbsp;    private String metalRailsFasteningSystem;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;metal_plates_fastening_system&quot;, length = 1)
+<b class="nc">&nbsp;    private String metalPlatesFasteningSystem;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;quick_connection_by_canon_connector&quot;, length = 1)
+<b class="nc">&nbsp;    private String quickConnectionByCanonConnector;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;test_board&quot;, length = 50)
+<b class="nc">&nbsp;    private String testBoard;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;weetech&quot;, length = 50)
+<b class="nc">&nbsp;    private String weetech;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;bak&quot;, length = 50)
+<b class="nc">&nbsp;    private String bak;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;ogc&quot;, length = 50)
+<b class="nc">&nbsp;    private String ogc;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;adaptronic_high_voltage&quot;, length = 50)
+<b class="nc">&nbsp;    private String adaptronicHighVoltage;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;emdep_hv_banana_plug&quot;, length = 50)
+<b class="nc">&nbsp;    private String emdepHVBananaPlug;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;leoni_emo_standard_hv&quot;, length = 50)
+<b class="nc">&nbsp;    private String leoniEMOStandardHV;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;clip_orientation&quot;, length = 600)
+<b class="nc">&nbsp;    private String clipOrientation;</b>
+&nbsp;
+&nbsp;    // PRICE
+&nbsp;    @Column(name = &quot;unit_price&quot;)
+<b class="nc">&nbsp;    private Double unitPrice;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;total_price&quot;)
+<b class="nc">&nbsp;    private Double totalPrice;</b>
+&nbsp;
+&nbsp;    // METADATA
+&nbsp;    @Column(name = &quot;item_status&quot;, length = 20)
+<b class="nc">&nbsp;    private String itemStatus;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;created_by&quot;, length = 100)
+<b class="nc">&nbsp;    private String createdBy;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;created_at&quot;)
+<b class="nc">&nbsp;    private LocalDate createdAt;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;updated_by&quot;, length = 100)
+<b class="nc">&nbsp;    private String updatedBy;</b>
+&nbsp;
+&nbsp;    @Column(name = &quot;updated_at&quot;)
+<b class="nc">&nbsp;    private LocalDate updatedAt;</b>
+&nbsp;    @OneToMany(mappedBy = &quot;item&quot;)
+&nbsp;    @JsonIgnore
+<b class="nc">&nbsp;    private List&lt;ReceptionHistory&gt; receptionHistories;</b>
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-01 14:00</div>
+</div>
+</body>
+</html>

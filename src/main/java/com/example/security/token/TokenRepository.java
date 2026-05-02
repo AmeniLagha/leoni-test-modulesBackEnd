@@ -1,5 +1,6 @@
 package com.example.security.token;
 
+import com.example.security.user.User;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
@@ -17,4 +18,6 @@ public interface TokenRepository  extends JpaRepository<Token, Integer> {
     // Supprimer tous les tokens d'un utilisateur
     @Transactional
     void deleteByUserId(Integer userId);
+    List<Token> findByUser(User user);
+
 }

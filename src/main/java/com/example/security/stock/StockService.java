@@ -360,15 +360,12 @@ public class StockService {
     }
 
 
-    // Récupérer un module par ID
     public StockModule getStockById(Long id) {
         try {
             return stockRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Module stock non trouvé"));
         } catch (Exception e) {
-            System.err.println("❌ Erreur dans getStockById: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("Module stock non trouvé", e);
         }
     }
 

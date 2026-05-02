@@ -7,8 +7,11 @@ import com.example.security.projet.ProjetRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,14 +30,14 @@ public class SiteService {
 
     public SiteDto getSiteById(Long id) {
         Site site = siteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
         return convertToDto(site);
     }
 
     @Transactional
     public SiteDto createSite(SiteDto dto) {
         if (siteRepository.findByName(dto.getName()).isPresent()) {
-            throw new RuntimeException("Un site avec ce nom existe déjà");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un site avec ce nom existe déjà");
         }
 
         Site site = Site.builder()
@@ -55,11 +58,11 @@ public class SiteService {
     @Transactional
     public SiteDto updateSite(Long id, SiteDto dto) {
         Site site = siteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
 
         if (dto.getName() != null && !dto.getName().equals(site.getName())) {
             if (siteRepository.findByName(dto.getName()).isPresent()) {
-                throw new RuntimeException("Un site avec ce nom existe déjà");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Un site avec ce nom existe déjà");
             }
             site.setName(dto.getName());
         }
@@ -82,7 +85,7 @@ public class SiteService {
     @Transactional
     public void deleteSite(Long id) {
         Site site = siteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
         siteRepository.delete(site);
     }
 
@@ -98,8 +101,9 @@ public class SiteService {
     }
     // SiteService.java - Ajouter
     public List<ProjetDto> getProjetsBySite(Long siteId) {
-        Site site = siteRepository.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+        // ✅ Utiliser la méthode avec FETCH pour charger les projets
+        Site site = siteRepository.findByIdWithProjets(siteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
 
         return site.getProjets().stream()
                 .map(projet -> ProjetDto.builder()
@@ -110,48 +114,35 @@ public class SiteService {
                         .build())
                 .collect(Collectors.toList());
     }
-    // SiteService.java - Ajouter
-// SiteService.java - Version corrigée
     @Transactional
     public SiteDto addProjetToSite(Long siteId, Long projetId) {
         System.out.println("🔍 addProjetToSite - siteId: " + siteId + ", projetId: " + projetId);
 
-        // Utiliser une requête native pour vérifier si l'association existe déjà
-        String checkSql = "SELECT COUNT(*) FROM site_projet WHERE site_id = ? AND projet_id = ?";
-        jakarta.persistence.Query checkQuery = entityManager.createNativeQuery(checkSql);
-        checkQuery.setParameter(1, siteId);
-        checkQuery.setParameter(2, projetId);
-        Long count = ((Number) checkQuery.getSingleResult()).longValue();
+        // ✅ Récupérer le site avec un JOIN FETCH pour charger les projets
+        Site site = siteRepository.findByIdWithProjets(siteId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
 
-        if (count == 0) {
-            // Insertion directe en base avec requête native
-            String insertSql = "INSERT INTO site_projet (site_id, projet_id) VALUES (?, ?)";
-            jakarta.persistence.Query insertQuery = entityManager.createNativeQuery(insertSql);
-            insertQuery.setParameter(1, siteId);
-            insertQuery.setParameter(2, projetId);
-            insertQuery.executeUpdate();
-            System.out.println("✅ Insertion directe - Projet " + projetId + " ajouté au site " + siteId);
+        Projet projet = projetRepository.findById(projetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé"));
+
+        if (!site.getProjets().contains(projet)) {
+            site.getProjets().add(projet);
+            site = siteRepository.save(site);
+            System.out.println("✅ Projet " + projetId + " ajouté au site " + siteId);
         } else {
             System.out.println("⚠️ Le projet " + projetId + " est déjà associé au site " + siteId);
         }
 
-        // Récupérer le site mis à jour
-        Site site = siteRepository.findById(siteId).orElseThrow();
         return convertToDto(site);
     }
-
-    // Ajoutez EntityManager dans la classe
-    @PersistenceContext
-    private EntityManager entityManager;
 
     @Transactional
     public SiteDto updateSiteProjets(Long siteId, List<Long> projetIds) {
         Site site = siteRepository.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Site non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé"));
 
         // Vider les associations existantes
         site.getProjets().clear();
-        siteRepository.save(site);
 
         // Créer les nouvelles associations
         if (projetIds != null && !projetIds.isEmpty()) {
