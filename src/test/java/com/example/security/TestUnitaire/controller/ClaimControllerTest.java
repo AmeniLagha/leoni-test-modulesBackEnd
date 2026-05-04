@@ -41,8 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-
-class ClaimControllerTest  extends BaseIntegrationTest {
+class ClaimControllerTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -93,10 +92,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         String uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage
         claimRepository.deleteAll();
         chargeSheetRepository.deleteAll();
         tokenRepository.deleteAll();
@@ -104,19 +101,16 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site avec nom unique
         testSite = new Site();
-        testSite.setName("MH1_" + uniqueId);  // ← UNIQUE
+        testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom unique
         testProjet = new Projet();
-        testProjet.setName("FORD_" + uniqueId);  // ← UNIQUE
+        testProjet.setName("FORD_" + uniqueId);
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
-        // Création utilisateurs avec des emails uniques
         ppUser = createUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
         mcUser = createUser("mc_" + uniqueId + "@test.com", "mc123", Role.MC, 10002);
         mpUser = createUser("mp_" + uniqueId + "@test.com", "mp123", Role.MP, 10003);
@@ -124,7 +118,6 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         ingUser = createUser("ing_" + uniqueId + "@test.com", "ing123", Role.ING, 10005);
         adminUser = createUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
 
-        // Génération des tokens (re-générer après avoir changé les emails)
         ppToken = jwtService.generateToken(ppUser);
         mcToken = jwtService.generateToken(mcUser);
         mpToken = jwtService.generateToken(mpUser);
@@ -139,10 +132,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         saveToken(ingUser, ingToken);
         saveToken(adminUser, adminToken);
 
-        // Création cahier de test avec les valeurs uniques
         testChargeSheet = ChargeSheet.builder()
-                .plant(testSite.getName())  // ← MH1_xxx
-                .project(testProjet.getName())  // ← FORD_xxx
+                .plant(testSite.getName())
+                .project(testProjet.getName())
                 .orderNumber("ORD-001_" + uniqueId)
                 .status(ChargeSheetStatus.VALIDATED_PT)
                 .createdBy(ppUser.getEmail())
@@ -150,7 +142,6 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                 .build();
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
-        // Création réclamation de test
         testClaim = Claim.builder()
                 .chargeSheetId(testChargeSheet.getId())
                 .title("Test Claim_" + uniqueId)
@@ -164,7 +155,7 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                 .assignedDate(LocalDate.now())
                 .createdBy(ppUser.getEmail())
                 .createdAt(LocalDate.now())
-                .plant(testSite.getName())  // ← MH1_xxx
+                .plant(testSite.getName())
                 .build();
         testClaim = claimRepository.save(testClaim);
     }
@@ -187,12 +178,7 @@ class ClaimControllerTest  extends BaseIntegrationTest {
     }
 
     private void saveToken(User user, String token) {
-        // Méthode 1: Supprimer par user
         tokenRepository.deleteAll(tokenRepository.findByUser(user));
-
-        // Méthode 2: Alternative - utiliser une requête native
-        // tokenRepository.deleteByUser(user);
-
         Token tokenEntity = Token.builder()
                 .token(token)
                 .tokenType(TokenType.BEARER)
@@ -221,8 +207,10 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("New Claim"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Réclamation créée avec succès"))
+                .andExpect(jsonPath("$.data.title").value("New Claim"));
     }
 
     @Test
@@ -247,47 +235,46 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/claims")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     @Test
     void getAllClaims_AsPp_ShouldReturnFiltered() throws Exception {
         mockMvc.perform(get("/api/v1/claims")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/claims/{id} ====================
 
-   @Test
+    @Test
     void getClaimById_WithValidId_ShouldReturn() throws Exception {
-        // FORCER LA RECHARGE DE L'UTILISATEUR DEPUIS LA BASE
         User freshPpUser = userRepository.findByEmail(adminUser.getEmail()).orElse(null);
         assertNotNull(freshPpUser, "User should exist");
 
-        // REGENERER LE TOKEN AVEC L'UTILISATEUR FRAIS
         String freshToken = jwtService.generateToken(freshPpUser);
-
-       // Pas besoin de rappeler saveToken car le token existe déjà
-       // saveToken(freshPpUser, freshToken)
 
         mockMvc.perform(get("/api/v1/claims/" + testClaim.getId())
                         .header("Authorization", "Bearer " + freshToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value(testClaim.getTitle()));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.title").value(testClaim.getTitle()));
     }
-
 
     @Test
     void getClaimById_WithInvalidId_ShouldReturnError() throws Exception {
         mockMvc.perform(get("/api/v1/claims/99999")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Claim not found"));
     }
 
     // ==================== PUT /api/v1/claims/{id} ====================
 
-   @Test
+    @Test
     void updateClaim_AsPp_ShouldUpdate() throws Exception {
         ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
                 .title("Updated Title")
@@ -300,7 +287,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Updated Title"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Réclamation mise à jour avec succès"))
+                .andExpect(jsonPath("$.data.title").value("Updated Title"));
     }
 
     // ==================== PUT /api/v1/claims/{id}/assign ====================
@@ -317,7 +306,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.assignedTo").value(mpUser.getEmail()));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Réclamation assignée avec succès"))
+                .andExpect(jsonPath("$.data.assignedTo").value(mpUser.getEmail()));
     }
 
     // ==================== PUT /api/v1/claims/{id}/resolve ====================
@@ -334,7 +325,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("RESOLVED"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Réclamation résolue avec succès"))
+                .andExpect(jsonPath("$.data.status").value("RESOLVED"));
     }
 
     // ==================== PATCH /api/v1/claims/{id}/status/{status} ====================
@@ -344,7 +337,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         mockMvc.perform(patch("/api/v1/claims/" + testClaim.getId() + "/status/IN_PROGRESS")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Statut de la réclamation mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
     }
 
     // ==================== GET /api/v1/claims/charge-sheet/{chargeSheetId} ====================
@@ -354,7 +349,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/claims/charge-sheet/" + testChargeSheet.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/claims/my-reported ====================
@@ -363,14 +359,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
     void getMyReportedClaims_ShouldReturnClaims() throws Exception {
         mockMvc.perform(get("/api/v1/claims/my-reported")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
-
-
-
-
-    // ==================== GET /api/v1/claims/status/{status} ====================
-
 
     // ==================== GET /api/v1/claims/priority/{priority} ====================
 
@@ -378,7 +369,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
     void getClaimsByPriority_ShouldReturnFiltered() throws Exception {
         mockMvc.perform(get("/api/v1/claims/priority/HIGH")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/claims/category/{category} ====================
@@ -387,7 +379,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
     void getClaimsByCategory_ShouldReturnFiltered() throws Exception {
         mockMvc.perform(get("/api/v1/claims/category/TEST")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/claims/search ====================
@@ -397,7 +390,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/claims/search")
                         .param("keyword", "Test")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/claims/summary/{chargeSheetId} ====================
@@ -407,7 +401,8 @@ class ClaimControllerTest  extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/claims/summary/" + testChargeSheet.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 
     // ==================== DELETE /api/v1/claims/{id} ====================
@@ -416,7 +411,9 @@ class ClaimControllerTest  extends BaseIntegrationTest {
     void deleteClaim_AsPp_ShouldDelete() throws Exception {
         mockMvc.perform(delete("/api/v1/claims/" + testClaim.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Réclamation supprimée avec succès"));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.example.security.TestUnitaire.controller;
 
 import com.example.security.cahierdeCharge.*;
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.fichierTechnique.*;
 import com.example.security.projet.Projet;
@@ -98,10 +99,8 @@ class StockModuleControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage dans l'ordre inverse des dépendances
         stockRepository.deleteAll();
         technicalFileItemRepository.deleteAll();
         technicalFileRepository.deleteAll();
@@ -112,30 +111,25 @@ class StockModuleControllerTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site avec nom unique
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom unique
         testProjet = new Projet();
         testProjet.setName("FORD_" + uniqueId);
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
-        // Création utilisateurs avec emails uniques
         ppUser = createUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
         adminUser = createUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
 
-        // Génération des tokens
         ppToken = jwtService.generateToken(ppUser);
         adminToken = jwtService.generateToken(adminUser);
 
         saveToken(ppUser, ppToken);
         saveToken(adminUser, adminToken);
 
-        // Création cahier de test
         testChargeSheet = ChargeSheet.builder()
                 .plant(testSite.getName())
                 .project(testProjet.getName())
@@ -146,7 +140,6 @@ class StockModuleControllerTest {
                 .build();
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
-        // Création item cahier
         testChargeSheetItem = ChargeSheetItem.builder()
                 .chargeSheet(testChargeSheet)
                 .itemNumber("1_" + uniqueId)
@@ -157,7 +150,6 @@ class StockModuleControllerTest {
                 .build();
         testChargeSheetItem = chargeSheetItemRepository.save(testChargeSheetItem);
 
-        // Création dossier technique
         testTechnicalFile = TechnicalFile.builder()
                 .reference("TF-001_" + uniqueId)
                 .createdBy(ppUser.getEmail())
@@ -166,7 +158,6 @@ class StockModuleControllerTest {
                 .build();
         testTechnicalFile = technicalFileRepository.save(testTechnicalFile);
 
-        // Création item technique
         testTechnicalFileItem = TechnicalFileItem.builder()
                 .technicalFile(testTechnicalFile)
                 .chargeSheetItem(testChargeSheetItem)
@@ -186,12 +177,10 @@ class StockModuleControllerTest {
                 .build();
         testTechnicalFileItem = technicalFileItemRepository.save(testTechnicalFileItem);
 
-        // Ajouter l'item au TechnicalFile
         testTechnicalFile = technicalFileRepository.findById(testTechnicalFile.getId()).orElseThrow();
         testTechnicalFile.getTechnicalFileItems().add(testTechnicalFileItem);
         testTechnicalFile = technicalFileRepository.save(testTechnicalFile);
 
-        // Création module en stock
         testStockModule = StockModule.builder()
                 .technicalFile(testTechnicalFile)
                 .technicalFileItem(testTechnicalFileItem)
@@ -238,7 +227,6 @@ class StockModuleControllerTest {
 
     @Test
     void moveItemToStock_ShouldMoveItem() throws Exception {
-        // Créer un nouvel item technique pour le test
         TechnicalFileItem newItem = TechnicalFileItem.builder()
                 .technicalFile(testTechnicalFile)
                 .chargeSheetItem(testChargeSheetItem)
@@ -249,7 +237,6 @@ class StockModuleControllerTest {
                 .build();
         newItem = technicalFileItemRepository.save(newItem);
 
-        // Ajouter l'item au TechnicalFile
         testTechnicalFile.getTechnicalFileItems().add(newItem);
         technicalFileRepository.save(testTechnicalFile);
 
@@ -263,8 +250,10 @@ class StockModuleControllerTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("AVAILABLE"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item technique déplacé vers le stock avec succès"))
+                .andExpect(jsonPath("$.data.status").value("AVAILABLE"));
     }
 
     // ==================== GET /api/v1/stock ====================
@@ -274,14 +263,17 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des stocks récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     @Test
     void getAllStock_AsAdmin_ShouldReturnAll() throws Exception {
         mockMvc.perform(get("/api/v1/stock")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/stock/statistics ====================
@@ -291,8 +283,10 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/statistics")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(1))
-                .andExpect(jsonPath("$.available").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Statistiques du stock récupérées avec succès"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.available").value(1));
     }
 
     // ==================== GET /api/v1/stock/my-site ====================
@@ -301,7 +295,9 @@ class StockModuleControllerTest {
     void getMySiteStock_ShouldReturnSiteStock() throws Exception {
         mockMvc.perform(get("/api/v1/stock/my-site")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Stock de votre site récupéré avec succès"));
     }
 
     // ==================== GET /api/v1/stock/site/{siteName} ====================
@@ -311,7 +307,9 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/site/" + testSite.getName())
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Stock du site " + testSite.getName() + " récupéré avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/stock/sites ====================
@@ -321,7 +319,9 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/sites")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des sites avec stock récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/stock/{id} ====================
@@ -331,9 +331,9 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/" + testStockModule.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itemNumber").value("1_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.itemNumber").value("1_" + uniqueId));
     }
-
 
     // ==================== PATCH /api/v1/stock/{id}/status ====================
 
@@ -343,7 +343,9 @@ class StockModuleControllerTest {
                         .param("status", "USED")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("USED"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Statut du module mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.status").value("USED"));
     }
 
     // ==================== POST /api/v1/stock ====================
@@ -362,8 +364,10 @@ class StockModuleControllerTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itemNumber").value("NEW-001_" + uniqueId));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Module créé avec succès"))
+                .andExpect(jsonPath("$.data.itemNumber").value("NEW-001_" + uniqueId));
     }
 
     // ==================== PUT /api/v1/stock/{id} ====================
@@ -381,7 +385,9 @@ class StockModuleControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.casier").value("B2_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Module mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.casier").value("B2_" + uniqueId));
     }
 
     // ==================== GET /api/v1/stock/dto ====================
@@ -391,7 +397,9 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/dto")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste complète des modules récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/stock/item/{technicalFileItemId}/pre-stock-info ====================
@@ -401,7 +409,9 @@ class StockModuleControllerTest {
         mockMvc.perform(get("/api/v1/stock/item/" + testTechnicalFileItem.getId() + "/pre-stock-info")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itemNumber").value("1_" + uniqueId))
-                .andExpect(jsonPath("$.position").value("Position 1_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Informations de pré-stock récupérées avec succès"))
+                .andExpect(jsonPath("$.data.itemNumber").value("1_" + uniqueId))
+                .andExpect(jsonPath("$.data.position").value("Position 1_" + uniqueId));
     }
 }

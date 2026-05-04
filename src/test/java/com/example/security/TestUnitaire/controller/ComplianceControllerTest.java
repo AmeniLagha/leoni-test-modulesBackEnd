@@ -1,6 +1,7 @@
 package com.example.security.TestUnitaire.controller;
 
 import com.example.security.cahierdeCharge.*;
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.conformité.*;
 import com.example.security.projet.Projet;
@@ -90,10 +91,8 @@ class ComplianceControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage dans le bon ordre
         complianceRepository.deleteAll();
         itemRepository.deleteAll();
         chargeSheetRepository.deleteAll();
@@ -102,25 +101,21 @@ class ComplianceControllerTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site avec nom unique
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom unique
         testProjet = new Projet();
         testProjet.setName("FORD_" + uniqueId);
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
-        // Création utilisateurs avec emails uniques
         ppUser = createAndSaveUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
         ptUser = createAndSaveUser("pt_" + uniqueId + "@test.com", "pt123", Role.PT, 10002);
         ingUser = createAndSaveUser("ing_" + uniqueId + "@test.com", "ing123", Role.ING, 10003);
         adminUser = createAndSaveUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
 
-        // Génération des tokens
         ppToken = jwtService.generateToken(ppUser);
         ptToken = jwtService.generateToken(ptUser);
         ingToken = jwtService.generateToken(ingUser);
@@ -131,7 +126,6 @@ class ComplianceControllerTest {
         saveToken(ingUser, ingToken);
         saveToken(adminUser, adminToken);
 
-        // Création cahier de test
         testChargeSheet = ChargeSheet.builder()
                 .plant(testSite.getName())
                 .project(testProjet.getName())
@@ -143,7 +137,6 @@ class ComplianceControllerTest {
                 .build();
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
-        // Création item de test
         testItem = ChargeSheetItem.builder()
                 .chargeSheet(testChargeSheet)
                 .itemNumber("1_" + uniqueId)
@@ -154,11 +147,9 @@ class ComplianceControllerTest {
                 .build();
         testItem = itemRepository.save(testItem);
 
-        // Ajouter l'item à la liste du cahier
         testChargeSheet.getItems().add(testItem);
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
-        // Création conformité de test
         testCompliance = Compliance.builder()
                 .item(testItem)
                 .chargeSheetId(testChargeSheet.getId())
@@ -226,8 +217,10 @@ class ComplianceControllerTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderNumber").value("ORD-002_" + uniqueId));
+                .andExpect(status().isCreated())  // ✅ 201
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Fiche de conformité créée avec succès"))
+                .andExpect(jsonPath("$.data.orderNumber").value("ORD-002_" + uniqueId));
     }
 
     @Test
@@ -242,6 +235,7 @@ class ComplianceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isForbidden());
+        // Pas de vérification JSON car réponse vide
     }
 
     // ==================== GET /api/v1/compliance/{id} ====================
@@ -251,15 +245,18 @@ class ComplianceControllerTest {
         mockMvc.perform(get("/api/v1/compliance/" + testCompliance.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderNumber").value("ORD-001_" + uniqueId))
-                .andExpect(jsonPath("$.technicianName").value("John Doe_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.orderNumber").value("ORD-001_" + uniqueId))
+                .andExpect(jsonPath("$.data.technicianName").value("John Doe_" + uniqueId));
     }
 
     @Test
     void getComplianceById_WithInvalidId_ShouldReturnError() throws Exception {
         mockMvc.perform(get("/api/v1/compliance/99999")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Compliance not found"));  // ✅ Corrigé
     }
 
     // ==================== PUT /api/v1/compliance/{id} ====================
@@ -278,7 +275,9 @@ class ComplianceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderitemNumber").value("UPDATED-ITEM_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Fiche de conformité modifiée avec succès"))
+                .andExpect(jsonPath("$.data.orderitemNumber").value("UPDATED-ITEM_" + uniqueId));
     }
 
     @Test
@@ -292,6 +291,7 @@ class ComplianceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isForbidden());
+        // Pas de vérification JSON car réponse vide
     }
 
     // ==================== DELETE /api/v1/compliance/{id} ====================
@@ -300,7 +300,9 @@ class ComplianceControllerTest {
     void deleteCompliance_AsPp_ShouldDeleteCompliance() throws Exception {
         mockMvc.perform(delete("/api/v1/compliance/" + testCompliance.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())  // ✅ 200 au lieu de 204
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Fiche de conformité supprimée avec succès"));
     }
 
     @Test
@@ -308,6 +310,7 @@ class ComplianceControllerTest {
         mockMvc.perform(delete("/api/v1/compliance/" + testCompliance.getId())
                         .header("Authorization", "Bearer " + ptToken))
                 .andExpect(status().isForbidden());
+        // Pas de vérification JSON car réponse vide
     }
 
     // ==================== GET /api/v1/compliance/charge-sheet/{chargeSheetId} ====================
@@ -317,7 +320,8 @@ class ComplianceControllerTest {
         mockMvc.perform(get("/api/v1/compliance/charge-sheet/" + testChargeSheet.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/compliance/item/{itemId} ====================
@@ -327,7 +331,8 @@ class ComplianceControllerTest {
         mockMvc.perform(get("/api/v1/compliance/item/" + testItem.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/compliance ====================
@@ -337,14 +342,16 @@ class ComplianceControllerTest {
         mockMvc.perform(get("/api/v1/compliance")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     @Test
     void getAllCompliance_AsPp_ShouldReturnAll() throws Exception {
         mockMvc.perform(get("/api/v1/compliance")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/compliance/display ====================
@@ -354,21 +361,23 @@ class ComplianceControllerTest {
         mockMvc.perform(get("/api/v1/compliance/display")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== POST /api/v1/compliance/create-for-item/{itemId} ====================
 
     @Test
     void createForItem_ShouldCreateComplianceForEachModule() throws Exception {
-        // Modifier la quantité de modules
         testItem.setQuantityOfTestModules(3);
         itemRepository.save(testItem);
 
         mockMvc.perform(post("/api/v1/compliance/create-for-item/" + testItem.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(status().isCreated())  // ✅ 201
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Fiches de conformité créées avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(3));
     }
 
     // ==================== GET /api/v1/compliance/prepare/{itemId} ====================
@@ -377,6 +386,7 @@ class ComplianceControllerTest {
     void prepareComplianceForItem_ShouldReturnPreparationData() throws Exception {
         mockMvc.perform(get("/api/v1/compliance/prepare/" + testItem.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }

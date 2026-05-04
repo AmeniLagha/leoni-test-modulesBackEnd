@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -64,6 +65,7 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .site(site)
+                .createdAt(LocalDateTime.now())
                 .build();
         var savedUser = repository.save(user);
         var jwtToken = jwtService.generateToken(user);

@@ -91,37 +91,29 @@ class ChargeSheetControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage dans l'ordre inverse des dépendances
         receptionHistoryRepository.deleteAll();
         itemRepository.deleteAll();
         chargeSheetRepository.deleteAll();
-
-        // ✅ SUPPRIMER D'ABORD LES ASSOCIATIONS site_projet
         tokenRepository.deleteAll();
-        userRepository.deleteAll();  // Utilisateurs d'abord
-        projetRepository.deleteAll(); // Puis projets
+        userRepository.deleteAll();
+        projetRepository.deleteAll();
         siteRepository.deleteAll();
 
-        // Création site avec nom unique
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom unique
         testProjet = new Projet();
         testProjet.setName("FORD_" + uniqueId);
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
-        // Création d'un Set mutable pour les projets
         Set<Projet> projetsSet = new HashSet<>();
         projetsSet.add(testProjet);
 
-        // Création utilisateur ING - CORRIGÉ
         ingUser = User.builder()
                 .email("ing_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("ing123"))
@@ -130,16 +122,14 @@ class ChargeSheetControllerTest {
                 .matricule(10001)
                 .role(Role.ING)
                 .site(testSite)
-                .projets(projetsSet)  // Utilisation d'un Set mutable
+                .projets(projetsSet)
                 .build();
         ingUser = userRepository.save(ingUser);
         ingToken = jwtService.generateToken(ingUser);
 
-        // Création d'un nouveau Set mutable pour PT
         projetsSet = new HashSet<>();
         projetsSet.add(testProjet);
 
-        // Création utilisateur PT - CORRIGÉ
         ptUser = User.builder()
                 .email("pt_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("pt123"))
@@ -153,11 +143,9 @@ class ChargeSheetControllerTest {
         ptUser = userRepository.save(ptUser);
         ptToken = jwtService.generateToken(ptUser);
 
-        // Création d'un nouveau Set mutable pour ADMIN
         projetsSet = new HashSet<>();
         projetsSet.add(testProjet);
 
-        // Création ADMIN - CORRIGÉ
         adminUser = User.builder()
                 .email("admin_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("admin123"))
@@ -171,12 +159,10 @@ class ChargeSheetControllerTest {
         adminUser = userRepository.save(adminUser);
         adminToken = jwtService.generateToken(adminUser);
 
-        // Sauvegarde des tokens
         saveToken(ingUser, ingToken);
         saveToken(ptUser, ptToken);
         saveToken(adminUser, adminToken);
 
-        // Le reste de votre code reste identique...
         testChargeSheet = ChargeSheet.builder()
                 .plant(testSite.getName())
                 .project(testProjet.getName())
@@ -246,8 +232,10 @@ class ChargeSheetControllerTest {
                         .header("Authorization", "Bearer " + ingToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderNumber").value("ORD-002_" + uniqueId));
+                .andExpect(status().isCreated())  // ✅ Changé: 201 au lieu de 200
+                .andExpect(jsonPath("$.success").value(true))  // ✅ Nouveau
+                .andExpect(jsonPath("$.message").value("Cahier des charges créé avec succès"))  // ✅ Nouveau
+                .andExpect(jsonPath("$.data.orderNumber").value("ORD-002_" + uniqueId));  // ✅ data. devant
     }
 
     @Test
@@ -260,7 +248,9 @@ class ChargeSheetControllerTest {
                         .header("Authorization", "Bearer " + ptToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(""));  // ✅ Vérifie que le corps est vide (pas de JSON)
+        // Ne pas vérifier $.success car il n'y a pas de corps
     }
 
     // ==================== GET /api/v1/charge-sheets ====================
@@ -270,7 +260,8 @@ class ChargeSheetControllerTest {
         mockMvc.perform(get("/api/v1/charge-sheets")
                         .header("Authorization", "Bearer " + ingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/charge-sheets/{id} ====================
@@ -280,9 +271,9 @@ class ChargeSheetControllerTest {
         mockMvc.perform(get("/api/v1/charge-sheets/" + testChargeSheet.getId())
                         .header("Authorization", "Bearer " + ingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderNumber").value("ORD-001_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.orderNumber").value("ORD-001_" + uniqueId));
     }
-
 
     // ==================== PUT /api/v1/charge-sheets/{id} ====================
 
@@ -303,24 +294,23 @@ class ChargeSheetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.harnessRef").value("HARNESS-UPDATED_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.harnessRef").value("HARNESS-UPDATED_" + uniqueId));
     }
 
     // ==================== PUT /api/v1/charge-sheets/{id}/validate-ing ====================
+
     @Test
     @Transactional
     @Rollback
     void validateByIng_WhenDraft_ShouldValidate() throws Exception {
-        // 1. Forcer le contexte de sécurité
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(ingUser, null, ingUser.getAuthorities())
         );
 
-        // 2. Rafraîchir les données
         testChargeSheet = chargeSheetRepository.findById(testChargeSheet.getId()).orElseThrow();
         testItem = itemRepository.findById(testItem.getId()).orElseThrow();
 
-        // 3. S'assurer que le statut est DRAFT
         testChargeSheet.setStatus(ChargeSheetStatus.DRAFT);
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
@@ -330,20 +320,15 @@ class ChargeSheetControllerTest {
                             request.setUserPrincipal(() -> ingUser.getEmail());
                             return request;
                         }))
-                .andDo(result -> {
-                    System.out.println("Status: " + result.getResponse().getStatus());
-                    if (result.getResponse().getStatus() == 403) {
-                        System.out.println("Error: " + result.getResponse().getErrorMessage());
-                    }
-                })
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("VALIDATED_ING"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("VALIDATED_ING"));
     }
+
     // ==================== PUT /api/v1/charge-sheets/{id}/validate-pt ====================
 
     @Test
     void validateByPt_WhenTechFilled_ShouldValidate() throws Exception {
-        // D'abord valider par ING
         testChargeSheet.setStatus(ChargeSheetStatus.TECH_FILLED);
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
         testItem.setItemStatus("TECH_FILLED");
@@ -352,7 +337,8 @@ class ChargeSheetControllerTest {
         mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/validate-pt")
                         .header("Authorization", "Bearer " + ptToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("VALIDATED_PT"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("VALIDATED_PT"));
     }
 
     // ==================== PUT /api/v1/charge-sheets/{id}/send-supplier ====================
@@ -365,7 +351,8 @@ class ChargeSheetControllerTest {
         mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/send-supplier")
                         .header("Authorization", "Bearer " + ptToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SENT_TO_SUPPLIER"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("SENT_TO_SUPPLIER"));
     }
 
     // ==================== POST /api/v1/charge-sheets/{sheetId}/items ====================
@@ -383,7 +370,8 @@ class ChargeSheetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newItem)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items.length()").value(2));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(2));
     }
 
     // ==================== DELETE /api/v1/charge-sheets/{sheetId}/items/{itemId} ====================
@@ -392,7 +380,9 @@ class ChargeSheetControllerTest {
     void removeItem_AsIng_ShouldRemoveItem() throws Exception {
         mockMvc.perform(delete("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/items/" + testItem.getId())
                         .header("Authorization", "Bearer " + ingToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())  // ✅ 200 au lieu de 204
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item supprimé avec succès"));
     }
 
     // ==================== PUT /api/v1/charge-sheets/{sheetId}/items/{itemId}/tech ====================
@@ -413,7 +403,8 @@ class ChargeSheetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.housingReferenceLeoni").value("REF-123_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.housingReferenceLeoni").value("REF-123_" + uniqueId));
     }
 
     // ==================== GET /api/v1/charge-sheets/stats ====================
@@ -423,7 +414,8 @@ class ChargeSheetControllerTest {
         mockMvc.perform(get("/api/v1/charge-sheets/stats")
                         .header("Authorization", "Bearer " + ingToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userRole").value("ING"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.userRole").value("ING"));
     }
 
     // ==================== DELETE /api/v1/charge-sheets/{id} ====================
@@ -432,7 +424,9 @@ class ChargeSheetControllerTest {
     void deleteChargeSheet_AsAdmin_ShouldDelete() throws Exception {
         mockMvc.perform(delete("/api/v1/charge-sheets/" + testChargeSheet.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())  // ✅ 200 au lieu de 204
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Cahier des charges supprimé avec succès"));
     }
 
     // ==================== GET /api/v1/charge-sheets/{id}/prepare-reception ====================
@@ -445,7 +439,8 @@ class ChargeSheetControllerTest {
         mockMvc.perform(get("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/prepare-reception")
                         .header("Authorization", "Bearer " + ptToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.chargeSheetId").value(testChargeSheet.getId()));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.chargeSheetId").value(testChargeSheet.getId()));
     }
 
     // ==================== POST /api/v1/charge-sheets/{id}/confirm-partial-reception ====================
@@ -469,7 +464,8 @@ class ChargeSheetControllerTest {
                         .header("Authorization", "Bearer " + ptToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/charge-sheets/{id}/reception-history ====================
@@ -478,7 +474,7 @@ class ChargeSheetControllerTest {
     void getReceptionHistory_ShouldReturnHistory() throws Exception {
         mockMvc.perform(get("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/reception-history")
                         .header("Authorization", "Bearer " + ptToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
-
 }

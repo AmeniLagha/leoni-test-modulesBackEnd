@@ -1,5 +1,6 @@
 package com.example.security.user;
 
+import com.example.security.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,23 +29,30 @@ public class UserController {
     @GetMapping
     @Operation(summary = "Lister tous les utilisateurs", description = "Récupère tous les utilisateurs avec leurs permissions")
     @PreAuthorize("hasAuthority('admin:readuser')")
-    public ResponseEntity<List<UserDto>> getAllUsers() {
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers() {
         List<UserDto> usersWithPermissions = service.getUserListWithPermissions();
-        return ResponseEntity.ok(usersWithPermissions);
+
+        ApiResponse<List<UserDto>> response = ApiResponse.success(
+                "Liste des utilisateurs récupérée avec succès",
+                usersWithPermissions
+        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
     @Operation(summary = "Infos utilisateur courant", description = "Récupère les informations de l'utilisateur connecté")
-    public ResponseEntity<Map<String, Object>> getCurrentUser() {
-
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).build();
+            ApiResponse<Map<String, Object>> errorResponse = ApiResponse.error(
+                    "Utilisateur non authentifié",
+                    HttpStatus.UNAUTHORIZED.value()
+            );
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
 
-        String email = authentication.getName(); // ✅ récupère le username/email
-
+        String email = authentication.getName();
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -56,67 +64,75 @@ public class UserController {
         userInfo.put("matricule", user.getMatricule());
         userInfo.put("site", user.getSiteName());
         userInfo.put("role", user.getRole().name());
+        userInfo.put("createdAt", user.getCreatedAt());
+        userInfo.put("updatedAt", user.getUpdatedAt());
         userInfo.put("permissions", user.getRole().getPermissions().stream()
                 .map(Permission::getPermission)
                 .collect(Collectors.toList()));
 
-        return ResponseEntity.ok(userInfo);
+        ApiResponse<Map<String, Object>> response = ApiResponse.success(
+                "Informations utilisateur récupérées avec succès",
+                userInfo
+        );
+        return ResponseEntity.ok(response);
     }
 
     // --- Supprimer un utilisateur ---
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un utilisateur", description = "Supprime un utilisateur par ID (ADMIN uniquement)")
-    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
-
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Integer id) {
         boolean deleted = service.deleteUser(id);
         if (!deleted) {
-            return ResponseEntity.notFound().build();
+            ApiResponse<Void> response = ApiResponse.error(
+                    "Utilisateur non trouvé",
+                    HttpStatus.NOT_FOUND.value()
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
-        return ResponseEntity.noContent().build();
+
+        ApiResponse<Void> response = ApiResponse.success("Utilisateur supprimé avec succès");
+        return ResponseEntity.ok(response);
     }
 
     // --- Mettre à jour un utilisateur ---
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Modifier un utilisateur", description = "Met à jour les informations d'un utilisateur par ID (ADMIN uniquement)")
     @PutMapping("/{id}")
-    public ResponseEntity<UserDto> updateUser(@PathVariable Integer id, @RequestBody UserDto userDto) {
+    public ResponseEntity<ApiResponse<UserDto>> updateUser(@PathVariable Integer id, @RequestBody UserDto userDto) {
         UserDto updatedUser = service.updateUser(id, userDto);
         if (updatedUser == null) {
-            return ResponseEntity.notFound().build();
+            ApiResponse<UserDto> response = ApiResponse.error(
+                    "Utilisateur non trouvé",
+                    HttpStatus.NOT_FOUND.value()
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
-        return ResponseEntity.ok(updatedUser);
+
+        ApiResponse<UserDto> response = ApiResponse.success(
+                "Utilisateur mis à jour avec succès",
+                updatedUser
+        );
+        return ResponseEntity.ok(response);
     }
     // UserController.java - Modifier getProjectEmails()
 
     @GetMapping("/project-emails")
     @Operation(summary = "Emails du projet", description = "Récupère les emails des utilisateurs selon le projet et le rôle de l'utilisateur courant")
-    public List<String> getProjectEmails() {
+    public ResponseEntity<ApiResponse<List<String>>> getProjectEmails() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
-
-        System.out.println("📧 Récupération des emails pour l'utilisateur: " + email);
 
         User currentUser = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        System.out.println("👤 Utilisateur trouvé: " + currentUser.getEmail());
-        System.out.println("🏢 Projets: " + currentUser.getProjetsNames());
-        System.out.println("👑 Rôle: " + currentUser.getRole());
-
         List<String> emails;
 
-        // ✅ Si ADMIN → voir TOUS les emails
         if (currentUser.getRole() == Role.ADMIN) {
             emails = repository.findAllUserEmails();
-            System.out.println("🔓 ADMIN - Tous les emails: " + emails);
-        }
-        // ✅ Sinon → emails du premier projet de l'utilisateur + ADMIN
-        else {
-            // Récupérer le premier projet de l'utilisateur (ou tous)
+        } else {
             String userProject = currentUser.getProjetsNames();
 
             if (userProject == null || userProject.isEmpty()) {
-                // Si l'utilisateur n'a pas de projet, retourner seulement les admins
                 emails = repository.findActiveUserEmailsByProjet("ADMIN");
             } else {
                 emails = repository.findActiveUserEmailsByProjetExcludingCurrent(
@@ -124,29 +140,28 @@ public class UserController {
                         currentUser.getEmail()
                 );
             }
-            System.out.println("🔒 Non-ADMIN - Emails du projet: " + emails);
         }
 
-        System.out.println("📨 Emails trouvés: " + emails.size());
-
-        return emails;
+        ApiResponse<List<String>> response = ApiResponse.success(
+                "Emails du projet récupérés avec succès",
+                emails
+        );
+        return ResponseEntity.ok(response);
     }
+
     @GetMapping("/project-site-emails")
-    public ResponseEntity<List<String>> getEmailsByProjectAndSite() {
+    public ResponseEntity<ApiResponse<List<String>>> getEmailsByProjectAndSite() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
 
         List<String> emails;
 
-        // Si ADMIN, voir tous les emails
         if (currentUser.getRole().name().equals("ADMIN")) {
             emails = repository.findAllUserEmails();
         } else {
-            // Pour les autres rôles, filtrer par site ET projet
             String userSite = currentUser.getSiteName();
             String userProjectsString = currentUser.getProjetsNames();
 
-            // Récupérer la liste des projets de l'utilisateur
             List<String> userProjects = userProjectsString != null ?
                     java.util.Arrays.asList(userProjectsString.split(", ")) :
                     java.util.List.of();
@@ -154,57 +169,67 @@ public class UserController {
             if (userProjects.isEmpty()) {
                 emails = java.util.List.of();
             } else {
-                // Récupérer les emails des utilisateurs qui ont au moins un projet en commun ET le même site
                 emails = repository.findEmailsByProjectsAndSite(userProjects, userSite);
             }
         }
 
-        return ResponseEntity.ok(emails);
+        ApiResponse<List<String>> response = ApiResponse.success(
+                "Emails par projet et site récupérés avec succès",
+                emails
+        );
+        return ResponseEntity.ok(response);
     }
 
     // --- Réinitialisation mot de passe ---
     @PostMapping("/forgot-password")
     @Operation(summary = "Demander réinitialisation mot de passe", description = "Envoie un email pour réinitialiser le mot de passe")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody PasswordResetRequestDto request) {
-        Map<String, String> response = new HashMap<>();
-
+    public ResponseEntity<ApiResponse<Map<String, String>>> forgotPassword(@RequestBody PasswordResetRequestDto request) {
         try {
             boolean sent = service.sendPasswordResetEmail(request.getEmail());
 
-            if (sent) {
-                response.put("message", "Un email de réinitialisation a été envoyé si l'adresse existe dans notre système.");
-                return ResponseEntity.ok(response);
-            } else {
-                // Pour des raisons de sécurité, on renvoie le même message
-                response.put("message", "Un email de réinitialisation a été envoyé si l'adresse existe dans notre système.");
-                return ResponseEntity.ok(response);
-            }
+            Map<String, String> data = new HashMap<>();
+            data.put("message", "Un email de réinitialisation a été envoyé si l'adresse existe dans notre système.");
+
+            ApiResponse<Map<String, String>> response = ApiResponse.success(
+                    "Demande de réinitialisation traitée",
+                    data
+            );
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            System.err.println("Erreur dans forgot-password: " + e.getMessage());
-            e.printStackTrace();
-            response.put("message", "Une erreur technique est survenue. Veuillez réessayer plus tard.");
+            ApiResponse<Map<String, String>> response = ApiResponse.error(
+                    "Une erreur technique est survenue. Veuillez réessayer plus tard.",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
+            );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
     @PostMapping("/reset-password")
     @Operation(summary = "Réinitialiser mot de passe", description = "Réinitialise le mot de passe via un token")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody PasswordResetDto request) {
-        Map<String, String> response = new HashMap<>();
-
+    public ResponseEntity<ApiResponse<Map<String, String>>> resetPassword(@RequestBody PasswordResetDto request) {
         try {
             boolean reset = service.resetPassword(request.getResetToken(), request.getNewPassword());
 
+            Map<String, String> data = new HashMap<>();
             if (reset) {
-                response.put("message", "Votre mot de passe a été réinitialisé avec succès.");
+                data.put("message", "Votre mot de passe a été réinitialisé avec succès.");
+                ApiResponse<Map<String, String>> response = ApiResponse.success(
+                        "Mot de passe réinitialisé",
+                        data
+                );
                 return ResponseEntity.ok(response);
             } else {
-                response.put("message", "Token invalide ou expiré.");
+                data.put("message", "Token invalide ou expiré.");
+                ApiResponse<Map<String, String>> response = ApiResponse.error(
+                        "Token invalide ou expiré",
+                        HttpStatus.BAD_REQUEST.value()
+                );
                 return ResponseEntity.badRequest().body(response);
             }
         } catch (Exception e) {
-            System.err.println("Erreur dans reset-password: " + e.getMessage());
-            e.printStackTrace();
-            response.put("message", "Une erreur technique est survenue. Veuillez réessayer plus tard.");
+            ApiResponse<Map<String, String>> response = ApiResponse.error(
+                    "Une erreur technique est survenue. Veuillez réessayer plus tard.",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
+            );
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -213,20 +238,32 @@ public class UserController {
      */
     @GetMapping("/check-email")
     @Operation(summary = "Vérifier si email existe", description = "Retourne true si l'email existe dans le système")
-    public ResponseEntity<Map<String, Boolean>> checkEmailExists(@RequestParam String email) {
-        Map<String, Boolean> response = new HashMap<>();
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmailExists(@RequestParam String email) {
         boolean exists = service.checkEmailExists(email);
-        response.put("exists", exists);
+
+        Map<String, Boolean> data = new HashMap<>();
+        data.put("exists", exists);
+
+        ApiResponse<Map<String, Boolean>> response = ApiResponse.success(
+                "Vérification d'email effectuée",
+                data
+        );
         return ResponseEntity.ok(response);
     }
 // UserController.java - Ajouter cette méthode
 
     @GetMapping("/check-matricule")
     @Operation(summary = "Vérifier si matricule existe", description = "Retourne true si le matricule existe déjà")
-    public ResponseEntity<Map<String, Boolean>> checkMatriculeExists(@RequestParam Integer matricule) {
-        Map<String, Boolean> response = new HashMap<>();
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkMatriculeExists(@RequestParam Integer matricule) {
         boolean exists = service.checkMatriculeExists(matricule);
-        response.put("exists", exists);
+
+        Map<String, Boolean> data = new HashMap<>();
+        data.put("exists", exists);
+
+        ApiResponse<Map<String, Boolean>> response = ApiResponse.success(
+                "Vérification de matricule effectuée",
+                data
+        );
         return ResponseEntity.ok(response);
     }
     // --- Gestion code de vérification ---
@@ -238,17 +275,25 @@ public class UserController {
      */
     @PostMapping("/send-verification-code")
     @Operation(summary = "Envoyer code de vérification", description = "Envoie un code à l'email pour validation")
-    public ResponseEntity<Map<String, String>> sendVerificationCode(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> sendVerificationCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        Map<String, String> response = new HashMap<>();
 
         boolean sent = verificationCodeService.sendVerificationCode(email);
 
+        Map<String, String> data = new HashMap<>();
         if (sent) {
-            response.put("message", "Un code de vérification a été envoyé à votre email.");
+            data.put("message", "Un code de vérification a été envoyé à votre email.");
+            ApiResponse<Map<String, String>> response = ApiResponse.success(
+                    "Code envoyé",
+                    data
+            );
             return ResponseEntity.ok(response);
         } else {
-            response.put("message", "Email non trouvé dans notre système.");
+            data.put("message", "Email non trouvé dans notre système.");
+            ApiResponse<Map<String, String>> response = ApiResponse.error(
+                    "Email non trouvé",
+                    HttpStatus.BAD_REQUEST.value()
+            );
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -258,15 +303,19 @@ public class UserController {
      */
     @PostMapping("/verify-code")
     @Operation(summary = "Vérifier code", description = "Vérifie le code saisi par l'utilisateur")
-    public ResponseEntity<Map<String, Boolean>> verifyCode(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> verifyCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String code = request.get("code");
 
         boolean isValid = verificationCodeService.verifyCode(email, code);
 
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("valid", isValid);
+        Map<String, Boolean> data = new HashMap<>();
+        data.put("valid", isValid);
 
+        ApiResponse<Map<String, Boolean>> response = ApiResponse.success(
+                "Code vérifié",
+                data
+        );
         return ResponseEntity.ok(response);
     }
     /**
@@ -275,40 +324,57 @@ public class UserController {
     @PostMapping("/send-reset-link")
     @Operation(summary = "Envoyer lien réinitialisation", description = "Envoie le lien de réinitialisation après vérification du code")
 
-    public ResponseEntity<Map<String, String>> sendResetLink(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> sendResetLink(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        Map<String, String> response = new HashMap<>();
+        Map<String, String> data = new HashMap<>();
 
-        // Vérifier d'abord que l'utilisateur a bien validé son code
-        // On pourrait vérifier s'il existe un code validé récemment
         boolean sent = service.sendPasswordResetEmail(email);
 
         if (sent) {
-            response.put("message", "Un lien de réinitialisation a été envoyé à votre email.");
+            data.put("message", "Un lien de réinitialisation a été envoyé à votre email.");
+            ApiResponse<Map<String, String>> response = ApiResponse.success(
+                    "Lien envoyé",
+                    data
+            );
             return ResponseEntity.ok(response);
         } else {
-            response.put("message", "Email non trouvé dans notre système.");
+            data.put("message", "Email non trouvé dans notre système.");
+            ApiResponse<Map<String, String>> response = ApiResponse.error(
+                    "Email non trouvé",
+                    HttpStatus.BAD_REQUEST.value()
+            );
             return ResponseEntity.badRequest().body(response);
         }
     }
 
+
     @GetMapping("/validate-reset-token")
-    public ResponseEntity<Map<String, Boolean>> validateResetToken(@RequestParam String token) {
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> validateResetToken(@RequestParam String token) {
         try {
             boolean isValid = service.validateResetToken(token);
-            Map<String, Boolean> response = new HashMap<>();
-            response.put("valid", isValid);
+            Map<String, Boolean> data = new HashMap<>();
+            data.put("valid", isValid);
+
+            ApiResponse<Map<String, Boolean>> response = ApiResponse.success(
+                    "Token validé",
+                    data
+            );
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            System.err.println("Erreur dans validate-reset-token: " + e.getMessage());
-            Map<String, Boolean> response = new HashMap<>();
-            response.put("valid", false);
+            Map<String, Boolean> data = new HashMap<>();
+            data.put("valid", false);
+
+            ApiResponse<Map<String, Boolean>> response = ApiResponse.success(
+                    "Token invalidé",
+                    data
+            );
             return ResponseEntity.ok(response);
         }
     }
 
+
     @PutMapping("/{id}/change-password")
-    public ResponseEntity<?> changeUserPassword(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> changeUserPassword(
             @PathVariable Integer id,
             @RequestBody Map<String, String> request) {
 
@@ -316,35 +382,49 @@ public class UserController {
         User currentUser = (User) auth.getPrincipal();
         String newPassword = request.get("newPassword");
 
-        // Vérifier que l'utilisateur est ADMIN
         if (!currentUser.getRole().name().equals("ADMIN")) {
-            return ResponseEntity.status(403).body(Map.of("error", "Seul l'administrateur peut modifier les mots de passe"));
+            ApiResponse<Map<String, Object>> response = ApiResponse.error(
+                    "Seul l'administrateur peut modifier les mots de passe",
+                    HttpStatus.FORBIDDEN.value()
+            );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
 
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Le nouveau mot de passe est requis"));
+            ApiResponse<Map<String, Object>> response = ApiResponse.error(
+                    "Le nouveau mot de passe est requis",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+            return ResponseEntity.badRequest().body(response);
         }
 
         if (newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Le mot de passe doit contenir au moins 6 caractères"));
+            ApiResponse<Map<String, Object>> response = ApiResponse.error(
+                    "Le mot de passe doit contenir au moins 6 caractères",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+            return ResponseEntity.badRequest().body(response);
         }
 
         boolean success = service.changePassword(id, newPassword);
 
         if (success) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Mot de passe modifié avec succès");
+            Map<String, Object> data = new HashMap<>();
+            data.put("success", true);
+            data.put("message", "Mot de passe modifié avec succès");
+
+            ApiResponse<Map<String, Object>> response = ApiResponse.success(
+                    "Mot de passe modifié",
+                    data
+            );
             return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.badRequest().body(Map.of("error", "Utilisateur non trouvé"));
+            ApiResponse<Map<String, Object>> response = ApiResponse.error(
+                    "Utilisateur non trouvé",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+            return ResponseEntity.badRequest().body(response);
         }
     }
-
-
-
-
-
-
 }
 

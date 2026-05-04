@@ -61,20 +61,18 @@ class AuthenticationControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Nettoyer dans le bon ordre
         tokenRepository.deleteAll();
         userRepository.deleteAll();
+        siteRepository.deleteAll();
+        projetRepository.deleteAll();
 
-        // Utiliser des noms uniques pour éviter les conflits
         String uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        siteRepository.deleteAll();
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        projetRepository.deleteAll();
         testProjet = new Projet();
         testProjet.setName("FORD_" + uniqueId);
         testProjet = projetRepository.save(testProjet);
@@ -96,9 +94,12 @@ class AuthenticationControllerTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").exists())
-                .andExpect(jsonPath("$.refresh_token").exists());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Utilisateur créé avec succès"))
+                .andExpect(jsonPath("$.statusCode").value(201))
+                .andExpect(jsonPath("$.data.access_token").exists())      // ✅ snake_case
+                .andExpect(jsonPath("$.data.refresh_token").exists());    // ✅ snake_case
     }
 
     @Test
@@ -131,7 +132,10 @@ class AuthenticationControllerTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Email déjà utilisé"))
+                .andExpect(jsonPath("$.statusCode").value(409));
     }
 
     @Test
@@ -160,12 +164,14 @@ class AuthenticationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").exists())
-                .andExpect(jsonPath("$.refresh_token").exists());
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Authentification réussie"))
+                .andExpect(jsonPath("$.data.access_token").exists())     // ✅ snake_case
+                .andExpect(jsonPath("$.data.refresh_token").exists());   // ✅ snake_case
     }
 
     @Test
-    void authenticate_WithInvalidPassword_ShouldReturnForbidden() throws Exception {
+    void authenticate_WithInvalidPassword_ShouldReturnUnauthorized() throws Exception {
         AuthenticationRequest request = AuthenticationRequest.builder()
                 .email("nonexistent_" + UUID.randomUUID() + "@example.com")
                 .password("wrongpassword")
@@ -175,7 +181,9 @@ class AuthenticationControllerTest {
         mockMvc.perform(post("/api/v1/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())  // ✅ 401 au lieu de 403 ou 500
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").exists());
     }
 
     @Test
@@ -203,7 +211,9 @@ class AuthenticationControllerTest {
         mockMvc.perform(post("/api/v1/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Vous n'avez pas accès à ce site"));
     }
 
     @Test
@@ -232,7 +242,8 @@ class AuthenticationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").exists());
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.access_token").exists());  // ✅ snake_case
     }
 
     @Test
@@ -260,6 +271,8 @@ class AuthenticationControllerTest {
         mockMvc.perform(post("/api/v1/auth/authenticate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Veuillez sélectionner un site"));
     }
 }

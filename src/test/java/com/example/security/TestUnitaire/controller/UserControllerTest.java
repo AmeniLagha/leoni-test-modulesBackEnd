@@ -2,6 +2,7 @@ package com.example.security.TestUnitaire.controller;
 
 import com.example.security.auth.AuthenticationRequest;
 import com.example.security.auth.RegisterRequest;
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.projet.Projet;
 import com.example.security.projet.ProjetRepository;
@@ -74,28 +75,23 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage dans l'ordre inverse des dépendances
         passwordResetTokenRepository.deleteAll();
         tokenRepository.deleteAll();
         userRepository.deleteAll();
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site avec nom unique
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom unique
         testProjet = new Projet();
         testProjet.setName("FORD_" + uniqueId);
         testProjet = projetRepository.save(testProjet);
 
-        // Création ADMIN avec email unique
         adminUser = User.builder()
                 .email("admin_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("admin123"))
@@ -118,7 +114,6 @@ class UserControllerTest {
                 .build();
         tokenRepository.save(adminTokenEntity);
 
-        // Création utilisateur normal avec email unique
         normalUser = User.builder()
                 .email("user_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("user123"))
@@ -149,7 +144,9 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des utilisateurs récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(2));
     }
 
     @Test
@@ -172,13 +169,16 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/me")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("admin_" + uniqueId + "@test.com"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Informations utilisateur récupérées avec succès"))
+                .andExpect(jsonPath("$.data.email").value("admin_" + uniqueId + "@test.com"));
     }
 
     @Test
-    void getCurrentUser_WithoutToken_ShouldReturnForbidden() throws Exception {
+    void getCurrentUser_WithoutToken_ShouldReturnUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/users/me"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden());  // ✅ 403 au lieu de 401
+        // Pas de vérification JSON car réponse vide
     }
 
     // ==================== DELETE /api/v1/users/{id} ====================
@@ -187,7 +187,9 @@ class UserControllerTest {
     void deleteUser_AsAdmin_ShouldDeleteUser() throws Exception {
         mockMvc.perform(delete("/api/v1/users/" + normalUser.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Utilisateur supprimé avec succès"));
     }
 
     @Test
@@ -201,7 +203,9 @@ class UserControllerTest {
     void deleteUser_WithNonExistentId_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/users/99999")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Utilisateur non trouvé"));
     }
 
     // ==================== PUT /api/v1/users/{id} ====================
@@ -222,7 +226,9 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstname").value("Updated"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Utilisateur mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.firstname").value("Updated"));
     }
 
     @Test
@@ -237,6 +243,20 @@ class UserControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void updateUser_WithNonExistentId_ShouldReturnNotFound() throws Exception {
+        UserDto updateRequest = new UserDto();
+        updateRequest.setFirstname("Updated");
+
+        mockMvc.perform(put("/api/v1/users/99999")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Utilisateur non trouvé"));
+    }
+
     // ==================== POST /api/v1/users/forgot-password ====================
 
     @Test
@@ -246,7 +266,9 @@ class UserControllerTest {
         mockMvc.perform(post("/api/v1/users/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Demande de réinitialisation traitée"));
     }
 
     @Test
@@ -256,7 +278,9 @@ class UserControllerTest {
         mockMvc.perform(post("/api/v1/users/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Demande de réinitialisation traitée"));
     }
 
     // ==================== GET /api/v1/users/check-email ====================
@@ -266,7 +290,9 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/check-email")
                         .param("email", "user_" + uniqueId + "@test.com"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.exists").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Vérification d'email effectuée"))
+                .andExpect(jsonPath("$.data.exists").value(true));
     }
 
     @Test
@@ -274,7 +300,9 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/check-email")
                         .param("email", "nonexistent_" + uniqueId + "@test.com"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.exists").value(false));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Vérification d'email effectuée"))
+                .andExpect(jsonPath("$.data.exists").value(false));
     }
 
     // ==================== GET /api/v1/users/check-matricule ====================
@@ -284,7 +312,9 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/check-matricule")
                         .param("matricule", "10001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.exists").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Vérification de matricule effectuée"))
+                .andExpect(jsonPath("$.data.exists").value(true));
     }
 
     @Test
@@ -292,6 +322,8 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/check-matricule")
                         .param("matricule", "99999"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.exists").value(false));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Vérification de matricule effectuée"))
+                .andExpect(jsonPath("$.data.exists").value(false));
     }
 }

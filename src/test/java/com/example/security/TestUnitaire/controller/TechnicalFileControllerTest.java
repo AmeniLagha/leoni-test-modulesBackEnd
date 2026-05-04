@@ -1,6 +1,7 @@
 package com.example.security.TestUnitaire.controller;
 
 import com.example.security.cahierdeCharge.*;
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.fichierTechnique.*;
 import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistoryRepository;
@@ -21,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -104,10 +104,8 @@ class TechnicalFileControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour cette exécution
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage
         historyRepository.deleteAll();
         technicalFileItemRepository.deleteAll();
         technicalFileRepository.deleteAll();
@@ -118,19 +116,16 @@ class TechnicalFileControllerTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création site avec nom UNIQUE
         testSite = new Site();
-        testSite.setName("MH1_" + uniqueId);  // ← Nom unique
+        testSite.setName("MH1_" + uniqueId);
         testSite.setActive(true);
         testSite = siteRepository.save(testSite);
 
-        // Création projet avec nom UNIQUE
         testProjet = new Projet();
-        testProjet.setName("FORD_" + uniqueId);  // ← Nom unique
+        testProjet.setName("FORD_" + uniqueId);
         testProjet.setActive(true);
         testProjet = projetRepository.save(testProjet);
 
-        // Création utilisateurs
         ppUser = createUser("pp_" + uniqueId + "@test.com", "pp123", Role.PP, 10001);
         mcUser = createUser("mc_" + uniqueId + "@test.com", "mc123", Role.MC, 10002);
         mpUser = createUser("mp_" + uniqueId + "@test.com", "mp123", Role.MP, 10003);
@@ -138,7 +133,6 @@ class TechnicalFileControllerTest {
         ingUser = createUser("ing_" + uniqueId + "@test.com", "ing123", Role.ING, 10005);
         adminUser = createUser("admin_" + uniqueId + "@test.com", "admin123", Role.ADMIN, 10000);
 
-        // Génération des tokens
         ppToken = jwtService.generateToken(ppUser);
         mcToken = jwtService.generateToken(mcUser);
         mpToken = jwtService.generateToken(mpUser);
@@ -153,7 +147,6 @@ class TechnicalFileControllerTest {
         saveToken(ingUser, ingToken);
         saveToken(adminUser, adminToken);
 
-        // Création cahier de test avec projet unique
         testChargeSheet = ChargeSheet.builder()
                 .plant("MH1_" + uniqueId)
                 .project("FORD_" + uniqueId)
@@ -164,7 +157,6 @@ class TechnicalFileControllerTest {
                 .build();
         testChargeSheet = chargeSheetRepository.save(testChargeSheet);
 
-        // Création item de test
         testItem = ChargeSheetItem.builder()
                 .chargeSheet(testChargeSheet)
                 .itemNumber("1_" + uniqueId)
@@ -175,7 +167,6 @@ class TechnicalFileControllerTest {
                 .build();
         testItem = chargeSheetItemRepository.save(testItem);
 
-        // Création dossier technique
         testTechnicalFile = TechnicalFile.builder()
                 .reference("TF-001_" + uniqueId)
                 .createdBy(ppUser.getEmail())
@@ -183,7 +174,6 @@ class TechnicalFileControllerTest {
                 .build();
         testTechnicalFile = technicalFileRepository.save(testTechnicalFile);
 
-        // Création item dossier technique
         testTechnicalFileItem = TechnicalFileItem.builder()
                 .technicalFile(testTechnicalFile)
                 .chargeSheetItem(testItem)
@@ -195,7 +185,6 @@ class TechnicalFileControllerTest {
                 .build();
         testTechnicalFileItem = technicalFileItemRepository.save(testTechnicalFileItem);
 
-        // Ajouter l'item à la collection du dossier technique
         if (testTechnicalFile.getTechnicalFileItems() == null) {
             testTechnicalFile.setTechnicalFileItems(new ArrayList<>());
         }
@@ -217,8 +206,6 @@ class TechnicalFileControllerTest {
         return userRepository.save(user);
     }
 
-
-
     private void saveToken(User user, String token) {
         Token tokenEntity = Token.builder()
                 .token(token)
@@ -235,7 +222,7 @@ class TechnicalFileControllerTest {
     @Test
     void createTechnicalFile_AsPp_ShouldCreate() throws Exception {
         TechnicalFileDto.CreateDto dto = TechnicalFileDto.CreateDto.builder()
-                .reference("TF-002")
+                .reference("TF-002_" + uniqueId)
                 .items(List.of(TechnicalFileDto.TechnicalFileItemDto.builder()
                         .chargeSheetItemId(testItem.getId())
                         .technicianName("Jane Doe")
@@ -247,14 +234,16 @@ class TechnicalFileControllerTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reference").value("TF-002"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Dossier technique créé avec succès"))
+                .andExpect(jsonPath("$.data.reference").value("TF-002_" + uniqueId));
     }
 
     @Test
     void createTechnicalFile_AsPt_ShouldReturnForbidden() throws Exception {
         TechnicalFileDto.CreateDto dto = TechnicalFileDto.CreateDto.builder()
-                .reference("TF-003")
+                .reference("TF-003_" + uniqueId)
                 .build();
 
         mockMvc.perform(post("/api/v1/technical-files")
@@ -271,7 +260,8 @@ class TechnicalFileControllerTest {
         mockMvc.perform(get("/api/v1/technical-files/list")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/technical-files/detail ====================
@@ -281,7 +271,8 @@ class TechnicalFileControllerTest {
         mockMvc.perform(get("/api/v1/technical-files/detail")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1));
     }
 
     // ==================== GET /api/v1/technical-files/{id} ====================
@@ -291,7 +282,8 @@ class TechnicalFileControllerTest {
         mockMvc.perform(get("/api/v1/technical-files/" + testTechnicalFile.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reference").value("TF-001_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.reference").value("TF-001_" + uniqueId));
     }
 
     // ==================== PUT /api/v1/technical-files/{id} ====================
@@ -299,7 +291,7 @@ class TechnicalFileControllerTest {
     @Test
     void updateTechnicalFile_AsPp_ShouldUpdate() throws Exception {
         TechnicalFileDto.UpdateDto dto = TechnicalFileDto.UpdateDto.builder()
-                .reference("TF-001-UPDATED")
+                .reference("TF-001-UPDATED_" + uniqueId)
                 .build();
 
         mockMvc.perform(put("/api/v1/technical-files/" + testTechnicalFile.getId())
@@ -307,7 +299,9 @@ class TechnicalFileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reference").value("TF-001-UPDATED"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Dossier technique mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.reference").value("TF-001-UPDATED_" + uniqueId));
     }
 
     // ==================== DELETE /api/v1/technical-files/{id} ====================
@@ -316,7 +310,9 @@ class TechnicalFileControllerTest {
     void deleteTechnicalFile_AsPp_ShouldDelete() throws Exception {
         mockMvc.perform(delete("/api/v1/technical-files/" + testTechnicalFile.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Dossier technique supprimé avec succès"));
     }
 
     // ==================== GET /api/v1/technical-files/items/{itemId} ====================
@@ -326,7 +322,8 @@ class TechnicalFileControllerTest {
         mockMvc.perform(get("/api/v1/technical-files/items/" + testTechnicalFileItem.getId())
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.technicianName").value("John Doe"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.technicianName").value("John Doe"));
     }
 
     // ==================== PUT /api/v1/technical-files/items/{itemId} ====================
@@ -343,7 +340,9 @@ class TechnicalFileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.technicianName").value("Jane Updated"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item technique mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.technicianName").value("Jane Updated"));
     }
 
     // ==================== DELETE /api/v1/technical-files/items/{itemId} ====================
@@ -352,7 +351,9 @@ class TechnicalFileControllerTest {
     void deleteTechnicalFileItem_AsPp_ShouldDelete() throws Exception {
         mockMvc.perform(delete("/api/v1/technical-files/items/" + testTechnicalFileItem.getId())
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item technique supprimé avec succès"));
     }
 
     // ==================== POST /api/v1/technical-files/{id}/items ====================
@@ -369,8 +370,10 @@ class TechnicalFileControllerTest {
                         .header("Authorization", "Bearer " + ppToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.technicianName").value("New Tech"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item ajouté au dossier technique avec succès"))
+                .andExpect(jsonPath("$.data.technicianName").value("New Tech"));
     }
 
     // ==================== PUT /api/v1/technical-files/items/{itemId}/validate ====================
@@ -380,32 +383,33 @@ class TechnicalFileControllerTest {
         mockMvc.perform(put("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/validate")
                         .header("Authorization", "Bearer " + ppToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.validationStatus").value("VALIDATED_PP"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item validé avec succès par PP"))
+                .andExpect(jsonPath("$.data.validationStatus").value("VALIDATED_PP"));
     }
 
     @Test
     void validateItem_AsMc_ShouldValidateAfterPp() throws Exception {
-        // Créer un item déjà validé par PP
         TechnicalFileItem preValidatedItem = TechnicalFileItem.builder()
                 .technicalFile(testTechnicalFile)
                 .chargeSheetItem(testItem)
                 .technicianName("Pre Validated")
                 .position("Position X")
-                .validationStatus(TechnicalFileItemStatus.VALIDATED_PP)  // ← DÉJÀ VALIDÉ
+                .validationStatus(TechnicalFileItemStatus.VALIDATED_PP)
                 .createdBy(ppUser.getEmail())
                 .createdAt(LocalDate.now())
                 .build();
         preValidatedItem = technicalFileItemRepository.save(preValidatedItem);
 
-        // Ajouter au dossier
         testTechnicalFile.getTechnicalFileItems().add(preValidatedItem);
         technicalFileRepository.save(testTechnicalFile);
 
-        // Valider par MC
         mockMvc.perform(put("/api/v1/technical-files/items/" + preValidatedItem.getId() + "/validate")
                         .header("Authorization", "Bearer " + mcToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.validationStatus").value("VALIDATED_MC"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item validé avec succès par MC"))
+                .andExpect(jsonPath("$.data.validationStatus").value("VALIDATED_MC"));
     }
 
     // ==================== GET /api/v1/technical-files/items/{itemId}/can-validate ====================
@@ -414,7 +418,9 @@ class TechnicalFileControllerTest {
     void canValidateItem_ShouldReturnBoolean() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/can-validate")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isBoolean());
     }
 
     // ==================== GET /api/v1/technical-files/{id}/history-audited ====================
@@ -423,7 +429,8 @@ class TechnicalFileControllerTest {
     void getHistoryAudited_ShouldReturnHistory() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/" + testTechnicalFile.getId() + "/history-audited")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/technical-files/items/{itemId}/history-audited ====================
@@ -432,7 +439,8 @@ class TechnicalFileControllerTest {
     void getItemHistoryAudited_ShouldReturnHistory() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/history-audited")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/technical-files/{id}/full-history-audited ====================
@@ -441,7 +449,8 @@ class TechnicalFileControllerTest {
     void getFullHistory_ShouldReturnCompleteHistory() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/" + testTechnicalFile.getId() + "/full-history-audited")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/technical-files/notifications/pending ====================
@@ -450,7 +459,8 @@ class TechnicalFileControllerTest {
     void getPendingNotifications_ShouldReturnNotifications() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/notifications/pending")
                         .header("Authorization", "Bearer " + mcToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ==================== GET /api/v1/technical-files/items/{itemId}/versions-compare ====================
@@ -459,6 +469,9 @@ class TechnicalFileControllerTest {
     void getFirstAndCurrentVersions_ShouldReturnComparison() throws Exception {
         mockMvc.perform(get("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/versions-compare")
                         .header("Authorization", "Bearer " + ppToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").exists());
+        // Ne vérifie pas l'existence de firstVersion car peut être vide
     }
 }

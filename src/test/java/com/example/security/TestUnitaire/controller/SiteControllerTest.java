@@ -1,5 +1,6 @@
 package com.example.security.TestUnitaire.controller;
 
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.projet.Projet;
 import com.example.security.projet.ProjetRepository;
@@ -71,14 +72,11 @@ class SiteControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Générer un ID unique pour ce test
         uniqueId = UUID.randomUUID().toString().substring(0, 8);
 
-        // Nettoyage dans le bon ordre
         tokenRepository.deleteAll();
         userRepository.deleteAll();
 
-        // Nettoyer les relations many-to-many d'abord
         List<Site> allSites = siteRepository.findAll();
         for (Site site : allSites) {
             site.getProjets().clear();
@@ -88,7 +86,6 @@ class SiteControllerTest {
         siteRepository.deleteAll();
         projetRepository.deleteAll();
 
-        // Création des projets avec noms uniques
         testProjet1 = new Projet();
         testProjet1.setName("FORD_" + uniqueId);
         testProjet1.setActive(true);
@@ -99,7 +96,6 @@ class SiteControllerTest {
         testProjet2.setActive(true);
         testProjet2 = projetRepository.save(testProjet2);
 
-        // Création du site avec nom unique
         testSite = new Site();
         testSite.setName("MH1_" + uniqueId);
         testSite.setDescription("Site de Manzel Hayet");
@@ -107,7 +103,6 @@ class SiteControllerTest {
         testSite.setProjets(new ArrayList<>(List.of(testProjet1)));
         testSite = siteRepository.save(testSite);
 
-        // Création ADMIN avec email unique
         adminUser = User.builder()
                 .email("admin_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("admin123"))
@@ -130,7 +125,6 @@ class SiteControllerTest {
                 .build();
         tokenRepository.save(adminTokenEntity);
 
-        // Création utilisateur normal avec email unique
         normalUser = User.builder()
                 .email("user_" + uniqueId + "@test.com")
                 .password(passwordEncoder.encode("user123"))
@@ -160,8 +154,10 @@ class SiteControllerTest {
     void getAllSites_ShouldReturnAllSites() throws Exception {
         mockMvc.perform(get("/api/v1/sites"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").value("MH1_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des sites récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("MH1_" + uniqueId));
     }
 
     // ==================== GET /api/v1/sites/{id} ====================
@@ -171,8 +167,9 @@ class SiteControllerTest {
         mockMvc.perform(get("/api/v1/sites/" + testSite.getId())
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testSite.getId()))
-                .andExpect(jsonPath("$.name").value("MH1_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(testSite.getId()))
+                .andExpect(jsonPath("$.data.name").value("MH1_" + uniqueId));
     }
 
     @Test
@@ -192,7 +189,9 @@ class SiteControllerTest {
     void getSiteById_WithNonExistentId_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/sites/99999")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 
     // ==================== POST /api/v1/sites ====================
@@ -211,7 +210,9 @@ class SiteControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newSite)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("MH2_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Site créé avec succès"))
+                .andExpect(jsonPath("$.data.name").value("MH2_" + uniqueId));
     }
 
     @Test
@@ -232,7 +233,7 @@ class SiteControllerTest {
     @Test
     void createSite_WithDuplicateName_ShouldReturnConflict() throws Exception {
         SiteDto duplicateSite = SiteDto.builder()
-                .name("MH1_" + uniqueId)  // Même nom que le site existant
+                .name("MH1_" + uniqueId)
                 .description("Site en double")
                 .active(true)
                 .build();
@@ -241,7 +242,9 @@ class SiteControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateSite)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Un site avec ce nom existe déjà"));
     }
 
     // ==================== PUT /api/v1/sites/{id} ====================
@@ -260,7 +263,9 @@ class SiteControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateSite)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("MH1_UPDATED_" + uniqueId));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Site mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.name").value("MH1_UPDATED_" + uniqueId));
     }
 
     @Test
@@ -286,14 +291,15 @@ class SiteControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateSite)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 
     // ==================== DELETE /api/v1/sites/{id} ====================
 
     @Test
     void deleteSite_AsAdmin_ShouldDeleteSite() throws Exception {
-        // Créer un site temporaire sans utilisateur pour le test
         Site tempSite = new Site();
         tempSite.setName("TempSite_" + uniqueId);
         tempSite.setDescription("Site temporaire pour suppression");
@@ -303,7 +309,9 @@ class SiteControllerTest {
 
         mockMvc.perform(delete("/api/v1/sites/" + tempSite.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Site supprimé avec succès"));
     }
 
     @Test
@@ -317,7 +325,9 @@ class SiteControllerTest {
     void deleteSite_WithNonExistentId_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/sites/99999")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 
     // ==================== GET /api/v1/sites/{siteId}/projets ====================
@@ -326,7 +336,8 @@ class SiteControllerTest {
     void getProjetsBySite_AsAuthenticated_ShouldReturnProjets() throws Exception {
         mockMvc.perform(get("/api/v1/sites/" + testSite.getId() + "/projets")
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
@@ -339,7 +350,9 @@ class SiteControllerTest {
     void getProjetsBySite_WithNonExistentSite_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/sites/99999/projets")
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 
     // ==================== POST /api/v1/sites/{siteId}/add-projet/{projetId} ====================
@@ -348,7 +361,9 @@ class SiteControllerTest {
     void addProjetToSite_AsAdmin_ShouldAddProjet() throws Exception {
         mockMvc.perform(post("/api/v1/sites/" + testSite.getId() + "/add-projet/" + testProjet2.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Projet ajouté au site avec succès"));
     }
 
     @Test
@@ -362,7 +377,9 @@ class SiteControllerTest {
     void addProjetToSite_WithNonExistentSite_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(post("/api/v1/sites/99999/add-projet/" + testProjet2.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 
     // ==================== PUT /api/v1/sites/{siteId}/projets ====================
@@ -376,7 +393,9 @@ class SiteControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Projets du site mis à jour avec succès"));
     }
 
     @Test
@@ -400,6 +419,8 @@ class SiteControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé"));
     }
 }

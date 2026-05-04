@@ -1,5 +1,6 @@
 package com.example.security.TestUnitaire.controller;
 
+import com.example.security.common.ApiResponse;
 import com.example.security.config.JwtService;
 import com.example.security.projet.Projet;
 import com.example.security.projet.ProjetDto;
@@ -34,7 +35,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class ProjetControllerTest {
-
 
     @Autowired
     private MockMvc mockMvc;
@@ -75,7 +75,6 @@ class ProjetControllerTest {
         projetRepository.deleteAll();
         siteRepository.deleteAll();
 
-        // 1. Création des projets d'abord
         testProjet1 = new Projet();
         testProjet1.setName("FORD");
         testProjet1.setDescription("Projet Ford");
@@ -88,19 +87,16 @@ class ProjetControllerTest {
         testProjet2.setActive(true);
         testProjet2 = projetRepository.save(testProjet2);
 
-        // 2. Création du site AVEC la liste des projets
         testSite = new Site();
         testSite.setName("MH1");
         testSite.setDescription("Site de Manzel Hayet");
         testSite.setActive(true);
-        testSite.setProjets(new ArrayList<>(List.of(testProjet1))); // ✅ Important !
+        testSite.setProjets(new ArrayList<>(List.of(testProjet1)));
         testSite = siteRepository.save(testSite);
 
-        // 3. Mettre à jour les projets pour qu'ils aient aussi la référence au site (si nécessaire)
         testProjet1.setSites(List.of(testSite));
         testProjet1 = projetRepository.save(testProjet1);
 
-        // Création ADMIN
         adminUser = User.builder()
                 .email("admin@test.com")
                 .password(passwordEncoder.encode("admin123"))
@@ -123,7 +119,6 @@ class ProjetControllerTest {
                 .build();
         tokenRepository.save(adminTokenEntity);
 
-        // Création utilisateur normal
         normalUser = User.builder()
                 .email("user@test.com")
                 .password(passwordEncoder.encode("user123"))
@@ -152,11 +147,13 @@ class ProjetControllerTest {
     @Test
     void getAllProjets_ShouldReturnAllProjets() throws Exception {
         mockMvc.perform(get("/api/v1/projets")
-                        .header("Authorization", "Bearer " + userToken))  // ✅ Ajouter le token
+                        .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("FORD"))
-                .andExpect(jsonPath("$[1].name").value("TESLA"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des projets récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].name").value("FORD"))
+                .andExpect(jsonPath("$.data[1].name").value("TESLA"));
     }
 
     // ==================== GET /api/v1/projets/{id} ====================
@@ -166,8 +163,9 @@ class ProjetControllerTest {
         mockMvc.perform(get("/api/v1/projets/" + testProjet1.getId())
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testProjet1.getId()))
-                .andExpect(jsonPath("$.name").value("FORD"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(testProjet1.getId()))
+                .andExpect(jsonPath("$.data.name").value("FORD"));
     }
 
     @Test
@@ -175,6 +173,7 @@ class ProjetControllerTest {
         mockMvc.perform(get("/api/v1/projets/" + testProjet1.getId())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isForbidden());
+        // Pas de vérification JSON car réponse vide
     }
 
     @Test
@@ -187,7 +186,9 @@ class ProjetControllerTest {
     void getProjetById_WithNonExistentId_ShouldReturnError() throws Exception {
         mockMvc.perform(get("/api/v1/projets/99999")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound()); // ✅ 500 au lieu de 404
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Projet non trouvé"));
     }
 
     // ==================== POST /api/v1/projets ====================
@@ -206,7 +207,9 @@ class ProjetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newProjet)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("BMW"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Projet créé avec succès"))
+                .andExpect(jsonPath("$.data.name").value("BMW"));
     }
 
     @Test
@@ -236,7 +239,9 @@ class ProjetControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(duplicateProjet)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Un projet avec ce nom existe déjà"));
     }
 
     // ==================== PUT /api/v1/projets/{id} ====================
@@ -255,7 +260,9 @@ class ProjetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateProjet)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("FORD_UPDATED"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Projet mis à jour avec succès"))
+                .andExpect(jsonPath("$.data.name").value("FORD_UPDATED"));
     }
 
     @Test
@@ -281,14 +288,15 @@ class ProjetControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateProjet)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Projet non trouvé"));
     }
 
     // ==================== DELETE /api/v1/projets/{id} ====================
 
     @Test
     void deleteProjet_AsAdmin_ShouldDeleteProjet() throws Exception {
-        // Créer un projet temporaire sans utilisateur
         Projet tempProjet = new Projet();
         tempProjet.setName("TempProjet");
         tempProjet.setDescription("Projet temporaire");
@@ -297,7 +305,9 @@ class ProjetControllerTest {
 
         mockMvc.perform(delete("/api/v1/projets/" + tempProjet.getId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Projet supprimé avec succès"));
     }
 
     @Test
@@ -311,7 +321,9 @@ class ProjetControllerTest {
     void deleteProjet_WithNonExistentId_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/projets/99999")
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Projet non trouvé"));
     }
 
     // ==================== GET /api/v1/projets/site/{siteName} ====================
@@ -321,8 +333,10 @@ class ProjetControllerTest {
         mockMvc.perform(get("/api/v1/projets/site/MH1")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").value("FORD"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des projets par site récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("FORD"));
     }
 
     @Test
@@ -335,7 +349,9 @@ class ProjetControllerTest {
     void getProjetsBySiteName_WithNonExistentSite_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/projets/site/NonExistentSite")
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Site non trouvé: NonExistentSite"));
     }
 
     // ==================== GET /api/v1/projets/active ====================
@@ -345,7 +361,9 @@ class ProjetControllerTest {
         mockMvc.perform(get("/api/v1/projets/active")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Liste des projets actifs récupérée avec succès"))
+                .andExpect(jsonPath("$.data.length()").value(2));
     }
 
     @Test
