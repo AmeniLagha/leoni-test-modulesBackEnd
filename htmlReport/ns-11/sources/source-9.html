@@ -1,0 +1,206 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > UserRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.user</a>
+</div>
+
+<h1>Coverage Summary for Class: UserRepository (com.example.security.user)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">UserRepository</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">UserRepository$MockitoMock$qBbQxCmk</td>
+  </tr>
+  <tr>
+    <td class="name">UserRepository$MockitoMock$qBbQxCmk$auxiliary$cSQmPwns</td>
+  </tr>
+  <tr>
+    <td class="name">UserRepository$MockitoMock$qBbQxCmk$auxiliary$va9Z6sxN</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/1)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.user;
+&nbsp;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;public interface UserRepository extends JpaRepository&lt;User,Integer&gt; {
+&nbsp;
+&nbsp;    boolean existsByEmail(String email);
+&nbsp;    boolean existsByMatricule(Integer matricule);
+&nbsp;
+&nbsp;    // Récupérer tous les emails des utilisateurs
+&nbsp;    @Query(&quot;SELECT u.email FROM User u&quot;)
+&nbsp;    List&lt;String&gt; findAllUserEmails();
+&nbsp;
+&nbsp;    @Query(&quot;SELECT u FROM User u WHERE u.email = :email&quot;)
+&nbsp;    Optional&lt;User&gt; findByEmail(@Param(&quot;email&quot;) String email);
+&nbsp;
+&nbsp;    default List&lt;String&gt; findAllActiveUserEmails() {
+<b class="nc">&nbsp;        return findAllUserEmails();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ CORRECTION : Utiliser la jointure avec projets
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT DISTINCT u.email FROM User u
+&nbsp;        JOIN u.projets p
+&nbsp;        WHERE p.name = :projet OR u.role = &#39;ADMIN&#39;
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;String&gt; findActiveUserEmailsByProjet(@Param(&quot;projet&quot;) String projet);
+&nbsp;
+&nbsp;    // ✅ CORRECTION : Exclure l&#39;utilisateur courant
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT DISTINCT u.email FROM User u
+&nbsp;        JOIN u.projets p
+&nbsp;        WHERE (p.name = :projet OR u.role = &#39;ADMIN&#39;)
+&nbsp;        AND u.email &lt;&gt; :currentEmail
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;String&gt; findActiveUserEmailsByProjetExcludingCurrent(
+&nbsp;            @Param(&quot;projet&quot;) String projet,
+&nbsp;            @Param(&quot;currentEmail&quot;) String currentEmail);
+&nbsp;
+&nbsp;    // ✅ CORRECTION : Trouver les MC et MP par projet
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT DISTINCT u FROM User u
+&nbsp;        JOIN u.projets p
+&nbsp;        WHERE p.name = :projet 
+&nbsp;        AND (u.role = &#39;MC&#39; OR u.role = &#39;MP&#39;)
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;User&gt; findMcAndMpByProject(@Param(&quot;projet&quot;) String projet);
+&nbsp;
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;        SELECT DISTINCT u.email FROM User u
+&nbsp;        JOIN u.projets p
+&nbsp;        WHERE p.name IN :projets
+&nbsp;        AND (u.site.name = :site OR u.role = &#39;ADMIN&#39;)
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;String&gt; findEmailsByProjectsAndSite(
+&nbsp;            @Param(&quot;projets&quot;) List&lt;String&gt; projets,
+&nbsp;            @Param(&quot;site&quot;) String site);
+&nbsp;
+&nbsp;    // Dans UserRepository.java - Ajoutez ces méthodes
+&nbsp;
+&nbsp;    // ✅ Trouver les utilisateurs PP par projet et site
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;    SELECT DISTINCT u FROM User u
+&nbsp;    JOIN u.projets p
+&nbsp;    WHERE u.role = &#39;PP&#39; 
+&nbsp;    AND p.name = :projet
+&nbsp;    AND u.site.name = :site
+&nbsp;&quot;&quot;&quot;)
+&nbsp;    List&lt;User&gt; findPpUsersByProjectAndSite(@Param(&quot;projet&quot;) String projet, @Param(&quot;site&quot;) String site);
+&nbsp;
+&nbsp;    // Trouver les emails des utilisateurs par projet ET par site
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;    SELECT DISTINCT u.email FROM User u
+&nbsp;    JOIN u.projets p
+&nbsp;    WHERE p.name = :projet 
+&nbsp;    AND u.site.name = :site
+&nbsp;&quot;&quot;&quot;)
+&nbsp;    List&lt;String&gt; findEmailsByProjectAndSite(@Param(&quot;projet&quot;) String projet, @Param(&quot;site&quot;) String site);
+&nbsp;
+&nbsp;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
+</div>
+</body>
+</html>

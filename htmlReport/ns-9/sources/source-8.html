@@ -1,0 +1,143 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TechnicalFileItemStatus</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.fichierTechnique</a>
+</div>
+
+<h1>Coverage Summary for Class: TechnicalFileItemStatus (com.example.security.fichierTechnique)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TechnicalFileItemStatus</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    42,9%
+  </span>
+  <span class="absValue">
+    (3/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    66,7%
+  </span>
+  <span class="absValue">
+    (10/15)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;// TechnicalFileItemStatus.java
+&nbsp;package com.example.security.fichierTechnique;
+&nbsp;
+<b class="fc">&nbsp;public enum TechnicalFileItemStatus {</b>
+<b class="fc">&nbsp;    DRAFT,                    // Créé, en attente validation PP</b>
+<b class="fc">&nbsp;    VALIDATED_PP,             // Validé par PP, en attente MC</b>
+<b class="fc">&nbsp;    VALIDATED_MC,             // Validé par MC, en attente MP</b>
+<b class="fc">&nbsp;    VALIDATED_MP;             // Validé par MP, finalisé</b>
+&nbsp;
+&nbsp;    public boolean canBeValidatedBy(String role) {
+<b class="pc">&nbsp;        return switch (this) {</b>
+<b class="fc">&nbsp;            case DRAFT -&gt; &quot;PP&quot;.equals(role);</b>
+<b class="fc">&nbsp;            case VALIDATED_PP -&gt; &quot;MC&quot;.equals(role);</b>
+<b class="nc">&nbsp;            case VALIDATED_MC -&gt; &quot;MP&quot;.equals(role);</b>
+<b class="nc">&nbsp;            default -&gt; false;</b>
+&nbsp;        };
+&nbsp;    }
+&nbsp;
+&nbsp;    public String getDisplayName() {
+<b class="pc">&nbsp;        return switch (this) {</b>
+<b class="fc">&nbsp;            case DRAFT -&gt; &quot;Brouillon&quot;;</b>
+<b class="nc">&nbsp;            case VALIDATED_PP -&gt; &quot;Validé PP&quot;;</b>
+<b class="nc">&nbsp;            case VALIDATED_MC -&gt; &quot;Validé MC&quot;;</b>
+<b class="nc">&nbsp;            case VALIDATED_MP -&gt; &quot;Validé MP&quot;;</b>
+&nbsp;        };
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
+</div>
+</body>
+</html>

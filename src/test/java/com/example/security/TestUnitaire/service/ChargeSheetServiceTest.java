@@ -2,17 +2,21 @@ package com.example.security.TestUnitaire.service;
 
 import com.example.security.cahierdeCharge.*;
 import com.example.security.email.GlobalNotificationService;
-import com.example.security.reception.ReceptionHistoryRepository;
+import com.example.security.reception.*;
+import com.example.security.site.Site;
 import com.example.security.user.Role;
 import com.example.security.user.User;
 import com.example.security.user.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +32,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ChargeSheetServiceTest {
 
     @Mock
@@ -56,9 +61,15 @@ class ChargeSheetServiceTest {
     private User adminUser;
     private ChargeSheet testSheet;
     private ChargeSheetItem testItem;
+    private Site testSite;
 
     @BeforeEach
     void setUp() {
+        testSite = new Site();
+        testSite.setId(1L);
+        testSite.setName("MH1");
+        testSite.setActive(true);
+
         ingUser = User.builder()
                 .id(1)
                 .email("ing@test.com")
@@ -85,7 +96,6 @@ class ChargeSheetServiceTest {
                 .role(Role.ADMIN)
                 .build();
 
-        // ⚠️ CORRECTION : S'assurer que testSheet a toutes ses propriétés
         testSheet = ChargeSheet.builder()
                 .id(1L)
                 .plant("MH1")
@@ -94,11 +104,11 @@ class ChargeSheetServiceTest {
                 .issuedBy("John Doe")
                 .emailAddress("john@test.com")
                 .phoneNumber("123456789")
-                .orderNumber("ORD-001")  // ✅ Déjà présent
+                .orderNumber("ORD-001")
                 .costCenterNumber("CC-001")
                 .date(LocalDate.now())
                 .preferredDeliveryDate(LocalDate.now().plusDays(30))
-                .status(ChargeSheetStatus.DRAFT)
+                .status(ChargeSheetStatus.DRAFT)  // ← Changé pour le test de statut valide
                 .createdBy(ingUser.getEmail())
                 .createdAt(LocalDate.now())
                 .items(new ArrayList<>())
@@ -113,6 +123,46 @@ class ChargeSheetServiceTest {
                 .build();
 
         testSheet.getItems().add(testItem);
+    }
+
+    // Helper method to set authentication context
+    private void setAuthUser(User user) {
+        Authentication auth = new Authentication() {
+            @Override
+            public Collection<? extends GrantedAuthority> getAuthorities() {
+                return List.of();
+            }
+
+            @Override
+            public Object getCredentials() {
+                return null;
+            }
+
+            @Override
+            public Object getDetails() {
+                return null;
+            }
+
+            @Override
+            public Object getPrincipal() {
+                return user;
+            }
+
+            @Override
+            public boolean isAuthenticated() {
+                return true;
+            }
+
+            @Override
+            public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
+            }
+
+            @Override
+            public String getName() {
+                return user.getEmail();
+            }
+        };
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
     }
 
     // ==================== Tests CRUD ====================
@@ -312,44 +362,375 @@ class ChargeSheetServiceTest {
         assertThat(stats.get("userRole")).isEqualTo("ADMIN");
     }
 
-    // Helper method to set authentication context - sans stubbing inutile
-    // Helper method to set authentication context
-    private void setAuthUser(User user) {
-        Authentication auth = new Authentication() {
-            @Override
-            public Collection<? extends GrantedAuthority> getAuthorities() {
-                return List.of();
-            }
 
-            @Override
-            public Object getCredentials() {
-                return null;
-            }
+    // ==================== TESTS DE RÉCEPTION ====================
 
-            @Override
-            public Object getDetails() {
-                return null;
-            }
+    @Test
+    void prepareReceptionData_WhenStatusSentToSupplier_ShouldReturnData() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.SENT_TO_SUPPLIER);
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(receptionHistoryRepository.findByChargeSheetId(1L)).thenReturn(List.of());
 
-            @Override
-            public Object getPrincipal() {
-                return user;
-            }
+        // When
+        ReceptionDto.ReceptionResponseDto result = chargeSheetService.prepareReceptionData(1L);
 
-            @Override
-            public boolean isAuthenticated() {
-                return true;
-            }
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getChargeSheetId()).isEqualTo(1L);
+        assertThat(result.isComplete()).isFalse();
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getItems().get(0).getQuantityOrdered()).isEqualTo(10);
+        assertThat(result.getItems().get(0).getQuantityRemaining()).isEqualTo(10);
+    }
 
-            @Override
-            public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
-            }
+    @Test
+    void prepareReceptionData_WhenStatusNotSentToSupplier_ShouldThrowException() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.DRAFT);
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
 
-            @Override
-            public String getName() {
-                return user.getEmail();
-            }
-        };
-        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
+        // When & Then
+        assertThatThrownBy(() -> chargeSheetService.prepareReceptionData(1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Le cahier doit être en statut SENT_TO_SUPPLIER");
+    }
+
+    @Test
+    void prepareReceptionData_WithExistingHistory_ShouldCalculateRemaining() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.SENT_TO_SUPPLIER);
+
+        ReceptionHistory existingHistory = ReceptionHistory.builder()
+                .item(testItem)
+                .quantityReceived(3)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(receptionHistoryRepository.findByChargeSheetId(1L)).thenReturn(List.of(existingHistory));
+
+        // When
+        ReceptionDto.ReceptionResponseDto result = chargeSheetService.prepareReceptionData(1L);
+
+        // Then
+        assertThat(result.getItems().get(0).getQuantityRemaining()).isEqualTo(7);
+    }
+
+    @Test
+    void confirmPartialReception_ShouldRecordReception() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.SENT_TO_SUPPLIER);
+
+        ReceptionDto.ReceptionRequestDto request = ReceptionDto.ReceptionRequestDto.builder()
+                .chargeSheetId(1L)
+                .deliveryNoteNumber("DN-001")
+                .receptionDate(LocalDate.now().toString())
+                .items(List.of(
+                        ReceptionDto.ReceptionItemDto.builder()
+                                .itemId(1L)
+                                .quantityReceived(5)
+                                .build()
+                ))
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(receptionHistoryRepository.findByChargeSheetId(1L)).thenReturn(List.of());
+        when(receptionHistoryRepository.save(any(ReceptionHistory.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any(ChargeSheet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        ReceptionDto.ReceptionResponseDto result = chargeSheetService.confirmPartialReception(request);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getMessage()).contains("Réception partielle");
+        verify(receptionHistoryRepository).save(any(ReceptionHistory.class));
+    }
+
+    @Test
+    void confirmPartialReception_WhenComplete_ShouldChangeStatus() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.SENT_TO_SUPPLIER);
+
+        ReceptionDto.ReceptionRequestDto request = ReceptionDto.ReceptionRequestDto.builder()
+                .chargeSheetId(1L)
+                .deliveryNoteNumber("DN-001")
+                .receptionDate(LocalDate.now().toString())
+                .items(List.of(
+                        ReceptionDto.ReceptionItemDto.builder()
+                                .itemId(1L)
+                                .quantityReceived(10)
+                                .build()
+                ))
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(receptionHistoryRepository.findByChargeSheetId(1L)).thenReturn(List.of());
+        when(receptionHistoryRepository.save(any(ReceptionHistory.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any(ChargeSheet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        ReceptionDto.ReceptionResponseDto result = chargeSheetService.confirmPartialReception(request);
+
+        // Then
+        assertThat(result.isComplete()).isTrue();
+        assertThat(result.getMessage()).contains("Tous les items ont été reçus");
+    }
+
+    @Test
+    void confirmPartialReception_WhenQuantityExceedsOrdered_ShouldThrowException() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.SENT_TO_SUPPLIER);
+
+        ReceptionDto.ReceptionRequestDto request = ReceptionDto.ReceptionRequestDto.builder()
+                .chargeSheetId(1L)
+                .deliveryNoteNumber("DN-001")
+                .items(List.of(
+                        ReceptionDto.ReceptionItemDto.builder()
+                                .itemId(1L)
+                                .quantityReceived(15)
+                                .build()
+                ))
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(receptionHistoryRepository.findByChargeSheetId(1L)).thenReturn(List.of());
+
+        // When & Then
+        assertThatThrownBy(() -> chargeSheetService.confirmPartialReception(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("dépasse la quantité commandée");
+    }
+
+    @Test
+    void confirmPartialReception_WhenStatusNotSentToSupplier_ShouldThrowException() {
+        // Given
+        testSheet.setStatus(ChargeSheetStatus.DRAFT);
+
+        ReceptionDto.ReceptionRequestDto request = ReceptionDto.ReceptionRequestDto.builder()
+                .chargeSheetId(1L)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+
+        // When & Then
+        assertThatThrownBy(() -> chargeSheetService.confirmPartialReception(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Le cahier doit être en statut SENT_TO_SUPPLIER");
+    }
+
+    @Test
+    void getReceptionHistoryDto_ShouldReturnHistoryList() {
+        // Given
+        ReceptionHistory history = ReceptionHistory.builder()
+                .id(1L)
+                .chargeSheet(testSheet)
+                .item(testItem)
+                .quantityReceived(5)
+                .previousTotalReceived(0)
+                .newTotalReceived(5)
+                .quantityOrdered(10)
+                .deliveryNoteNumber("DN-001")
+                .receptionDate(LocalDate.now())
+                .receivedBy("user@test.com")
+                .comments("Test comment")
+                .createdAt(LocalDate.now())
+                .build();
+
+        when(receptionHistoryRepository.findByChargeSheetIdOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of(history));
+
+        // When
+        List<ReceptionHistoryDto> result = chargeSheetService.getReceptionHistoryDto(1L);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getDeliveryNoteNumber()).isEqualTo("DN-001");
+        assertThat(result.get(0).getQuantityReceived()).isEqualTo(5);
+        assertThat(result.get(0).getItem().getItemNumber()).isEqualTo("1");
+    }
+
+    @Test
+    void getReceptionHistoryDto_WhenNoHistory_ShouldReturnEmptyList() {
+        // Given
+        when(receptionHistoryRepository.findByChargeSheetIdOrderByCreatedAtDesc(1L))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<ReceptionHistoryDto> result = chargeSheetService.getReceptionHistoryDto(1L);
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+    // ==================== TESTS STATISTIQUES MENSUELLES ====================
+
+    @Test
+    void getMonthlyCreationStats_AsAdmin_ShouldReturnAllStats() {
+        setAuthUser(adminUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 15L});
+        mockResults.add(new Object[]{"2024-02", 10L});
+        mockResults.add(new Object[]{"2024-01", 5L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        MonthlyStatsDto result = chargeSheetService.getMonthlyCreationStats(null, 6);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMonthlyCounts()).isNotEmpty();
+        assertThat(result.getCurrentMonth()).isEqualTo("2024-03");
+        assertThat(result.getPreviousMonth()).isEqualTo("2024-02");
+        assertThat(result.getVariationPercentage()).isEqualTo(50.0);
+        assertThat(result.getTrend()).isEqualTo("hausse");
+    }
+
+    @Test
+    void getMonthlyCreationStats_AsUser_ShouldReturnFilteredStats() {
+        setAuthUser(ingUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 8L});
+        mockResults.add(new Object[]{"2024-02", 6L});
+
+        when(repository.countByMonthForProject("FORD")).thenReturn(mockResults);
+
+        MonthlyStatsDto result = chargeSheetService.getMonthlyCreationStats("FORD", 3);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getMonthlyCounts()).hasSize(2);
+    }
+
+    @Test
+    void getMonthlyCreationStats_WithNoData_ShouldReturnEmpty() {
+        setAuthUser(ingUser);
+
+        when(repository.countByMonthForProject("FORD")).thenReturn(Collections.emptyList());
+
+        MonthlyStatsDto result = chargeSheetService.getMonthlyCreationStats("FORD", 6);
+
+        assertThat(result.getMonthlyCounts()).isEmpty();
+    }
+
+    @Test
+    void getLastTwoMonthsVariation_WithData_ShouldCalculateCorrectly() {
+        setAuthUser(adminUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 15L});
+        mockResults.add(new Object[]{"2024-02", 10L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        Map<String, Object> result = chargeSheetService.getLastTwoMonthsVariation(null);
+
+        assertThat(result.get("currentMonth")).isEqualTo("2024-03");
+        assertThat(result.get("currentMonthCount")).isEqualTo(15L);
+        assertThat(result.get("previousMonth")).isEqualTo("2024-02");
+        assertThat(result.get("previousMonthCount")).isEqualTo(10L);
+        assertThat(result.get("variation")).isEqualTo(50.0);
+        assertThat(result.get("trend")).isEqualTo("hausse");
+    }
+
+    @Test
+    void getLastTwoMonthsVariation_WithInsufficientData_ShouldReturnMessage() {
+        setAuthUser(adminUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 15L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        Map<String, Object> result = chargeSheetService.getLastTwoMonthsVariation(null);
+
+        assertThat(result.get("message")).isEqualTo("Pas assez de données pour calculer la variation");
+    }
+
+    @Test
+    void getVariationBetweenMonths_ShouldCalculateCorrectly() {
+        setAuthUser(adminUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 15L});
+        mockResults.add(new Object[]{"2024-02", 10L});
+        mockResults.add(new Object[]{"2024-01", 5L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        Map<String, Object> result = chargeSheetService.getVariationBetweenMonths(null, "2024-01", "2024-03");
+
+        assertThat(result.get("month1Count")).isEqualTo(5L);
+        assertThat(result.get("month2Count")).isEqualTo(15L);
+        assertThat(result.get("variation")).isEqualTo(200.0);
+        assertThat(result.get("trend")).isEqualTo("hausse");
+    }
+
+    @Test
+    void getVariationBetweenMonths_WhenMonth1Zero_ShouldHandleCorrectly() {
+        setAuthUser(adminUser);
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-03", 15L});
+        mockResults.add(new Object[]{"2024-01", 0L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        Map<String, Object> result = chargeSheetService.getVariationBetweenMonths(null, "2024-01", "2024-03");
+
+        assertThat(result.get("variation")).isEqualTo(100.0);
+        assertThat(result.get("trend")).isEqualTo("hausse");
+    }
+
+// ==================== TESTS REVERT TO ING ====================
+
+    @Test
+    void revertToIng_WithValidReason_ShouldRevertToDraft() {
+        setAuthUser(ptUser);
+        testSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.save(any(ChargeSheetItem.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any(ChargeSheet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ChargeSheet result = chargeSheetService.revertToIng(1L, "Corrections nécessaires");
+
+        assertThat(result.getStatus()).isEqualTo(ChargeSheetStatus.DRAFT);
+        assertThat(result.getItems().get(0).getItemStatus()).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void revertToIng_WithoutReason_ShouldThrowException() {
+        setAuthUser(ptUser);
+
+        assertThatThrownBy(() -> chargeSheetService.revertToIng(1L, null))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Veuillez indiquer la raison du retour à ING");
+    }
+
+    @Test
+    void revertToIng_WithInvalidUser_ShouldThrowException() {
+        setAuthUser(ingUser);
+
+        // ✅ Ajouter ce mock pour que findById ne retourne pas Optional.empty()
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+
+        assertThatThrownBy(() -> chargeSheetService.revertToIng(1L, "Raison"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Seul PT ou ADMIN");
+    }
+
+    @Test
+    void revertToIng_WithInvalidStatus_ShouldThrowException() {
+        setAuthUser(ptUser);
+        testSheet.setStatus(ChargeSheetStatus.DRAFT);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+
+        assertThatThrownBy(() -> chargeSheetService.revertToIng(1L, "Raison valide"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("VALIDATED_ING ou TECH_FILLED");
     }
 }

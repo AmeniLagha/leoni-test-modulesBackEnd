@@ -52,18 +52,18 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    50%
+    100%
   </span>
   <span class="absValue">
-    (1/2)
+    (2/2)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    16,7%
+    100%
   </span>
   <span class="absValue">
-    (1/6)
+    (6/6)
   </span>
 </td>
 </tr>
@@ -94,12 +94,12 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;
 &nbsp;    @PostMapping(&quot;/ask&quot;)
 &nbsp;    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; askQuestion(@RequestBody Map&lt;String, String&gt; request) {
-<b class="nc">&nbsp;        String question = request.get(&quot;question&quot;);</b>
-<b class="nc">&nbsp;        String response = aiChatbotService.getResponse(question);</b>
+<b class="fc">&nbsp;        String question = request.get(&quot;question&quot;);</b>
+<b class="fc">&nbsp;        String response = aiChatbotService.getResponse(question);</b>
 &nbsp;
-<b class="nc">&nbsp;        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        result.put(&quot;response&quot;, response);</b>
-<b class="nc">&nbsp;        return ResponseEntity.ok(result);</b>
+<b class="fc">&nbsp;        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        result.put(&quot;response&quot;, response);</b>
+<b class="fc">&nbsp;        return ResponseEntity.ok(result);</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -125,7 +125,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

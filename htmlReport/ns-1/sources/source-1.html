@@ -56,26 +56,26 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    33,3%
+    100%
   </span>
   <span class="absValue">
-    (1/3)
+    (3/3)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    0%
+    50%
   </span>
   <span class="absValue">
-    (0/4)
+    (2/4)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    4,2%
+    87,5%
   </span>
   <span class="absValue">
-    (1/24)
+    (21/24)
   </span>
 </td>
 </tr>
@@ -110,37 +110,37 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;
 &nbsp;    @GetMapping(&quot;/health&quot;)
 &nbsp;    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; health() {
-<b class="nc">&nbsp;        Map&lt;String, Object&gt; status = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        status.put(&quot;status&quot;, &quot;UP&quot;);</b>
-<b class="nc">&nbsp;        status.put(&quot;timestamp&quot;, System.currentTimeMillis());</b>
-<b class="nc">&nbsp;        status.put(&quot;service&quot;, &quot;Leoni Backend API&quot;);</b>
-<b class="nc">&nbsp;        status.put(&quot;version&quot;, &quot;1.0.0&quot;);</b>
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; status = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        status.put(&quot;status&quot;, &quot;UP&quot;);</b>
+<b class="fc">&nbsp;        status.put(&quot;timestamp&quot;, System.currentTimeMillis());</b>
+<b class="fc">&nbsp;        status.put(&quot;service&quot;, &quot;Leoni Backend API&quot;);</b>
+<b class="fc">&nbsp;        status.put(&quot;version&quot;, &quot;1.0.0&quot;);</b>
 &nbsp;
 &nbsp;        // Vérifier la base de données
-<b class="nc">&nbsp;        Map&lt;String, Object&gt; dbStatus = checkDatabase();</b>
-<b class="nc">&nbsp;        status.put(&quot;database&quot;, dbStatus);</b>
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; dbStatus = checkDatabase();</b>
+<b class="fc">&nbsp;        status.put(&quot;database&quot;, dbStatus);</b>
 &nbsp;
 &nbsp;        // Vérifier si le service est globalement healthy
-<b class="nc">&nbsp;        boolean isHealthy = &quot;UP&quot;.equals(dbStatus.get(&quot;status&quot;));</b>
-<b class="nc">&nbsp;        status.put(&quot;healthy&quot;, isHealthy);</b>
+<b class="fc">&nbsp;        boolean isHealthy = &quot;UP&quot;.equals(dbStatus.get(&quot;status&quot;));</b>
+<b class="fc">&nbsp;        status.put(&quot;healthy&quot;, isHealthy);</b>
 &nbsp;
-<b class="nc">&nbsp;        return isHealthy ? ResponseEntity.ok(status) : ResponseEntity.status(503).body(status);</b>
+<b class="pc">&nbsp;        return isHealthy ? ResponseEntity.ok(status) : ResponseEntity.status(503).body(status);</b>
 &nbsp;    }
 &nbsp;
 &nbsp;    private Map&lt;String, Object&gt; checkDatabase() {
-<b class="nc">&nbsp;        Map&lt;String, Object&gt; dbStatus = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; dbStatus = new HashMap&lt;&gt;();</b>
 &nbsp;
-<b class="nc">&nbsp;        try (Connection conn = dataSource.getConnection()) {</b>
+<b class="fc">&nbsp;        try (Connection conn = dataSource.getConnection()) {</b>
 &nbsp;            // Vérifier la connexion
-<b class="nc">&nbsp;            dbStatus.put(&quot;status&quot;, &quot;UP&quot;);</b>
-<b class="nc">&nbsp;            dbStatus.put(&quot;url&quot;, conn.getMetaData().getURL());</b>
-<b class="nc">&nbsp;            dbStatus.put(&quot;product&quot;, conn.getMetaData().getDatabaseProductName());</b>
-<b class="nc">&nbsp;            dbStatus.put(&quot;version&quot;, conn.getMetaData().getDatabaseProductVersion());</b>
+<b class="fc">&nbsp;            dbStatus.put(&quot;status&quot;, &quot;UP&quot;);</b>
+<b class="fc">&nbsp;            dbStatus.put(&quot;url&quot;, conn.getMetaData().getURL());</b>
+<b class="fc">&nbsp;            dbStatus.put(&quot;product&quot;, conn.getMetaData().getDatabaseProductName());</b>
+<b class="fc">&nbsp;            dbStatus.put(&quot;version&quot;, conn.getMetaData().getDatabaseProductVersion());</b>
 &nbsp;
 &nbsp;            // Vérifier que la BDD répond aux requêtes
-<b class="nc">&nbsp;            try (ResultSet rs = conn.createStatement().executeQuery(&quot;SELECT 1&quot;)) {</b>
-<b class="nc">&nbsp;                if (rs.next()) {</b>
-<b class="nc">&nbsp;                    dbStatus.put(&quot;query_test&quot;, &quot;OK&quot;);</b>
+<b class="fc">&nbsp;            try (ResultSet rs = conn.createStatement().executeQuery(&quot;SELECT 1&quot;)) {</b>
+<b class="pc">&nbsp;                if (rs.next()) {</b>
+<b class="fc">&nbsp;                    dbStatus.put(&quot;query_test&quot;, &quot;OK&quot;);</b>
 &nbsp;                }
 &nbsp;            }
 &nbsp;
@@ -150,7 +150,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;            dbStatus.put(&quot;error_type&quot;, e.getClass().getSimpleName());</b>
 &nbsp;        }
 &nbsp;
-<b class="nc">&nbsp;        return dbStatus;</b>
+<b class="fc">&nbsp;        return dbStatus;</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -176,7 +176,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

@@ -1,0 +1,424 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ComplianceReminderService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.conformité</a>
+</div>
+
+<h1>Coverage Summary for Class: ComplianceReminderService (com.example.security.conformité)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ComplianceReminderService</td>
+<td class="coverageStat">
+  <span class="percent">
+    58,3%
+  </span>
+  <span class="absValue">
+    (7/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    17,5%
+  </span>
+  <span class="absValue">
+    (7/40)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    32,3%
+  </span>
+  <span class="absValue">
+    (41/127)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">ComplianceReminderService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    58,3%
+  </span>
+  <span class="absValue">
+    (7/12)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    17,5%
+  </span>
+  <span class="absValue">
+    (7/40)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    32,3%
+  </span>
+  <span class="absValue">
+    (41/127)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.conformité;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.*;
+&nbsp;import com.example.security.email.GlobalNotificationService;
+&nbsp;import com.example.security.reception.ReceptionHistory;
+&nbsp;import com.example.security.reception.ReceptionHistoryRepository;
+&nbsp;import com.example.security.user.User;
+&nbsp;import com.example.security.user.UserRepository;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import lombok.extern.slf4j.Slf4j;
+&nbsp;import org.springframework.scheduling.annotation.Scheduled;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.time.LocalDate;
+&nbsp;import java.util.*;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+<b class="fc">&nbsp;@Slf4j</b>
+&nbsp;@Service
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class ComplianceReminderService {
+&nbsp;
+&nbsp;    private final ChargeSheetRepository chargeSheetRepository;
+&nbsp;    private final ChargeSheetItemRepository itemRepository;
+&nbsp;    private final ReceptionHistoryRepository receptionHistoryRepository;
+&nbsp;    private final ComplianceRepository complianceRepository;
+&nbsp;    private final UserRepository userRepository;
+&nbsp;    private final GlobalNotificationService notificationService;
+&nbsp;
+&nbsp;    // Stockage pour suivre les rappels envoyés (pour éviter les doublons par jour)
+<b class="fc">&nbsp;    private final Map&lt;String, LocalDate&gt; reminderSentMap = new HashMap&lt;&gt;();</b>
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Vérifie si la quantité reçue a déjà des fiches de conformité
+&nbsp;     */
+&nbsp;    private boolean isAllReceivedQuantityHasCompliance(Long itemId) {
+<b class="fc">&nbsp;        int totalReceived = getTotalReceivedForItem(itemId);</b>
+&nbsp;
+<b class="pc">&nbsp;        if (totalReceived == 0) {</b>
+<b class="fc">&nbsp;            return true;</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        List&lt;Compliance&gt; compliances = complianceRepository.findByItemId(itemId);</b>
+<b class="nc">&nbsp;        int totalCompliance = compliances.size();</b>
+<b class="nc">&nbsp;        boolean isComplete = totalCompliance &gt;= totalReceived;</b>
+&nbsp;
+<b class="nc">&nbsp;        log.debug(&quot;Item {} - Reçu: {}, Conformités: {}, Complet: {}&quot;,</b>
+<b class="nc">&nbsp;                itemId, totalReceived, totalCompliance, isComplete);</b>
+&nbsp;
+<b class="nc">&nbsp;        return isComplete;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Calcule la quantité qui n&#39;a pas encore de fiche de conformité
+&nbsp;     */
+&nbsp;    private int getPendingComplianceQuantity(Long itemId) {
+<b class="nc">&nbsp;        int totalReceived = getTotalReceivedForItem(itemId);</b>
+<b class="nc">&nbsp;        List&lt;Compliance&gt; compliances = complianceRepository.findByItemId(itemId);</b>
+<b class="nc">&nbsp;        int totalCompliance = compliances.size();</b>
+<b class="nc">&nbsp;        return Math.max(0, totalReceived - totalCompliance);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Tâche programmée qui s&#39;exécute tous les jours à 9h00
+&nbsp;     */
+&nbsp;    @Scheduled(cron = &quot;0 18 21 * * *&quot; , zone = &quot;Africa/Tunis&quot;)
+&nbsp;    @Transactional(readOnly = true, timeout = 60)
+&nbsp;    public void sendPendingComplianceReminders() {
+<b class="fc">&nbsp;        log.info(&quot;🔔 Démarrage de la vérification des rappels de conformité&quot;);</b>
+<b class="fc">&nbsp;        long count = receptionHistoryRepository.count();</b>
+<b class="fc">&nbsp;        log.info(&quot;📊 DB accessible - {} réceptions trouvées&quot;, count);</b>
+&nbsp;        // Récupérer tous les items qui ont des réceptions
+<b class="fc">&nbsp;        List&lt;ReceptionHistory&gt; allHistories = receptionHistoryRepository.findAll();</b>
+<b class="fc">&nbsp;        Set&lt;Long&gt; itemIdsWithReceptions = allHistories.stream()</b>
+<b class="fc">&nbsp;                .map(h -&gt; h.getItem().getId())</b>
+<b class="fc">&nbsp;                .collect(Collectors.toSet());</b>
+&nbsp;
+<b class="fc">&nbsp;        int remindersSent = 0;</b>
+&nbsp;
+<b class="fc">&nbsp;        for (Long itemId : itemIdsWithReceptions) {</b>
+<b class="fc">&nbsp;            Optional&lt;ChargeSheetItem&gt; itemOpt = itemRepository.findById(itemId);</b>
+<b class="pc">&nbsp;            if (itemOpt.isEmpty()) continue;</b>
+&nbsp;
+<b class="fc">&nbsp;            ChargeSheetItem item = itemOpt.get();</b>
+<b class="fc">&nbsp;            ChargeSheet sheet = item.getChargeSheet();</b>
+&nbsp;
+&nbsp;            // Vérifier si toute la quantité reçue a des fiches
+<b class="pc">&nbsp;            if (!isAllReceivedQuantityHasCompliance(item.getId())) {</b>
+<b class="nc">&nbsp;                int pendingQuantity = getPendingComplianceQuantity(item.getId());</b>
+<b class="nc">&nbsp;                int totalReceived = getTotalReceivedForItem(item.getId());</b>
+<b class="nc">&nbsp;                int existingCompliances = totalReceived - pendingQuantity;</b>
+&nbsp;
+<b class="nc">&nbsp;                boolean reminderSent = sendReminderForItem(sheet, item, pendingQuantity, existingCompliances);</b>
+<b class="nc">&nbsp;                if (reminderSent) {</b>
+<b class="nc">&nbsp;                    remindersSent++;</b>
+&nbsp;                }
+&nbsp;            } else {
+<b class="fc">&nbsp;                resetRemindersForItem(item.getId());</b>
+<b class="fc">&nbsp;                log.debug(&quot;Item #{} - Toutes les quantités reçues ont des fiches, pas de rappel&quot;, item.getItemNumber());</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        log.info(&quot;✅ Vérification terminée. {} rappel(s) envoyé(s)&quot;, remindersSent);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Envoie un rappel pour un item spécifique - UNIQUEMENT aux PP du même projet et site
+&nbsp;     */
+&nbsp;    private boolean sendReminderForItem(ChargeSheet sheet, ChargeSheetItem item,
+&nbsp;                                        int pendingQuantity, int existingCompliances) {
+&nbsp;
+&nbsp;        // Vérification supplémentaire avant d&#39;envoyer
+<b class="nc">&nbsp;        if (isAllReceivedQuantityHasCompliance(item.getId())) {</b>
+<b class="nc">&nbsp;            log.info(&quot;Item #{} - Plus de rappel nécessaire (toutes les quantités ont des fiches)&quot;, item.getItemNumber());</b>
+<b class="nc">&nbsp;            resetRemindersForItem(item.getId());</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Vérifier si nous devons envoyer un rappel aujourd&#39;hui
+<b class="nc">&nbsp;        String reminderKey = item.getId() + &quot;_reminder&quot;;</b>
+<b class="nc">&nbsp;        LocalDate lastReminderSent = reminderSentMap.get(reminderKey);</b>
+<b class="nc">&nbsp;        LocalDate today = LocalDate.now();</b>
+&nbsp;
+<b class="nc">&nbsp;        if (lastReminderSent != null &amp;&amp; lastReminderSent.equals(today)) {</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Récupérer la date de la dernière réception
+<b class="nc">&nbsp;        LocalDate lastReceptionDate = getLastReceptionDateForItem(item.getId());</b>
+<b class="nc">&nbsp;        if (lastReceptionDate == null) {</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Calculer le nombre de jours depuis la dernière réception
+<b class="nc">&nbsp;        long daysSinceLastReception = java.time.temporal.ChronoUnit.DAYS.between(lastReceptionDate, today);</b>
+&nbsp;
+&nbsp;        // Ne pas envoyer de rappel avant 1 jour
+<b class="nc">&nbsp;        if (daysSinceLastReception &lt; 1) {</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Limiter à 14 jours de rappels
+<b class="nc">&nbsp;        if (daysSinceLastReception &gt; 14) {</b>
+<b class="nc">&nbsp;            log.info(&quot;Item #{} - Plus de 14 jours sans conformité, arrêt des rappels&quot;, item.getItemNumber());</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // ✅ Récupérer UNIQUEMENT les PP du projet ET du site (SANS FALLBACK)
+<b class="nc">&nbsp;        String projectName = sheet.getProject();</b>
+<b class="nc">&nbsp;        String siteName = sheet.getPlant(); // Le plant = site</b>
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;🔍 Recherche des PP pour le projet &#39;{}&#39; et le site &#39;{}&#39;&quot;, projectName, siteName);</b>
+&nbsp;
+<b class="nc">&nbsp;        List&lt;User&gt; ppUsers = userRepository.findPpUsersByProjectAndSite(projectName, siteName);</b>
+&nbsp;
+&nbsp;        // ✅ SI AUCUN PP TROUVÉ → PAS D&#39;ENVOI (pas de fallback)
+<b class="nc">&nbsp;        if (ppUsers.isEmpty()) {</b>
+<b class="nc">&nbsp;            log.warn(&quot;❌ Aucun PP trouvé pour le projet &#39;{}&#39; et site &#39;{}&#39;. Aucun email envoyé.&quot;, projectName, siteName);</b>
+<b class="nc">&nbsp;            return false;</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        log.info(&quot;📧 Envoi du rappel à {} utilisateur(s) PP (uniquement ceux du projet {} et site {})&quot;,</b>
+<b class="nc">&nbsp;                ppUsers.size(), projectName, siteName);</b>
+&nbsp;
+&nbsp;        // Construire et envoyer l&#39;email
+<b class="nc">&nbsp;        String subject = buildReminderSubject(item, daysSinceLastReception);</b>
+<b class="nc">&nbsp;        String htmlMessage = buildReminderText(sheet, item, pendingQuantity, existingCompliances, daysSinceLastReception);</b>
+&nbsp;
+<b class="nc">&nbsp;        for (User ppUser : ppUsers) {</b>
+<b class="nc">&nbsp;            notificationService.sendNotificationToOneUser(subject, htmlMessage, ppUser.getEmail());</b>
+<b class="nc">&nbsp;            log.info(&quot;📧 Rappel envoyé à PP {} pour l&#39;item #{} (Jour {}/14) - {} fiche(s) restante(s)&quot;,</b>
+<b class="nc">&nbsp;                    ppUser.getEmail(), item.getItemNumber(), daysSinceLastReception, pendingQuantity);</b>
+&nbsp;        }
+&nbsp;
+<b class="nc">&nbsp;        reminderSentMap.put(reminderKey, today);</b>
+<b class="nc">&nbsp;        return true;</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Calcule la quantité totale reçue pour un item
+&nbsp;     */
+&nbsp;    private int getTotalReceivedForItem(Long itemId) {
+<b class="fc">&nbsp;        List&lt;ReceptionHistory&gt; histories = receptionHistoryRepository.findByItemId(itemId);</b>
+<b class="fc">&nbsp;        return histories.stream().mapToInt(ReceptionHistory::getQuantityReceived).sum();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Récupère la date de la dernière réception
+&nbsp;     */
+&nbsp;    private LocalDate getLastReceptionDateForItem(Long itemId) {
+<b class="nc">&nbsp;        return receptionHistoryRepository.findByItemIdOrderByReceptionDateDesc(itemId)</b>
+<b class="nc">&nbsp;                .stream()</b>
+<b class="nc">&nbsp;                .findFirst()</b>
+<b class="nc">&nbsp;                .map(ReceptionHistory::getReceptionDate)</b>
+<b class="nc">&nbsp;                .orElse(null);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Construit le sujet de l&#39;email
+&nbsp;     */
+&nbsp;    private String buildReminderSubject(ChargeSheetItem item, long daysSinceLastReception) {
+<b class="nc">&nbsp;        String urgency = &quot;&quot;;</b>
+<b class="nc">&nbsp;        if (daysSinceLastReception &gt;= 7) {</b>
+<b class="nc">&nbsp;            urgency = &quot;⚠️ URGENT - &quot;;</b>
+<b class="nc">&nbsp;        } else if (daysSinceLastReception &gt;= 3) {</b>
+<b class="nc">&nbsp;            urgency = &quot;🔔 IMPORTANT - &quot;;</b>
+&nbsp;        }
+<b class="nc">&nbsp;        return urgency + &quot;Rappel: Créer les fiches de conformité - Item #&quot; + item.getHousingReferenceSupplierCustomer();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Construit l&#39;email
+&nbsp;     */
+&nbsp;    private String buildReminderText(ChargeSheet sheet, ChargeSheetItem item,
+&nbsp;                                     int pendingQuantity, int existingCompliances,
+&nbsp;                                     long daysSinceLastReception) {
+&nbsp;
+<b class="nc">&nbsp;        int totalReceived = pendingQuantity + existingCompliances;</b>
+&nbsp;
+<b class="nc">&nbsp;        StringBuilder text = new StringBuilder();</b>
+&nbsp;
+&nbsp;        // Objet
+<b class="nc">&nbsp;        text.append(&quot;Objet : Rappel - Création des fiches de conformité - Cahier &quot;)</b>
+<b class="nc">&nbsp;                .append(sheet.getOrderNumber()).append(&quot;\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // Corps du message
+<b class="nc">&nbsp;        text.append(&quot;Bonjour,\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Des modules réceptionnés pour l&#39;item ci-dessous n&#39;ont pas encore de fiches de conformité.\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // Cahier des charges
+<b class="nc">&nbsp;        text.append(&quot;Cahier des charges :\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;N° commande : &quot;).append(sheet.getOrderNumber()).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Projet : &quot;).append(sheet.getProject()).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Site : &quot;).append(sheet.getPlant()).append(&quot;\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // Item concerné
+<b class="nc">&nbsp;        text.append(&quot;Item concerné :\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;N° item : &quot;).append(item.getId()).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Réf. Leoni : &quot;).append(item.getHousingReferenceLeoni() != null ? item.getHousingReferenceLeoni() : &quot;-&quot;).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Réf. Client : &quot;).append(item.getHousingReferenceSupplierCustomer() != null ? item.getHousingReferenceSupplierCustomer() : &quot;-&quot;).append(&quot;\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // État des fiches
+<b class="nc">&nbsp;        text.append(&quot;État des fiches :\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Quantité totale reçue : &quot;).append(totalReceived).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Fiches déjà créées : &quot;).append(existingCompliances).append(&quot;\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Fiches restantes à créer : &quot;).append(pendingQuantity).append(&quot;\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // Délai
+<b class="nc">&nbsp;        text.append(&quot;Délai : Jour &quot;).append(daysSinceLastReception).append(&quot;/14\n\n&quot;);</b>
+&nbsp;
+&nbsp;        // Conclusion
+<b class="nc">&nbsp;        text.append(&quot;Merci de créer les fiches de conformité manquantes dès que possible.\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Cordialement,\n\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;LEONI Tunisia\n&quot;);</b>
+<b class="nc">&nbsp;        text.append(&quot;Gestion des Cahiers des Charges\n&quot;);</b>
+&nbsp;
+<b class="nc">&nbsp;        return text.toString();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Réinitialise les rappels pour un item
+&nbsp;     */
+&nbsp;    public void resetRemindersForItem(Long itemId) {
+<b class="fc">&nbsp;        String reminderKey = itemId + &quot;_reminder&quot;;</b>
+<b class="fc">&nbsp;        reminderSentMap.remove(reminderKey);</b>
+<b class="fc">&nbsp;        log.info(&quot;🔄 Rappels réinitialisés pour l&#39;item #{}&quot;, itemId);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Vérifie le statut d&#39;un item (peut être appelé par API)
+&nbsp;     */
+&nbsp;    public Map&lt;String, Object&gt; getItemComplianceStatus(Long itemId) {
+<b class="fc">&nbsp;        int totalReceived = getTotalReceivedForItem(itemId);</b>
+<b class="fc">&nbsp;        List&lt;Compliance&gt; compliances = complianceRepository.findByItemId(itemId);</b>
+<b class="fc">&nbsp;        int totalCompliance = compliances.size();</b>
+<b class="fc">&nbsp;        int pendingQuantity = Math.max(0, totalReceived - totalCompliance);</b>
+<b class="fc">&nbsp;        boolean isComplete = pendingQuantity == 0;</b>
+&nbsp;
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; status = new HashMap&lt;&gt;();</b>
+<b class="fc">&nbsp;        status.put(&quot;itemId&quot;, itemId);</b>
+<b class="fc">&nbsp;        status.put(&quot;totalReceived&quot;, totalReceived);</b>
+<b class="fc">&nbsp;        status.put(&quot;totalCompliance&quot;, totalCompliance);</b>
+<b class="fc">&nbsp;        status.put(&quot;pendingQuantity&quot;, pendingQuantity);</b>
+<b class="fc">&nbsp;        status.put(&quot;isComplete&quot;, isComplete);</b>
+<b class="pc">&nbsp;        status.put(&quot;reminderActive&quot;, !isComplete &amp;&amp; totalReceived &gt; 0);</b>
+&nbsp;
+<b class="fc">&nbsp;        return status;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
+</div>
+</body>
+</html>

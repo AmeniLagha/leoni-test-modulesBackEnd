@@ -56,26 +56,26 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    66,7%
+    100%
   </span>
   <span class="absValue">
-    (2/3)
+    (3/3)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    0%
+    58,3%
   </span>
   <span class="absValue">
-    (0/48)
+    (28/48)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    33,3%
+    80,6%
   </span>
   <span class="absValue">
-    (12/36)
+    (29/36)
   </span>
 </td>
 </tr>
@@ -197,39 +197,39 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;    }
 &nbsp;
 &nbsp;    public String getChatResponse(String userMessage) {
-<b class="nc">&nbsp;        String message = userMessage.toLowerCase().trim();</b>
+<b class="fc">&nbsp;        String message = userMessage.toLowerCase().trim();</b>
 &nbsp;
 &nbsp;        // Détection des mots-clés
-<b class="nc">&nbsp;        if (message.contains(&quot;créer&quot;) &amp;&amp; message.contains(&quot;cahier&quot;)) {</b>
-<b class="nc">&nbsp;            return responses.get(&quot;créer cahier&quot;);</b>
+<b class="fc">&nbsp;        if (message.contains(&quot;créer&quot;) &amp;&amp; message.contains(&quot;cahier&quot;)) {</b>
+<b class="fc">&nbsp;            return responses.get(&quot;créer cahier&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;valider&quot;) &amp;&amp; message.contains(&quot;cahier&quot;)) {</b>
-<b class="nc">&nbsp;            return responses.get(&quot;valider cahier&quot;);</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;valider&quot;) &amp;&amp; message.contains(&quot;cahier&quot;)) {</b>
+<b class="fc">&nbsp;            return responses.get(&quot;valider cahier&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;item&quot;) || message.contains(&quot;connecteur&quot;)) {</b>
-<b class="nc">&nbsp;            return responses.get(&quot;item&quot;);</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;item&quot;) || message.contains(&quot;connecteur&quot;)) {</b>
+<b class="fc">&nbsp;            return responses.get(&quot;item&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;conformité&quot;) || message.contains(&quot;conformite&quot;)) {</b>
-<b class="nc">&nbsp;            return responses.get(&quot;conformité&quot;);</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;conformité&quot;) || message.contains(&quot;conformite&quot;)) {</b>
+<b class="fc">&nbsp;            return responses.get(&quot;conformité&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;réception&quot;) || message.contains(&quot;reception&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;réception&quot;) || message.contains(&quot;reception&quot;)) {</b>
 <b class="nc">&nbsp;            return responses.get(&quot;réception&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;réclamation&quot;) || message.contains(&quot;reclamation&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;réclamation&quot;) || message.contains(&quot;reclamation&quot;)) {</b>
 <b class="nc">&nbsp;            return responses.get(&quot;réclamation&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;dossier&quot;) &amp;&amp; message.contains(&quot;technique&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;dossier&quot;) &amp;&amp; message.contains(&quot;technique&quot;)) {</b>
 <b class="nc">&nbsp;            return responses.get(&quot;dossier technique&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;statut&quot;) || message.contains(&quot;status&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;statut&quot;) || message.contains(&quot;status&quot;)) {</b>
 <b class="nc">&nbsp;            return responses.get(&quot;statut&quot;);</b>
 &nbsp;        }
-<b class="nc">&nbsp;        if (message.contains(&quot;permission&quot;) || message.contains(&quot;droit&quot;) || message.contains(&quot;role&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;permission&quot;) || message.contains(&quot;droit&quot;) || message.contains(&quot;role&quot;)) {</b>
 <b class="nc">&nbsp;            return responses.get(&quot;permission&quot;);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        // Messages d&#39;accueil
-<b class="nc">&nbsp;        if (message.contains(&quot;bonjour&quot;) || message.contains(&quot;salut&quot;) || message.contains(&quot;hello&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;bonjour&quot;) || message.contains(&quot;salut&quot;) || message.contains(&quot;hello&quot;)) {</b>
 <b class="nc">&nbsp;            return &quot;👋 **Bienvenue sur l&#39;assistant LEONI !**\n\n&quot; +</b>
 &nbsp;                    &quot;Je peux vous aider avec :\n&quot; +
 &nbsp;                    &quot;• 📄 Créer/valider un cahier des charges\n&quot; +
@@ -243,7 +243,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                    &quot;💡 **Posez votre question** ou tapez &#39;aide&#39; !&quot;;
 &nbsp;        }
 &nbsp;
-<b class="nc">&nbsp;        if (message.contains(&quot;aide&quot;) || message.contains(&quot;help&quot;)) {</b>
+<b class="pc">&nbsp;        if (message.contains(&quot;aide&quot;) || message.contains(&quot;help&quot;)) {</b>
 <b class="nc">&nbsp;            return &quot;🤖 **AIDE - ASSISTANT LEONI**\n\n&quot; +</b>
 &nbsp;                    &quot;Posez-moi une question avec un de ces mots-clés :\n\n&quot; +
 &nbsp;                    &quot;📄 **Cahiers des charges**\n&quot; +
@@ -266,7 +266,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                    &quot;💬 Tapez &#39;bonjour&#39; pour l&#39;accueil !&quot;;
 &nbsp;        }
 &nbsp;
-<b class="nc">&nbsp;        return &quot;🤖 **Assistant LEONI**\n\n&quot; +</b>
+<b class="fc">&nbsp;        return &quot;🤖 **Assistant LEONI**\n\n&quot; +</b>
 &nbsp;                &quot;Je ne connais pas encore la réponse à cette question.\n\n&quot; +
 &nbsp;                &quot;💡 **Essayez plutôt** :\n&quot; +
 &nbsp;                &quot;• &#39;créer cahier&#39;\n&quot; +
@@ -303,7 +303,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

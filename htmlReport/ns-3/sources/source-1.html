@@ -61,10 +61,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    27,3%
+    44,4%
   </span>
   <span class="absValue">
-    (3/11)
+    (8/18)
   </span>
 </td>
 </tr>
@@ -91,10 +91,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    27,3%
+    44,4%
   </span>
   <span class="absValue">
-    (3/11)
+    (8/18)
   </span>
 </td>
 </tr>
@@ -112,6 +112,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import jakarta.servlet.http.HttpServletRequest;
 &nbsp;import jakarta.servlet.http.HttpServletResponse;
 &nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.http.HttpStatus;
 &nbsp;import org.springframework.http.ResponseEntity;
 &nbsp;import org.springframework.security.access.prepost.PreAuthorize;
 &nbsp;import org.springframework.web.bind.annotation.*;
@@ -120,23 +121,33 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import java.util.HashMap;
 &nbsp;import java.util.Map;
 &nbsp;
+&nbsp;import com.example.security.common.ApiResponse;
 &nbsp;
 &nbsp;@RestController
 &nbsp;@Tag(name = &quot;Authentification&quot;, description = &quot;Gestion de l&#39;authentification et des tokens JWT&quot;)
 &nbsp;@RequestMapping(&quot;api/v1/auth&quot;)
 <b class="fc">&nbsp;@RequiredArgsConstructor</b>
 &nbsp;public class AuthenticationController {
-&nbsp;private final AuthenticationService service;
+&nbsp;
+&nbsp;    private final AuthenticationService service;
 &nbsp;
 &nbsp;    @PostMapping(&quot;/register&quot;)
 &nbsp;    @Operation(
 &nbsp;            summary = &quot;Inscription&quot;,
 &nbsp;            description = &quot;Permet de créer un nouveau compte utilisateur avec génération d’un token JWT&quot;
 &nbsp;    )
-&nbsp;    public ResponseEntity&lt;AuthenticationResponse&gt; register(
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;AuthenticationResponse&gt;&gt; register(
 &nbsp;            @RequestBody RegisterRequest request
 &nbsp;    ) {
-<b class="fc">&nbsp;        return ResponseEntity.ok(service.register(request));</b>
+<b class="fc">&nbsp;        AuthenticationResponse authResponse = service.register(request);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;AuthenticationResponse&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Utilisateur créé avec succès&quot;,
+&nbsp;                authResponse,
+<b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
+&nbsp;        );
+&nbsp;
+<b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
 &nbsp;    }
 &nbsp;
 &nbsp;    @PostMapping(&quot;/authenticate&quot;)
@@ -144,10 +155,17 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;            summary = &quot;Connexion&quot;,
 &nbsp;            description = &quot;Authentifier un utilisateur et retourner un token JWT&quot;
 &nbsp;    )
-&nbsp;    public ResponseEntity&lt;AuthenticationResponse&gt; authenticate(
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;AuthenticationResponse&gt;&gt; authenticate(
 &nbsp;            @RequestBody AuthenticationRequest request
 &nbsp;    ) {
-<b class="fc">&nbsp;        return ResponseEntity.ok(service.authenticate(request));</b>
+<b class="fc">&nbsp;        AuthenticationResponse authResponse = service.authenticate(request);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;AuthenticationResponse&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Authentification réussie&quot;,
+&nbsp;                authResponse
+&nbsp;        );
+&nbsp;
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
 &nbsp;
 &nbsp;    @Operation(
@@ -168,16 +186,27 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;            description = &quot;Retourne le token JWT de l’utilisateur connecté à partir du header Authorization&quot;
 &nbsp;    )
 &nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
-&nbsp;    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; getCurrentToken(HttpServletRequest request) {
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, String&gt;&gt;&gt; getCurrentToken(HttpServletRequest request) {
 <b class="nc">&nbsp;        String authHeader = request.getHeader(&quot;Authorization&quot;);</b>
-<b class="nc">&nbsp;        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</b>
 &nbsp;
 <b class="nc">&nbsp;        if (authHeader != null &amp;&amp; authHeader.startsWith(&quot;Bearer &quot;)) {</b>
-<b class="nc">&nbsp;            response.put(&quot;token&quot;, authHeader.substring(7));</b>
+<b class="nc">&nbsp;            Map&lt;String, String&gt; tokenData = new HashMap&lt;&gt;();</b>
+<b class="nc">&nbsp;            tokenData.put(&quot;token&quot;, authHeader.substring(7));</b>
+&nbsp;
+<b class="nc">&nbsp;            ApiResponse&lt;Map&lt;String, String&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                    &quot;Token récupéré avec succès&quot;,
+&nbsp;                    tokenData
+&nbsp;            );
 <b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
 &nbsp;        }
 &nbsp;
-<b class="nc">&nbsp;        response.put(&quot;error&quot;, &quot;No token found&quot;);</b>
+<b class="nc">&nbsp;        ApiResponse&lt;Map&lt;String, String&gt;&gt; response = ApiResponse.error(</b>
+&nbsp;                &quot;Aucun token trouvé&quot;,
+<b class="nc">&nbsp;                HttpStatus.BAD_REQUEST.value(),</b>
+&nbsp;                &quot;Authorization&quot;,
+&nbsp;                &quot;Le header Authorization est manquant ou invalide&quot;
+&nbsp;        );
+&nbsp;
 <b class="nc">&nbsp;        return ResponseEntity.badRequest().body(response);</b>
 &nbsp;    }
 &nbsp;}
@@ -204,7 +233,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

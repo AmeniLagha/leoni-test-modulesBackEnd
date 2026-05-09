@@ -1,4 +1,4 @@
-name: Backend CI/CD Pipeline
+name: Backend CI/CD Pipeline with SigNoz
 
 on:
   push:
@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  SIGNOZ_ENDPOINT: ${{ secrets.SIGNOZ_ENDPOINT }}
+  SIGNOZ_ACCESS_TOKEN: ${{ secrets.SIGNOZ_ACCESS_TOKEN }}
+
 jobs:
 
-  # ==================== BUILD & UNIT TESTS ====================
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -20,21 +23,17 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # ✅ ÉTAPE 1 : Compilation
       - name: Build
         run: mvn clean compile
 
-      # ✅ ÉTAPE 2 : Exécuter les tests unitaires JUnit
       - name: Run JUnit Unit Tests
         run: mvn test
         env:
           SPRING_PROFILES_ACTIVE: test
 
-      # ✅ ÉTAPE 3 : Générer le rapport JaCoCo
       - name: Generate JaCoCo Report
         run: mvn jacoco:report
 
-      # ✅ ÉTAPE 4 : Upload rapport JaCoCo
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -42,19 +41,16 @@ jobs:
           path: target/site/jacoco/
           retention-days: 7
 
-      # ✅ ÉTAPE 5 : Package sans skip tests (les tests ont déjà été exécutés)
       - name: Package
         run: mvn package -DskipTests
 
-      # ✅ ÉTAPE 6 : Upload JAR
       - uses: actions/upload-artifact@v4
         with:
           name: backend-jar
           path: target/*.jar
 
-  # ==================== TESTS SELENIUM (End-to-End) ====================
   selenium-tests:
-    needs: build-and-test  # ← Dépend de la réussite des tests JUnit
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +66,6 @@ jobs:
           wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update -q && sudo apt-get install -y google-chrome-stable
-          echo "Chrome: $(google-chrome --version)"
 
       - name: Wake up Render
         run: |
@@ -93,15 +88,13 @@ jobs:
         run: mvn test -Dtest=ChargeSheetTestRunner -Dapp.url=${{ secrets.FRONTEND_URL }} -Dselenium.headless=true
         continue-on-error: true
 
-      - name: Upload Cucumber Reports
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cucumber-reports
           path: target/cucumber-reports/
           retention-days: 7
 
-    # ==================== DOCKER BUILD & RELEASE ====================
   docker-build:
     needs: selenium-tests
     runs-on: ubuntu-latest
@@ -116,9 +109,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image (no cache)
+      - name: Build Docker image with SigNoz
         run: |
-          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
+          docker build --no-cache \
+            --build-arg SIGNOZ_ENDPOINT=${{ secrets.SIGNOZ_ENDPOINT }} \
+            --build-arg SIGNOZ_ACCESS_TOKEN=${{ secrets.SIGNOZ_ACCESS_TOKEN }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
             -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} .
 
       - name: Push Docker images
@@ -126,7 +122,6 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }}
 
-  # ==================== DEPLOY ====================
   deploy:
     needs: docker-build
     runs-on: ubuntu-latest
@@ -138,3 +133,16 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"appId\": \"${{ secrets.CLEVER_CLOUD_APP_ID }}\", \"secret\": \"${{ secrets.CLEVER_CLOUD_SECRET }}\"}"
           echo "Deployed!"
+
+      - name: Health Check
+        run: |
+          sleep 30
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/actuator/health" 2>/dev/null || echo "000")
+            echo "Attempt $i: Health = $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend deployed with SigNoz monitoring!"
+              break
+            fi
+            sleep 15
+          done

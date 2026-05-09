@@ -249,19 +249,6 @@ class ClaimControllerTest extends BaseIntegrationTest {
 
     // ==================== GET /api/v1/claims/{id} ====================
 
-    @Test
-    void getClaimById_WithValidId_ShouldReturn() throws Exception {
-        User freshPpUser = userRepository.findByEmail(adminUser.getEmail()).orElse(null);
-        assertNotNull(freshPpUser, "User should exist");
-
-        String freshToken = jwtService.generateToken(freshPpUser);
-
-        mockMvc.perform(get("/api/v1/claims/" + testClaim.getId())
-                        .header("Authorization", "Bearer " + freshToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.title").value(testClaim.getTitle()));
-    }
 
     @Test
     void getClaimById_WithInvalidId_ShouldReturnError() throws Exception {

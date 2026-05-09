@@ -1,0 +1,444 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > TechnicalFileController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.fichierTechnique</a>
+</div>
+
+<h1>Coverage Summary for Class: TechnicalFileController (com.example.security.fichierTechnique)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">TechnicalFileController</td>
+<td class="coverageStat">
+  <span class="percent">
+    89,5%
+  </span>
+  <span class="absValue">
+    (17/19)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    50%
+  </span>
+  <span class="absValue">
+    (2/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    87,7%
+  </span>
+  <span class="absValue">
+    (64/73)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">TechnicalFileController$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    89,5%
+  </span>
+  <span class="absValue">
+    (17/19)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    50%
+  </span>
+  <span class="absValue">
+    (2/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    87,7%
+  </span>
+  <span class="absValue">
+    (64/73)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.fichierTechnique;
+&nbsp;
+&nbsp;import com.example.security.common.ApiResponse;
+&nbsp;import com.example.security.email.GlobalNotificationService;
+&nbsp;import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistory;
+&nbsp;import com.example.security.user.Role;
+&nbsp;import com.example.security.user.User;
+&nbsp;import io.swagger.v3.oas.annotations.Operation;
+&nbsp;import io.swagger.v3.oas.annotations.tags.Tag;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.security.access.prepost.PreAuthorize;
+&nbsp;import org.springframework.security.core.Authentication;
+&nbsp;import org.springframework.security.core.context.SecurityContextHolder;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Map;
+&nbsp;
+&nbsp;@RestController
+&nbsp;@Tag(name = &quot;Dossier Technique&quot;, description = &quot;Gestion des dossiers techniques, items, historique et validation&quot;)
+&nbsp;@RequestMapping(&quot;/api/v1/technical-files&quot;)
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class TechnicalFileController {
+&nbsp;
+&nbsp;    private final TechnicalFileService service;
+&nbsp;    private final TechnicalFileNotificationService notificationService ;
+&nbsp;
+&nbsp;    // ✅ Créer un dossier technique
+&nbsp;    @PostMapping
+&nbsp;    @Operation(summary = &quot;Créer un dossier technique&quot;, description = &quot;Créer un nouveau dossier technique avec plusieurs items&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFile&gt;&gt; createTechnicalFile(
+&nbsp;            @RequestBody TechnicalFileDto.CreateDto dto) {
+<b class="fc">&nbsp;        TechnicalFile created = service.createTechnicalFile(dto);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFile&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Dossier technique créé avec succès&quot;,
+&nbsp;                created,
+<b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Récupérer tous les dossiers
+&nbsp;    @GetMapping(&quot;/list&quot;)
+&nbsp;    @Operation(summary = &quot;Lister les dossiers&quot;, description = &quot;Afficher tous les dossiers techniques (version simplifiée)&quot;)
+&nbsp;
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;TechnicalFileDto.ListDto&gt;&gt;&gt; getAllTechnicalFiles() {
+<b class="fc">&nbsp;        List&lt;TechnicalFileDto.ListDto&gt; files = service.getAllTechnicalFilesList();</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;TechnicalFileDto.ListDto&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Liste des dossiers techniques récupérée avec succès&quot;,
+&nbsp;                files
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Récupérer un dossier par ID
+&nbsp;    @GetMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(summary = &quot;Consulter un dossier&quot;, description = &quot;Récupérer un dossier technique par son ID&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFile&gt;&gt; getTechnicalFile(@PathVariable Long id) {
+<b class="fc">&nbsp;        TechnicalFile technicalFile = service.getTechnicalFileById(id);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFile&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Dossier technique récupéré avec succès&quot;,
+&nbsp;                technicalFile
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Récupérer tous les dossiers avec leurs items
+&nbsp;    @GetMapping(&quot;/detail&quot;)
+&nbsp;    @Operation(summary = &quot;Détails complets&quot;, description = &quot;Récupérer tous les dossiers avec leurs items&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;TechnicalFileDto.ResponseDto&gt;&gt;&gt; getAllTechnicalFilesWithItems() {
+<b class="fc">&nbsp;        List&lt;TechnicalFileDto.ResponseDto&gt; files = service.getAllTechnicalFilesWithItems();</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;TechnicalFileDto.ResponseDto&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Liste complète des dossiers techniques récupérée avec succès&quot;,
+&nbsp;                files
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Mettre à jour un dossier
+&nbsp;    @PutMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(summary = &quot;Modifier un dossier&quot;, description = &quot;Mettre à jour les informations d’un dossier technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFile&gt;&gt; updateTechnicalFile(
+&nbsp;            @PathVariable Long id,
+&nbsp;            @RequestBody TechnicalFileDto.UpdateDto dto) {
+<b class="fc">&nbsp;        TechnicalFile updated = service.updateTechnicalFile(id, dto);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFile&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Dossier technique mis à jour avec succès&quot;,
+&nbsp;                updated
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Supprimer un dossier
+&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
+&nbsp;    @Operation(summary = &quot;Supprimer un dossier&quot;, description = &quot;Supprimer un dossier technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteTechnicalFile(@PathVariable Long id) {
+<b class="fc">&nbsp;        service.deleteTechnicalFile(id);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;Void&gt; response = ApiResponse.success(&quot;Dossier technique supprimé avec succès&quot;);</b>
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Historique Envers
+&nbsp;    @GetMapping(&quot;/{id}/history-audited&quot;)
+&nbsp;    @Operation(summary = &quot;Historique audité&quot;, description = &quot;Afficher l’historique complet via Hibernate Envers&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getHistoryAudited(@PathVariable Long id) {
+<b class="fc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; history = service.getHistoryAudited(id);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Historique audité récupéré avec succès&quot;,
+&nbsp;                history
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // =========================
+&nbsp;    // TECHNICAL FILE ITEMS
+&nbsp;    // =========================
+&nbsp;
+&nbsp;    // ✅ Récupérer un item
+&nbsp;    @GetMapping(&quot;/items/{itemId}&quot;)
+&nbsp;    @Operation(summary = &quot;Consulter un item&quot;, description = &quot;Récupérer un item d’un dossier technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFileItem&gt;&gt; getTechnicalFileItem(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        TechnicalFileItem item = service.getTechnicalFileItemById(itemId);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFileItem&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Item technique récupéré avec succès&quot;,
+&nbsp;                item
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Mettre à jour un item
+&nbsp;    @PutMapping(&quot;/items/{itemId}&quot;)
+&nbsp;    @Operation(summary = &quot;Modifier un item&quot;, description = &quot;Mettre à jour un item technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFileItem&gt;&gt; updateTechnicalFileItem(
+&nbsp;            @PathVariable Long itemId,
+&nbsp;            @RequestBody TechnicalFileDto.UpdateItemDto dto) {
+<b class="fc">&nbsp;        TechnicalFileItem updated = service.updateTechnicalFileItem(itemId, dto);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFileItem&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Item technique mis à jour avec succès&quot;,
+&nbsp;                updated
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Supprimer un item
+&nbsp;    @DeleteMapping(&quot;/items/{itemId}&quot;)
+&nbsp;    @Operation(summary = &quot;Supprimer un item&quot;, description = &quot;Supprimer un item du dossier technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:write&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteTechnicalFileItem(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        service.deleteTechnicalFileItem(itemId);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;Void&gt; response = ApiResponse.success(&quot;Item technique supprimé avec succès&quot;);</b>
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Historique item
+&nbsp;    @GetMapping(&quot;/items/{itemId}/history&quot;)
+&nbsp;    @Operation(summary = &quot;Historique item&quot;, description = &quot;Afficher l’historique des modifications d’un item&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;TechnicalFileHistory&gt;&gt;&gt; getItemHistory(@PathVariable Long itemId) {
+<b class="nc">&nbsp;        List&lt;TechnicalFileHistory&gt; history = service.getItemHistory(itemId);</b>
+&nbsp;
+<b class="nc">&nbsp;        ApiResponse&lt;List&lt;TechnicalFileHistory&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Historique de l&#39;item récupéré avec succès&quot;,
+&nbsp;                history
+&nbsp;        );
+<b class="nc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Historique Envers item
+&nbsp;    @GetMapping(&quot;/items/{itemId}/history-audited&quot;)
+&nbsp;    @Operation(summary = &quot;Historique item audité&quot;, description = &quot;Historique complet via Envers pour un item&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getItemHistoryAudited(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; history = service.getItemHistoryAudited(itemId);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Historique audité de l&#39;item récupéré avec succès&quot;,
+&nbsp;                history
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    // ✅ Historique complet dossier
+&nbsp;    @GetMapping(&quot;/{id}/full-history-audited&quot;)
+&nbsp;    @Operation(summary = &quot;Historique complet&quot;, description = &quot;Afficher l’historique complet du dossier et de ses items&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getFullHistory(@PathVariable Long id) {
+<b class="nc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; history = service.getFullHistoryAudited(id);</b>
+&nbsp;
+<b class="nc">&nbsp;        ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Historique complet récupéré avec succès&quot;,
+&nbsp;                history
+&nbsp;        );
+<b class="nc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;    // ==================== VALIDATION ====================
+&nbsp;
+&nbsp;    @PutMapping(&quot;/items/{itemId}/validate&quot;)
+&nbsp;    @Operation(summary = &quot;Valider un item&quot;, description = &quot;Valider un item selon le rôle (PP, MC, MP)&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAnyRole(&#39;PP&#39;, &#39;MC&#39;, &#39;MP&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFileItem&gt;&gt; validateItem(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="fc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="fc">&nbsp;        Role userRole = currentUser.getRole();</b>
+<b class="pc">&nbsp;        if (userRole == null) {</b>
+<b class="nc">&nbsp;            throw new RuntimeException(&quot;Utilisateur sans rôle attribué&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        String role = userRole.name();</b>
+<b class="fc">&nbsp;        TechnicalFileItem validatedItem = service.validateItem(itemId, role);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFileItem&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Item validé avec succès par &quot; + role,
+&nbsp;                validatedItem
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/items/{itemId}/can-validate&quot;)
+&nbsp;    @Operation(summary = &quot;Vérifier validation&quot;, description = &quot;Vérifier si l’utilisateur peut valider cet item&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAnyRole(&#39;PP&#39;, &#39;MC&#39;, &#39;MP&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Boolean&gt;&gt; canValidateItem(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="fc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
+&nbsp;
+<b class="fc">&nbsp;        Role userRole = currentUser.getRole();</b>
+<b class="pc">&nbsp;        if (userRole == null) {</b>
+<b class="nc">&nbsp;            ApiResponse&lt;Boolean&gt; response = ApiResponse.success(&quot;Vérification effectuée&quot;, false);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        String role = userRole.name();</b>
+<b class="fc">&nbsp;        boolean canValidate = service.canValidateItem(itemId, role);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;Boolean&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Vérification effectuée&quot;,
+<b class="fc">&nbsp;                canValidate</b>
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;    // Dans TechnicalFileController.java, ajoute cette méthode :
+&nbsp;
+&nbsp;    @PostMapping(&quot;/{id}/items&quot;)
+&nbsp;    @Operation(summary = &quot;Ajouter un item&quot;, description = &quot;Ajouter un nouvel item dans un dossier technique&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:create&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;TechnicalFileItem&gt;&gt; addItemToTechnicalFile(
+&nbsp;            @PathVariable Long id,
+&nbsp;            @RequestBody TechnicalFileDto.AddItemDto dto) {
+<b class="fc">&nbsp;        TechnicalFileItem item = service.addItemToTechnicalFile(id, dto);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;TechnicalFileItem&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Item ajouté au dossier technique avec succès&quot;,
+&nbsp;                item,
+<b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
+&nbsp;    }
+&nbsp;    // Dans TechnicalFileController.java - Ajoutez
+&nbsp;
+&nbsp;    @GetMapping(&quot;/notifications/pending&quot;)
+&nbsp;    @Operation(summary = &quot;Notifications en attente&quot;, description = &quot;Récupère les items techniques nécessitant une attention&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getPendingNotifications() {
+<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
+<b class="fc">&nbsp;        String userEmail = auth.getName();</b>
+&nbsp;
+<b class="fc">&nbsp;        List&lt;Map&lt;String, Object&gt;&gt; notifications = notificationService.getPendingNotificationsForUser(userEmail);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Notifications récupérées avec succès&quot;,
+&nbsp;                notifications
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;    // TechnicalFileController.java - Ajouter cet endpoint
+&nbsp;
+&nbsp;    @GetMapping(&quot;/items/{itemId}/versions-compare&quot;)
+&nbsp;    @Operation(summary = &quot;Comparer versions&quot;, description = &quot;Affiche la première et la dernière version d&#39;un item&quot;)
+&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;technical_file:read&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getFirstAndCurrentVersions(@PathVariable Long itemId) {
+<b class="fc">&nbsp;        Map&lt;String, Object&gt; versions = service.getFirstAndCurrentVersions(itemId);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Comparaison des versions récupérée avec succès&quot;,
+&nbsp;                versions
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
+</div>
+</body>
+</html>

@@ -389,4 +389,5 @@ class ComplianceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
+
 }

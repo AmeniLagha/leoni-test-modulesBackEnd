@@ -5,6 +5,7 @@ import com.example.security.config.JwtService;
 import com.example.security.projet.Projet;
 import com.example.security.projet.ProjetDto;
 import com.example.security.projet.ProjetRepository;
+import com.example.security.projet.ProjetService;
 import com.example.security.site.Site;
 import com.example.security.site.SiteRepository;
 import com.example.security.token.Token;
@@ -19,8 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -59,6 +64,9 @@ class ProjetControllerTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @SpyBean  // ← Pour pouvoir spy le service
+    private ProjetService projetService;
 
     private String adminToken;
     private String userToken;
@@ -141,7 +149,6 @@ class ProjetControllerTest {
                 .build();
         tokenRepository.save(userTokenEntity);
     }
-
     // ==================== GET /api/v1/projets ====================
 
     @Test
@@ -173,7 +180,6 @@ class ProjetControllerTest {
         mockMvc.perform(get("/api/v1/projets/" + testProjet1.getId())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isForbidden());
-        // Pas de vérification JSON car réponse vide
     }
 
     @Test
@@ -296,15 +302,26 @@ class ProjetControllerTest {
     // ==================== DELETE /api/v1/projets/{id} ====================
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void deleteProjet_AsAdmin_ShouldDeleteProjet() throws Exception {
-        Projet tempProjet = new Projet();
-        tempProjet.setName("TempProjet");
-        tempProjet.setDescription("Projet temporaire");
-        tempProjet.setActive(true);
-        tempProjet = projetRepository.save(tempProjet);
+        // ✅ SOLUTION : Créer un projet vraiment indépendant
+        Projet independentProjet = new Projet();
+        independentProjet.setName("Temp_" + System.currentTimeMillis());
+        independentProjet.setDescription("Projet temporaire sans association");
+        independentProjet.setActive(true);
+        independentProjet.setSites(null);  // ← Forcer à null
+        independentProjet = projetRepository.save(independentProjet);
 
-        mockMvc.perform(delete("/api/v1/projets/" + tempProjet.getId())
+        // Vérifier qu'il n'y a pas d'association
+        System.out.println("=== PROJET CRÉÉ ===");
+        System.out.println("ID: " + independentProjet.getId());
+        System.out.println("Nom: " + independentProjet.getName());
+        System.out.println("Sites: " + independentProjet.getSites());
+
+        mockMvc.perform(delete("/api/v1/projets/" + independentProjet.getId())
                         .header("Authorization", "Bearer " + adminToken))
+                .andDo(result -> System.out.println("Response status: " + result.getResponse().getStatus()))
+                .andDo(result -> System.out.println("Response body: " + result.getResponse().getContentAsString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Projet supprimé avec succès"));

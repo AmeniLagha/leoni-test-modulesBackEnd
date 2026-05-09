@@ -72,10 +72,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    74,4%
+    74,7%
   </span>
   <span class="absValue">
-    (58/78)
+    (59/79)
   </span>
 </td>
 </tr>
@@ -113,6 +113,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import org.springframework.web.server.ResponseStatusException;
 &nbsp;
 &nbsp;import java.io.IOException;
+&nbsp;import java.time.LocalDateTime;
 &nbsp;import java.util.HashSet;
 &nbsp;import java.util.Set;
 &nbsp;
@@ -153,6 +154,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="fc">&nbsp;                .password(passwordEncoder.encode(request.getPassword()))</b>
 <b class="fc">&nbsp;                .role(request.getRole())</b>
 <b class="fc">&nbsp;                .site(site)</b>
+<b class="fc">&nbsp;                .createdAt(LocalDateTime.now())</b>
 <b class="fc">&nbsp;                .build();</b>
 <b class="fc">&nbsp;        var savedUser = repository.save(user);</b>
 <b class="fc">&nbsp;        var jwtToken = jwtService.generateToken(user);</b>
@@ -270,7 +272,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

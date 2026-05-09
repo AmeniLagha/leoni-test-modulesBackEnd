@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ComplianceService</title>
+  <title>Coverage Report > WebConfig</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,10 +19,10 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.conformité</a>
+    <a href="../index.html">com.example.security.config</a>
 </div>
 
-<h1>Coverage Summary for Class: ComplianceService (com.example.security.conformité)</h1>
+<h1>Coverage Summary for Class: WebConfig (com.example.security.config)</h1>
 
 <table class="coverageStats">
 
@@ -34,67 +34,72 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 <th class="coverageStat 
 ">
-  Branch, %
-</th>
-<th class="coverageStat 
-">
   Line, %
 </th>
 </tr>
 <tr>
-  <td class="name">ComplianceService</td>
+  <td class="name">WebConfig</td>
 <td class="coverageStat">
   <span class="percent">
-    5,6%
+    100%
   </span>
   <span class="absValue">
-    (1/18)
+    (3/3)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    0%
+    100%
   </span>
   <span class="absValue">
-    (0/159)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    0,3%
-  </span>
-  <span class="absValue">
-    (1/373)
+    (4/4)
   </span>
 </td>
 </tr>
   <tr>
-    <td class="name">ComplianceService$$SpringCGLIB$$0</td>
+    <td class="name">WebConfig$$SpringCGLIB$$0</td>
+  </tr>
+  <tr>
+    <td class="name">WebConfig$$SpringCGLIB$$FastClass$$0</td>
+  </tr>
+  <tr>
+    <td class="name">WebConfig$$SpringCGLIB$$FastClass$$1</td>
+  </tr>
+  <tr>
+    <td class="name">WebConfig$1</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (6/6)
+  </span>
+</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
 <td class="coverageStat">
   <span class="percent">
-    5,6%
+    100%
   </span>
   <span class="absValue">
-    (1/18)
+    (5/5)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    0%
+    100%
   </span>
   <span class="absValue">
-    (0/159)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    0,3%
-  </span>
-  <span class="absValue">
-    (1/373)
+    (10/10)
   </span>
 </td>
 </tr>
@@ -105,613 +110,38 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.conformité;
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.config;
 &nbsp;
-&nbsp;import com.example.security.cahierdeCharge.*;
-&nbsp;import com.example.security.email.GlobalNotificationService;
-&nbsp;import com.example.security.user.User;
-&nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.beans.factory.annotation.Autowired;
-&nbsp;import org.springframework.security.core.Authentication;
-&nbsp;import org.springframework.security.core.context.SecurityContextHolder;
-&nbsp;import org.springframework.stereotype.Service;
-&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;import org.springframework.context.annotation.Bean;
+&nbsp;import org.springframework.context.annotation.Configuration;
+&nbsp;import org.springframework.web.servlet.config.annotation.CorsRegistry;
+&nbsp;import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+&nbsp;import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 &nbsp;
-&nbsp;import java.time.LocalDate;
-&nbsp;import java.util.*;
-&nbsp;import java.util.stream.Collectors;
+&nbsp;@Configuration
+<b class="fc">&nbsp;public class WebConfig implements WebMvcConfigurer {</b>
 &nbsp;
-&nbsp;@Service
-<b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ComplianceService {
-&nbsp;
-&nbsp;    private final ComplianceRepository repository;
-&nbsp;    private final GlobalNotificationService notificationService;
-&nbsp;    private final ChargeSheetItemRepository chargeSheetItemRepository;
-&nbsp;    @Autowired
-&nbsp;    private ComplianceReminderService reminderService;
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Compliance createCompliance(ComplianceDto.CreateDto dto) {
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;        // ⚡ Récupérer l’item
-<b class="nc">&nbsp;        ChargeSheetItem item = chargeSheetItemRepository.findById(dto.getItemId())</b>
-<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Item not found&quot;));</b>
-<b class="nc">&nbsp;        ChargeSheet chargeSheet = item.getChargeSheet();</b>
-<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
-<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
-&nbsp;        // ⚡ Récupérer le chargeSheetId depuis l&#39;item
-<b class="nc">&nbsp;        Long chargeSheetId = item.getChargeSheet().getId();</b>
-<b class="nc">&nbsp;        Compliance compliance = Compliance.builder()</b>
-<b class="nc">&nbsp;                .item(item) // ✅ assigné ici</b>
-<b class="nc">&nbsp;                .chargeSheetId(chargeSheetId)</b>
-<b class="nc">&nbsp;                .orderNumber(dto.getOrderNumber())</b>
-<b class="nc">&nbsp;                .orderitemNumber(dto.getOrderitemNumber())</b>
-<b class="nc">&nbsp;                .testDateTime(dto.getTestDateTime())</b>
-<b class="nc">&nbsp;                .technicianName(dto.getTechnicianName())</b>
-<b class="nc">&nbsp;                .rfidNumber(dto.getRfidNumber())</b>
-<b class="nc">&nbsp;                .leoniPartNumber(dto.getLeoniPartNumber())</b>
-<b class="nc">&nbsp;                .indexValue(dto.getIndexValue())</b>
-<b class="nc">&nbsp;                .producer(dto.getProducer())</b>
-<b class="nc">&nbsp;                .type(dto.getType())</b>
-<b class="nc">&nbsp;                .sequenceTestPins(dto.getSequenceTestPins())</b>
-<b class="nc">&nbsp;                .codingRequest(dto.getCodingRequest())</b>
-<b class="nc">&nbsp;                .secondaryLocking(dto.getSecondaryLocking())</b>
-<b class="nc">&nbsp;                .offsetTestMm(dto.getOffsetTestMm())</b>
-<b class="nc">&nbsp;                .stableOffsetTestMm(dto.getStableOffsetTestMm())</b>
-<b class="nc">&nbsp;                .displacementPathPushBackMm(dto.getDisplacementPathPushBackMm())</b>
-<b class="nc">&nbsp;                .housingAttachments(dto.getHousingAttachments())</b>
-<b class="nc">&nbsp;                .maxLeakTestMbar(dto.getMaxLeakTestMbar())</b>
-<b class="nc">&nbsp;                .adjustmentLeakTestMbar(dto.getAdjustmentLeakTestMbar())</b>
-<b class="nc">&nbsp;                .colourVerification(dto.getColourVerification())</b>
-<b class="nc">&nbsp;                .terminalAlignment(dto.getTerminalAlignment())</b>
-<b class="nc">&nbsp;                .openShuntsAirbag(dto.getOpenShuntsAirbag())</b>
-<b class="nc">&nbsp;                .spacerClosingUnit(dto.getSpacerClosingUnit())</b>
-<b class="nc">&nbsp;                .specialFunctions(dto.getSpecialFunctions())</b>
-<b class="nc">&nbsp;                .contactProblemsPercentage(dto.getContactProblemsPercentage())</b>
-<b class="nc">&nbsp;                .qualifiedTestModule(dto.getQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .conditionallyQualifiedTestModule(dto.getConditionallyQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .notQualifiedTestModule(dto.getNotQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .remarks(dto.getRemarks())</b>
-<b class="nc">&nbsp;                .createdBy(currentUser.getEmail())</b>
-<b class="nc">&nbsp;                .createdAt(LocalDate.now())</b>
-<b class="nc">&nbsp;                .build();</b>
-&nbsp;
-<b class="nc">&nbsp;        Compliance saved = repository.save(compliance);</b>
-&nbsp;
-<b class="nc">&nbsp;        notificationService.notifyComplianceCreatedToProjectAndSite(</b>
-<b class="nc">&nbsp;                saved.getId(),</b>
-<b class="nc">&nbsp;                saved.getChargeSheetId(),</b>
-<b class="nc">&nbsp;                currentUser.getEmail(),</b>
-&nbsp;                projet,
-&nbsp;                site
-&nbsp;        );
-<b class="nc">&nbsp;        reminderService.resetRemindersForItem(dto.getItemId());</b>
-&nbsp;
-<b class="nc">&nbsp;        return saved;</b>
+&nbsp;    @Override
+&nbsp;    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+&nbsp;        // Servir le dossier uploads depuis la racine du projet
+<b class="fc">&nbsp;        registry.addResourceHandler(&quot;/uploads/**&quot;)</b>
+<b class="fc">&nbsp;                .addResourceLocations(&quot;file:uploads/&quot;);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Compliance updateCompliance(Long id, ComplianceDto.UpdateDto dto) {
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-<b class="nc">&nbsp;        Compliance compliance = repository.findById(id)</b>
-<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Compliance not found&quot;));</b>
-<b class="nc">&nbsp;        ChargeSheetItem item = compliance.getItem();</b>
-<b class="nc">&nbsp;        ChargeSheet chargeSheet = item.getChargeSheet();</b>
-<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
-<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
-&nbsp;        // Update inspection fields
-<b class="nc">&nbsp;        compliance.setOrderitemNumber(dto.getOrderitemNumber());</b>
-<b class="nc">&nbsp;        compliance.setSequenceTestPins(dto.getSequenceTestPins());</b>
-<b class="nc">&nbsp;        compliance.setCodingRequest(dto.getCodingRequest());</b>
-<b class="nc">&nbsp;        compliance.setSecondaryLocking(dto.getSecondaryLocking());</b>
-<b class="nc">&nbsp;        compliance.setOffsetTestMm(dto.getOffsetTestMm());</b>
-<b class="nc">&nbsp;        compliance.setStableOffsetTestMm(dto.getStableOffsetTestMm());</b>
-<b class="nc">&nbsp;        compliance.setDisplacementPathPushBackMm(dto.getDisplacementPathPushBackMm());</b>
-<b class="nc">&nbsp;        compliance.setHousingAttachments(dto.getHousingAttachments());</b>
-<b class="nc">&nbsp;        compliance.setMaxLeakTestMbar(dto.getMaxLeakTestMbar());</b>
-<b class="nc">&nbsp;        compliance.setAdjustmentLeakTestMbar(dto.getAdjustmentLeakTestMbar());</b>
-<b class="nc">&nbsp;        compliance.setColourVerification(dto.getColourVerification());</b>
-<b class="nc">&nbsp;        compliance.setTerminalAlignment(dto.getTerminalAlignment());</b>
-<b class="nc">&nbsp;        compliance.setOpenShuntsAirbag(dto.getOpenShuntsAirbag());</b>
-<b class="nc">&nbsp;        compliance.setSpacerClosingUnit(dto.getSpacerClosingUnit());</b>
-<b class="nc">&nbsp;        compliance.setSpecialFunctions(dto.getSpecialFunctions());</b>
-<b class="nc">&nbsp;        compliance.setContactProblemsPercentage(dto.getContactProblemsPercentage());</b>
-&nbsp;
-&nbsp;        // Update qualification result
-<b class="nc">&nbsp;        compliance.setQualifiedTestModule(dto.getQualifiedTestModule());</b>
-<b class="nc">&nbsp;        compliance.setConditionallyQualifiedTestModule(dto.getConditionallyQualifiedTestModule());</b>
-<b class="nc">&nbsp;        compliance.setNotQualifiedTestModule(dto.getNotQualifiedTestModule());</b>
-&nbsp;
-&nbsp;        // Update remarks and status
-<b class="nc">&nbsp;        compliance.setRemarks(dto.getRemarks());</b>
-&nbsp;
-&nbsp;
-<b class="nc">&nbsp;        compliance.setUpdatedBy(currentUser.getEmail());</b>
-<b class="nc">&nbsp;        compliance.setUpdatedAt(LocalDate.now());</b>
-&nbsp;
-<b class="nc">&nbsp;        Compliance updated = repository.save(compliance);</b>
-&nbsp;
-&nbsp;        // Notification à TOUS les utilisateurs
-<b class="nc">&nbsp;        notificationService.notifyComplianceUpdatedToProjectAndSite(</b>
-<b class="nc">&nbsp;                updated.getId(),</b>
-<b class="nc">&nbsp;                updated.getChargeSheetId(),</b>
-<b class="nc">&nbsp;                currentUser.getEmail(),</b>
-&nbsp;                projet,
-&nbsp;                site
-&nbsp;        );
-&nbsp;
-<b class="nc">&nbsp;        return updated;</b>
+&nbsp;    @Bean
+&nbsp;    public WebMvcConfigurer corsConfigurer() {
+<b class="fc">&nbsp;        return new WebMvcConfigurer() {</b>
+&nbsp;            @Override
+&nbsp;            public void addCorsMappings(CorsRegistry registry) {
+<b class="fc">&nbsp;                registry.addMapping(&quot;/**&quot;)</b>
+<b class="fc">&nbsp;                        .allowedOrigins(&quot;https://leoni-test-modulesfrontend.onrender.com&quot;,&quot;http://localhost:4200&quot;)</b>
+<b class="fc">&nbsp;                        .allowedMethods(&quot;GET&quot;,&quot;POST&quot;,&quot;PUT&quot;,&quot;PATCH&quot;,&quot;DELETE&quot;,&quot;OPTIONS&quot;)</b>
+<b class="fc">&nbsp;                        .allowedHeaders(&quot;*&quot;)</b>
+<b class="fc">&nbsp;                        .allowCredentials(true);</b>
+&nbsp;            }
+&nbsp;        };
 &nbsp;    }
 &nbsp;
-&nbsp;    @Transactional
-&nbsp;    public void deleteCompliance(Long id) {
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-<b class="nc">&nbsp;        Compliance compliance = repository.findById(id)</b>
-<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Compliance not found&quot;));</b>
-<b class="nc">&nbsp;        ChargeSheetItem item = compliance.getItem();</b>
-<b class="nc">&nbsp;        ChargeSheet chargeSheet = item.getChargeSheet();</b>
-<b class="nc">&nbsp;        String projet = chargeSheet.getProject();</b>
-<b class="nc">&nbsp;        String site = chargeSheet.getPlant();</b>
-<b class="nc">&nbsp;        Long chargeSheetId = compliance.getChargeSheetId();</b>
-<b class="nc">&nbsp;        repository.deleteById(id);</b>
-&nbsp;
-&nbsp;        // Notification à TOUS les utilisateurs
-<b class="nc">&nbsp;        notificationService.notifyComplianceDeletedToProjectAndSite(</b>
-&nbsp;                &quot;Fiche de Conformité&quot;,
-&nbsp;                id,
-&nbsp;                chargeSheetId,
-<b class="nc">&nbsp;                currentUser.getEmail(),</b>
-&nbsp;                projet,
-&nbsp;                site
-&nbsp;        );
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Compliance&gt; getComplianceByChargeSheetId(Long chargeSheetId) {
-<b class="nc">&nbsp;        return repository.findByChargeSheetId(chargeSheetId);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public Compliance getComplianceById(Long id) {
-<b class="nc">&nbsp;        return repository.findById(id)</b>
-<b class="nc">&nbsp;                .orElseThrow(() -&gt; new RuntimeException(&quot;Compliance not found&quot;));</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Compliance&gt; getAllCompliance() {
-<b class="nc">&nbsp;        return repository.findAll();</b>
-&nbsp;    }
-&nbsp;    public List&lt;ComplianceDisplayDto&gt; getAllComplianceForDisplay() {
-&nbsp;
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="nc">&nbsp;        String userRole = currentUser.getRole().name();</b>
-<b class="nc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();  // ✅ Récupérer tous les projets</b>
-<b class="nc">&nbsp;        String userSite = currentUser.getSiteName();</b>
-&nbsp;
-&nbsp;        // ✅ Convertir en liste
-<b class="nc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="nc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="nc">&nbsp;                List.of();</b>
-&nbsp;
-&nbsp;        List&lt;Compliance&gt; list;
-&nbsp;
-<b class="nc">&nbsp;        if (userRole.equals(&quot;ADMIN&quot;)) {</b>
-<b class="nc">&nbsp;            list = repository.findAll();</b>
-&nbsp;        }
-&nbsp;        else {
-&nbsp;            // ✅ Récupérer toutes les conformités pour les projets de l&#39;utilisateur
-<b class="nc">&nbsp;            List&lt;Compliance&gt; allCompliances = new ArrayList&lt;&gt;();</b>
-<b class="nc">&nbsp;            for (String project : userProjects) {</b>
-<b class="nc">&nbsp;                allCompliances.addAll(repository.findByProject(project));</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // Filtrer en mémoire par site (plant du chargeSheet)
-<b class="nc">&nbsp;            list = allCompliances.stream()</b>
-<b class="nc">&nbsp;                    .filter(compliance -&gt; {</b>
-<b class="nc">&nbsp;                        ChargeSheetItem item = compliance.getItem();</b>
-<b class="nc">&nbsp;                        if (item == null) return false;</b>
-<b class="nc">&nbsp;                        ChargeSheet chargeSheet = item.getChargeSheet();</b>
-<b class="nc">&nbsp;                        if (chargeSheet == null) return false;</b>
-<b class="nc">&nbsp;                        String plant = chargeSheet.getPlant();</b>
-<b class="nc">&nbsp;                        return plant != null &amp;&amp; plant.equals(userSite);</b>
-&nbsp;                    })
-<b class="nc">&nbsp;                    .collect(Collectors.toList());</b>
-&nbsp;
-&nbsp;            // ✅ Appliquer les filtres de statut selon le rôle
-<b class="nc">&nbsp;            switch (userRole) {</b>
-&nbsp;                case &quot;ING&quot;:
-&nbsp;                    // ING voit tous les cahiers de ses projets ET site (déjà filtré)
-&nbsp;                    break;
-&nbsp;                case &quot;PT&quot;:
-<b class="nc">&nbsp;                    list = list.stream()</b>
-<b class="nc">&nbsp;                            .filter(c -&gt; {</b>
-<b class="nc">&nbsp;                                ChargeSheet cs = c.getItem().getChargeSheet();</b>
-<b class="nc">&nbsp;                                return cs != null &amp;&amp; List.of(</b>
-&nbsp;                                        ChargeSheetStatus.VALIDATED_ING,
-&nbsp;                                        ChargeSheetStatus.TECH_FILLED,
-&nbsp;                                        ChargeSheetStatus.VALIDATED_PT,
-&nbsp;                                        ChargeSheetStatus.SENT_TO_SUPPLIER,
-&nbsp;                                        ChargeSheetStatus.COMPLETED
-<b class="nc">&nbsp;                                ).contains(cs.getStatus());</b>
-&nbsp;                            })
-<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
-&nbsp;                    break;
-&nbsp;                case &quot;PP&quot;:
-<b class="nc">&nbsp;                    list = list.stream()</b>
-<b class="nc">&nbsp;                            .filter(c -&gt; {</b>
-<b class="nc">&nbsp;                                ChargeSheet cs = c.getItem().getChargeSheet();</b>
-<b class="nc">&nbsp;                                return cs != null &amp;&amp; List.of(</b>
-&nbsp;                                        ChargeSheetStatus.VALIDATED_PT,
-&nbsp;                                        ChargeSheetStatus.SENT_TO_SUPPLIER,
-&nbsp;                                        ChargeSheetStatus.COMPLETED
-<b class="nc">&nbsp;                                ).contains(cs.getStatus());</b>
-&nbsp;                            })
-<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
-&nbsp;                    break;
-&nbsp;                case &quot;MC&quot;:
-&nbsp;                case &quot;MP&quot;:
-<b class="nc">&nbsp;                    list = list.stream()</b>
-<b class="nc">&nbsp;                            .filter(c -&gt; {</b>
-<b class="nc">&nbsp;                                ChargeSheet cs = c.getItem().getChargeSheet();</b>
-<b class="nc">&nbsp;                                return cs != null &amp;&amp; cs.getStatus() == ChargeSheetStatus.COMPLETED;</b>
-&nbsp;                            })
-<b class="nc">&nbsp;                            .collect(Collectors.toList());</b>
-&nbsp;                    break;
-&nbsp;                default:
-<b class="nc">&nbsp;                    list = List.of();</b>
-&nbsp;                    break;
-&nbsp;            }
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        System.out.println(&quot;📋 Compliance pour site &#39;&quot; + userSite + &quot;&#39;: &quot; + list.size() + &quot; élément(s)&quot;);</b>
-&nbsp;
-<b class="nc">&nbsp;        return list.stream().map(c -&gt; ComplianceDisplayDto.builder()</b>
-<b class="nc">&nbsp;                .id(c.getId())</b>
-<b class="nc">&nbsp;                .chargeSheetId(c.getChargeSheetId())</b>
-<b class="nc">&nbsp;                .orderNumber(c.getOrderNumber())</b>
-<b class="nc">&nbsp;                .itemNumber(c.getIndexValue())</b>
-<b class="nc">&nbsp;                .orderitemNumber(c.getOrderitemNumber())</b>
-<b class="nc">&nbsp;                .testDateTime(c.getTestDateTime())</b>
-<b class="nc">&nbsp;                .technicianName(c.getTechnicianName())</b>
-<b class="nc">&nbsp;                .rfidNumber(c.getRfidNumber())</b>
-<b class="nc">&nbsp;                .leoniPartNumber(c.getLeoniPartNumber())</b>
-<b class="nc">&nbsp;                .producer(c.getProducer())</b>
-<b class="nc">&nbsp;                .indexValue(c.getIndexValue())</b>
-<b class="nc">&nbsp;                .type(c.getType())</b>
-<b class="nc">&nbsp;                .sequenceTestPins(c.getSequenceTestPins())</b>
-<b class="nc">&nbsp;                .codingRequest(c.getCodingRequest())</b>
-<b class="nc">&nbsp;                .secondaryLocking(c.getSecondaryLocking())</b>
-<b class="nc">&nbsp;                .offsetTestMm(c.getOffsetTestMm())</b>
-<b class="nc">&nbsp;                .stableOffsetTestMm(c.getStableOffsetTestMm())</b>
-<b class="nc">&nbsp;                .displacementPathPushBackMm(c.getDisplacementPathPushBackMm())</b>
-<b class="nc">&nbsp;                .housingAttachments(c.getHousingAttachments())</b>
-<b class="nc">&nbsp;                .maxLeakTestMbar(c.getMaxLeakTestMbar())</b>
-<b class="nc">&nbsp;                .adjustmentLeakTestMbar(c.getAdjustmentLeakTestMbar())</b>
-<b class="nc">&nbsp;                .colourVerification(c.getColourVerification())</b>
-<b class="nc">&nbsp;                .terminalAlignment(c.getTerminalAlignment())</b>
-<b class="nc">&nbsp;                .openShuntsAirbag(c.getOpenShuntsAirbag())</b>
-<b class="nc">&nbsp;                .spacerClosingUnit(c.getSpacerClosingUnit())</b>
-<b class="nc">&nbsp;                .specialFunctions(c.getSpecialFunctions())</b>
-<b class="nc">&nbsp;                .contactProblemsPercentage(c.getContactProblemsPercentage())</b>
-<b class="nc">&nbsp;                .qualifiedTestModule(c.getQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .conditionallyQualifiedTestModule(c.getConditionallyQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .notQualifiedTestModule(c.getNotQualifiedTestModule())</b>
-<b class="nc">&nbsp;                .remarks(c.getRemarks())</b>
-<b class="nc">&nbsp;                .createdBy(c.getCreatedBy())</b>
-<b class="nc">&nbsp;                .createdAt(c.getCreatedAt())</b>
-<b class="nc">&nbsp;                .updatedBy(c.getUpdatedBy())</b>
-<b class="nc">&nbsp;                .updatedAt(c.getUpdatedAt())</b>
-<b class="nc">&nbsp;                .build()</b>
-<b class="nc">&nbsp;        ).toList();</b>
-&nbsp;    }
-&nbsp;    @Transactional
-&nbsp;    public List&lt;Compliance&gt; createComplianceForItem(ChargeSheetItem item) {
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-<b class="nc">&nbsp;        List&lt;Compliance&gt; createdList = new ArrayList&lt;&gt;();</b>
-&nbsp;
-<b class="nc">&nbsp;        for (int i = 1; i &lt;= item.getQuantityOfTestModules(); i++) {</b>
-<b class="nc">&nbsp;            Compliance compliance = Compliance.builder()</b>
-<b class="nc">&nbsp;                    .chargeSheetId(item.getChargeSheet().getId())</b>
-<b class="nc">&nbsp;                    .item(item)</b>
-<b class="nc">&nbsp;                    .orderNumber(item.getChargeSheet().getOrderNumber()) // récupère order number du cahier</b>
-<b class="nc">&nbsp;                    .indexValue(i) // chaque module a son index</b>
-<b class="nc">&nbsp;                    .createdBy(currentUser.getEmail())</b>
-<b class="nc">&nbsp;                    .createdAt(LocalDate.now())</b>
-<b class="nc">&nbsp;                    .build();</b>
-&nbsp;
-<b class="nc">&nbsp;            createdList.add(repository.save(compliance));</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        return createdList;</b>
-&nbsp;    }
-&nbsp;    /**
-&nbsp;     * Calcule la variation entre deux mois spécifiques pour les conformités
-&nbsp;     */
-&nbsp;    public Map&lt;String, Object&gt; getVariationBetweenMonths(String project, String month1, String month2) {
-&nbsp;        List&lt;Object[]&gt; results;
-&nbsp;
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="nc">&nbsp;        boolean isAdmin = currentUser.getRole().name().equals(&quot;ADMIN&quot;);</b>
-&nbsp;
-&nbsp;        // ✅ Récupérer tous les projets de l&#39;utilisateur
-<b class="nc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();</b>
-<b class="nc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="nc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="nc">&nbsp;                List.of();</b>
-&nbsp;
-<b class="nc">&nbsp;        if (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) {</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForAllProjects();</b>
-&nbsp;        } else {
-&nbsp;            // ✅ Déterminer le projet cible
-<b class="nc">&nbsp;            String targetProject = project;</b>
-<b class="nc">&nbsp;            if (targetProject == null || targetProject.isEmpty() || targetProject.equals(&quot;ALL&quot;)) {</b>
-<b class="nc">&nbsp;                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            if (targetProject == null) {</b>
-<b class="nc">&nbsp;                Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;message&quot;, &quot;Aucun projet disponible&quot;);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;month1Count&quot;, 0L);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;month2Count&quot;, 0L);</b>
-<b class="nc">&nbsp;                return emptyResult;</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            results = repository.countByMonthForProject(targetProject);</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Map&lt;String, Long&gt; monthlyCounts = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        for (Object[] result : results) {</b>
-<b class="nc">&nbsp;            String month = (String) result[0];</b>
-<b class="nc">&nbsp;            Long count = ((Number) result[1]).longValue();</b>
-<b class="nc">&nbsp;            monthlyCounts.put(month, count);</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Long countMonth1 = monthlyCounts.getOrDefault(month1, 0L);</b>
-<b class="nc">&nbsp;        Long countMonth2 = monthlyCounts.getOrDefault(month2, 0L);</b>
-&nbsp;
-<b class="nc">&nbsp;        double variation = 0.0;</b>
-<b class="nc">&nbsp;        String trend = &quot;stable&quot;;</b>
-<b class="nc">&nbsp;        String formula = &quot;&quot;;</b>
-&nbsp;
-<b class="nc">&nbsp;        if (countMonth1 &gt; 0) {</b>
-<b class="nc">&nbsp;            variation = ((countMonth2 - countMonth1) * 100.0) / countMonth1;</b>
-<b class="nc">&nbsp;            variation = Math.round(variation * 10.0) / 10.0;</b>
-&nbsp;
-<b class="nc">&nbsp;            if (variation &gt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            } else if (variation &lt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;baisse&quot;;</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            formula = String.format(&quot;((%d - %d) / %d) × 100 = %.1f%%&quot;,</b>
-<b class="nc">&nbsp;                    countMonth2, countMonth1, countMonth1, variation);</b>
-<b class="nc">&nbsp;        } else if (countMonth1 == 0 &amp;&amp; countMonth2 &gt; 0) {</b>
-<b class="nc">&nbsp;            variation = 100.0;</b>
-<b class="nc">&nbsp;            trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            formula = String.format(&quot;Création depuis zéro: %d fiches&quot;, countMonth2);</b>
-<b class="nc">&nbsp;        } else if (countMonth1 == 0 &amp;&amp; countMonth2 == 0) {</b>
-<b class="nc">&nbsp;            formula = &quot;Aucune conformité sur les deux mois&quot;;</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        result.put(&quot;project&quot;, (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) ? &quot;TOUS_PROJETS&quot; : project);</b>
-<b class="nc">&nbsp;        result.put(&quot;month1&quot;, month1);</b>
-<b class="nc">&nbsp;        result.put(&quot;month1Count&quot;, countMonth1);</b>
-<b class="nc">&nbsp;        result.put(&quot;month2&quot;, month2);</b>
-<b class="nc">&nbsp;        result.put(&quot;month2Count&quot;, countMonth2);</b>
-<b class="nc">&nbsp;        result.put(&quot;variation&quot;, variation);</b>
-<b class="nc">&nbsp;        result.put(&quot;trend&quot;, trend);</b>
-<b class="nc">&nbsp;        result.put(&quot;formula&quot;, formula);</b>
-<b class="nc">&nbsp;        result.put(&quot;interpretation&quot;, getInterpretation(trend, variation, countMonth2, countMonth1));</b>
-&nbsp;
-<b class="nc">&nbsp;        return result;</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Récupère les statistiques de création mensuelles des conformités
-&nbsp;     */
-&nbsp;    public MonthlyComplianceStatsDto getMonthlyComplianceStats(String project, int numberOfMonths) {
-&nbsp;        List&lt;Object[]&gt; results;
-&nbsp;
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="nc">&nbsp;        boolean isAdmin = currentUser.getRole().name().equals(&quot;ADMIN&quot;);</b>
-&nbsp;
-<b class="nc">&nbsp;        if (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) {</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForAllProjects();</b>
-&nbsp;        } else {
-<b class="nc">&nbsp;            String userProject = (project != null &amp;&amp; !project.isEmpty() &amp;&amp; !project.equals(&quot;ALL&quot;)) ? project : currentUser.getProjetsNames();</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForProject(userProject);</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Map&lt;String, Long&gt; monthlyCounts = new LinkedHashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        Map&lt;String, Double&gt; monthlyVariations = new LinkedHashMap&lt;&gt;();</b>
-&nbsp;
-<b class="nc">&nbsp;        for (Object[] result : results) {</b>
-<b class="nc">&nbsp;            String month = (String) result[0];</b>
-<b class="nc">&nbsp;            Long count = ((Number) result[1]).longValue();</b>
-<b class="nc">&nbsp;            monthlyCounts.put(month, count);</b>
-&nbsp;        }
-&nbsp;
-&nbsp;        // Calculer les variations
-<b class="nc">&nbsp;        List&lt;String&gt; months = new ArrayList&lt;&gt;(monthlyCounts.keySet());</b>
-<b class="nc">&nbsp;        for (int i = 0; i &lt; months.size() - 1; i++) {</b>
-<b class="nc">&nbsp;            String currentMonth = months.get(i);</b>
-<b class="nc">&nbsp;            String previousMonth = months.get(i + 1);</b>
-&nbsp;
-<b class="nc">&nbsp;            Long currentCount = monthlyCounts.get(currentMonth);</b>
-<b class="nc">&nbsp;            Long previousCount = monthlyCounts.get(previousMonth);</b>
-&nbsp;
-<b class="nc">&nbsp;            if (previousCount != null &amp;&amp; previousCount &gt; 0) {</b>
-<b class="nc">&nbsp;                double variation = ((currentCount - previousCount) * 100.0) / previousCount;</b>
-<b class="nc">&nbsp;                monthlyVariations.put(currentMonth, Math.round(variation * 10.0) / 10.0);</b>
-<b class="nc">&nbsp;            } else if (previousCount != null &amp;&amp; previousCount == 0) {</b>
-<b class="nc">&nbsp;                monthlyVariations.put(currentMonth, currentCount &gt; 0 ? 100.0 : 0.0);</b>
-&nbsp;            } else {
-<b class="nc">&nbsp;                monthlyVariations.put(currentMonth, 0.0);</b>
-&nbsp;            }
-&nbsp;        }
-&nbsp;
-&nbsp;        // Calculer la variation pour les deux derniers mois
-<b class="nc">&nbsp;        String currentMonth = null;</b>
-<b class="nc">&nbsp;        String previousMonth = null;</b>
-<b class="nc">&nbsp;        double variationPercentage = 0.0;</b>
-<b class="nc">&nbsp;        String trend = &quot;stable&quot;;</b>
-&nbsp;
-<b class="nc">&nbsp;        if (months.size() &gt;= 2) {</b>
-<b class="nc">&nbsp;            currentMonth = months.get(0);</b>
-<b class="nc">&nbsp;            previousMonth = months.get(1);</b>
-<b class="nc">&nbsp;            variationPercentage = monthlyVariations.getOrDefault(currentMonth, 0.0);</b>
-&nbsp;
-<b class="nc">&nbsp;            if (variationPercentage &gt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            } else if (variationPercentage &lt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;baisse&quot;;</b>
-&nbsp;            }
-&nbsp;        }
-&nbsp;
-&nbsp;        // Limiter au nombre de mois demandé
-<b class="nc">&nbsp;        Map&lt;String, Long&gt; limitedMonthlyCounts = new LinkedHashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        Map&lt;String, Double&gt; limitedMonthlyVariations = new LinkedHashMap&lt;&gt;();</b>
-&nbsp;
-<b class="nc">&nbsp;        int count = 0;</b>
-<b class="nc">&nbsp;        for (Map.Entry&lt;String, Long&gt; entry : monthlyCounts.entrySet()) {</b>
-<b class="nc">&nbsp;            if (count &gt;= numberOfMonths) break;</b>
-<b class="nc">&nbsp;            limitedMonthlyCounts.put(entry.getKey(), entry.getValue());</b>
-<b class="nc">&nbsp;            if (monthlyVariations.containsKey(entry.getKey())) {</b>
-<b class="nc">&nbsp;                limitedMonthlyVariations.put(entry.getKey(), monthlyVariations.get(entry.getKey()));</b>
-&nbsp;            }
-<b class="nc">&nbsp;            count++;</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        String formula = &quot;&quot;;</b>
-<b class="nc">&nbsp;        if (currentMonth != null &amp;&amp; previousMonth != null) {</b>
-<b class="nc">&nbsp;            Long currentCount = monthlyCounts.get(currentMonth);</b>
-<b class="nc">&nbsp;            Long prevCount = monthlyCounts.get(previousMonth);</b>
-<b class="nc">&nbsp;            if (prevCount != null &amp;&amp; prevCount &gt; 0) {</b>
-<b class="nc">&nbsp;                formula = String.format(&quot;((%d - %d) / %d) × 100 = %.1f%%&quot;,</b>
-<b class="nc">&nbsp;                        currentCount, prevCount, prevCount, variationPercentage);</b>
-&nbsp;            }
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        return MonthlyComplianceStatsDto.builder()</b>
-<b class="nc">&nbsp;                .monthlyCounts(limitedMonthlyCounts)</b>
-<b class="nc">&nbsp;                .monthlyVariations(limitedMonthlyVariations)</b>
-<b class="nc">&nbsp;                .currentMonth(currentMonth)</b>
-<b class="nc">&nbsp;                .previousMonth(previousMonth)</b>
-<b class="nc">&nbsp;                .variationPercentage(variationPercentage)</b>
-<b class="nc">&nbsp;                .trend(trend)</b>
-<b class="nc">&nbsp;                .formula(formula)</b>
-<b class="nc">&nbsp;                .build();</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Version simplifiée pour le dashboard avec les deux derniers mois
-&nbsp;     */
-&nbsp;    public Map&lt;String, Object&gt; getLastTwoMonthsVariation(String project) {
-&nbsp;        List&lt;Object[]&gt; results;
-&nbsp;
-<b class="nc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="nc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="nc">&nbsp;        boolean isAdmin = currentUser.getRole().name().equals(&quot;ADMIN&quot;);</b>
-&nbsp;
-&nbsp;        // ✅ Récupérer tous les projets de l&#39;utilisateur
-<b class="nc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();</b>
-<b class="nc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="nc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="nc">&nbsp;                List.of();</b>
-&nbsp;
-<b class="nc">&nbsp;        if (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) {</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForAllProjects();</b>
-&nbsp;        } else {
-<b class="nc">&nbsp;            String targetProject = project;</b>
-<b class="nc">&nbsp;            if (targetProject == null || targetProject.isEmpty() || targetProject.equals(&quot;ALL&quot;)) {</b>
-<b class="nc">&nbsp;                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            if (targetProject == null) {</b>
-<b class="nc">&nbsp;                Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;message&quot;, &quot;Aucun projet disponible&quot;);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;availableMonths&quot;, 0);</b>
-<b class="nc">&nbsp;                return emptyResult;</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            results = repository.countByMonthForProject(targetProject);</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        if (results == null || results.size() &lt; 2) {</b>
-<b class="nc">&nbsp;            Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;            emptyResult.put(&quot;message&quot;, &quot;Pas assez de données pour calculer la variation&quot;);</b>
-<b class="nc">&nbsp;            emptyResult.put(&quot;availableMonths&quot;, results != null ? results.size() : 0);</b>
-<b class="nc">&nbsp;            return emptyResult;</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Object[] latestMonth = results.get(0);</b>
-<b class="nc">&nbsp;        Object[] previousMonth = results.get(1);</b>
-&nbsp;
-<b class="nc">&nbsp;        String monthLatest = (String) latestMonth[0];</b>
-<b class="nc">&nbsp;        Long countLatest = ((Number) latestMonth[1]).longValue();</b>
-<b class="nc">&nbsp;        String monthPrevious = (String) previousMonth[0];</b>
-<b class="nc">&nbsp;        Long countPrevious = ((Number) previousMonth[1]).longValue();</b>
-&nbsp;
-<b class="nc">&nbsp;        double variation = 0.0;</b>
-<b class="nc">&nbsp;        String trend = &quot;stable&quot;;</b>
-<b class="nc">&nbsp;        String formula = &quot;&quot;;</b>
-&nbsp;
-<b class="nc">&nbsp;        if (countPrevious &gt; 0) {</b>
-<b class="nc">&nbsp;            variation = ((countLatest - countPrevious) * 100.0) / countPrevious;</b>
-<b class="nc">&nbsp;            variation = Math.round(variation * 10.0) / 10.0;</b>
-&nbsp;
-<b class="nc">&nbsp;            if (variation &gt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            } else if (variation &lt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;baisse&quot;;</b>
-&nbsp;            }
-&nbsp;
-<b class="nc">&nbsp;            formula = String.format(&quot;((%d - %d) / %d) × 100 = %.1f%%&quot;,</b>
-<b class="nc">&nbsp;                    countLatest, countPrevious, countPrevious, variation);</b>
-&nbsp;        }
-&nbsp;
-<b class="nc">&nbsp;        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;        result.put(&quot;currentMonth&quot;, monthLatest);</b>
-<b class="nc">&nbsp;        result.put(&quot;currentMonthCount&quot;, countLatest);</b>
-<b class="nc">&nbsp;        result.put(&quot;previousMonth&quot;, monthPrevious);</b>
-<b class="nc">&nbsp;        result.put(&quot;previousMonthCount&quot;, countPrevious);</b>
-<b class="nc">&nbsp;        result.put(&quot;variation&quot;, variation);</b>
-<b class="nc">&nbsp;        result.put(&quot;trend&quot;, trend);</b>
-<b class="nc">&nbsp;        result.put(&quot;formula&quot;, formula);</b>
-<b class="nc">&nbsp;        result.put(&quot;interpretation&quot;, getInterpretation(trend, variation, countLatest, countPrevious));</b>
-&nbsp;
-<b class="nc">&nbsp;        return result;</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    private String getInterpretation(String trend, double variation, long currentCount, long previousCount) {
-<b class="nc">&nbsp;        if (trend.equals(&quot;hausse&quot;)) {</b>
-<b class="nc">&nbsp;            if (variation &gt; 50) {</b>
-<b class="nc">&nbsp;                return String.format(&quot;📈 Forte augmentation de %.1f%% (%d vs %d)&quot;, variation, currentCount, previousCount);</b>
-&nbsp;            } else {
-<b class="nc">&nbsp;                return String.format(&quot;📈 Augmentation de %.1f%% (%d vs %d)&quot;, variation, currentCount, previousCount);</b>
-&nbsp;            }
-<b class="nc">&nbsp;        } else if (trend.equals(&quot;baisse&quot;)) {</b>
-<b class="nc">&nbsp;            if (variation &lt; -50) {</b>
-<b class="nc">&nbsp;                return String.format(&quot;📉 Forte baisse de %.1f%% (%d vs %d)&quot;, Math.abs(variation), currentCount, previousCount);</b>
-&nbsp;            } else {
-<b class="nc">&nbsp;                return String.format(&quot;📉 Baisse de %.1f%% (%d vs %d)&quot;, Math.abs(variation), currentCount, previousCount);</b>
-&nbsp;            }
-&nbsp;        } else {
-<b class="nc">&nbsp;            return String.format(&quot;➡️ Stable (%d fiches de conformité pour les deux mois)&quot;, currentCount);</b>
-&nbsp;        }
-&nbsp;
-&nbsp;
-&nbsp;    }
 &nbsp;}
 </code>
 </pre>
@@ -736,7 +166,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

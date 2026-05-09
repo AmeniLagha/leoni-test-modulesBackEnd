@@ -242,4 +242,5 @@ class ComplianceServiceTest {
         assertThat(result.get("variation")).isEqualTo(100.0);
         assertThat(result.get("trend")).isEqualTo("hausse");
     }
+
 }

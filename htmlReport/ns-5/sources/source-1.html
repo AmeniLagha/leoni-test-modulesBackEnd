@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ApplicationConfig</title>
+  <title>Coverage Report > ApiError</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,10 +19,10 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.config</a>
+    <a href="../index.html">com.example.security.common</a>
 </div>
 
-<h1>Coverage Summary for Class: ApplicationConfig (com.example.security.config)</h1>
+<h1>Coverage Summary for Class: ApiError (com.example.security.common)</h1>
 
 <table class="coverageStats">
 
@@ -34,53 +34,83 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 <th class="coverageStat 
 ">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
   Line, %
 </th>
 </tr>
 <tr>
-  <td class="name">ApplicationConfig</td>
+  <td class="name">ApiError</td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    75%
   </span>
   <span class="absValue">
-    (6/6)
+    (6/8)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    0%
   </span>
   <span class="absValue">
-    (9/9)
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    81,8%
+  </span>
+  <span class="absValue">
+    (9/11)
   </span>
 </td>
 </tr>
   <tr>
-    <td class="name">ApplicationConfig$$SpringCGLIB$$0</td>
-  </tr>
-  <tr>
-    <td class="name">ApplicationConfig$$SpringCGLIB$$FastClass$$0</td>
-  </tr>
-  <tr>
-    <td class="name">ApplicationConfig$$SpringCGLIB$$FastClass$$1</td>
+    <td class="name">ApiError$ApiErrorBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    77,8%
   </span>
   <span class="absValue">
-    (6/6)
+    (7/9)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    0%
   </span>
   <span class="absValue">
-    (9/9)
+    (0/30)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    83,3%
+  </span>
+  <span class="absValue">
+    (10/12)
   </span>
 </td>
 </tr>
@@ -91,52 +121,29 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.config;
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.common;
 &nbsp;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
 &nbsp;
-&nbsp;import com.example.security.user.UserRepository;
-&nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.context.annotation.Bean;
-&nbsp;import org.springframework.context.annotation.Configuration;
-&nbsp;import org.springframework.security.authentication.AuthenticationManager;
-&nbsp;import org.springframework.security.authentication.AuthenticationProvider;
-&nbsp;import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-&nbsp;import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-&nbsp;import org.springframework.security.core.userdetails.UserDetailsService;
-&nbsp;import org.springframework.security.core.userdetails.UsernameNotFoundException;
-&nbsp;import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-&nbsp;import org.springframework.security.crypto.password.PasswordEncoder;
+<b class="nc">&nbsp;@Data</b>
+<b class="fc">&nbsp;@Builder</b>
+<b class="nc">&nbsp;@NoArgsConstructor</b>
+<b class="fc">&nbsp;@AllArgsConstructor</b>
+&nbsp;public class ApiError {
+<b class="fc">&nbsp;    private String field;</b>
+<b class="fc">&nbsp;    private String message;</b>
+<b class="fc">&nbsp;    private String code;</b>
 &nbsp;
-&nbsp;@Configuration
-<b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ApplicationConfig {
-&nbsp;    private final UserRepository repository;
-&nbsp;    @Bean
-&nbsp;    public UserDetailsService userDetailsService(){
-<b class="fc">&nbsp;        return username -&gt; repository.findByEmail(username)</b>
-<b class="fc">&nbsp;                .orElseThrow(() -&gt;new UsernameNotFoundException(&quot;user not found&quot;));</b>
-&nbsp;
+&nbsp;    // ✅ Constructeur pour field + message (utile pour les validations simples)
+<b class="fc">&nbsp;    public ApiError(String field, String message) {</b>
+<b class="fc">&nbsp;        this.field = field;</b>
+<b class="fc">&nbsp;        this.message = message;</b>
+<b class="fc">&nbsp;        this.code = null;</b>
 &nbsp;    }
-&nbsp;
-&nbsp;    @Bean
-&nbsp;    public AuthenticationProvider authenticationProvider(){
-<b class="fc">&nbsp;        DaoAuthenticationProvider authProvider= new DaoAuthenticationProvider();</b>
-<b class="fc">&nbsp;        authProvider.setUserDetailsService(userDetailsService());</b>
-<b class="fc">&nbsp;        authProvider.setPasswordEncoder(passwordEncoder());</b>
-<b class="fc">&nbsp;        return authProvider;</b>
-&nbsp;    }
-&nbsp;    @Bean
-&nbsp;    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
-<b class="fc">&nbsp;        return config.getAuthenticationManager();</b>
-&nbsp;    }
-&nbsp;@Bean
-&nbsp;    public PasswordEncoder passwordEncoder() {
-<b class="fc">&nbsp;        return  new BCryptPasswordEncoder();</b>
-&nbsp;    }
-&nbsp;
-&nbsp;
 &nbsp;}
-&nbsp;
 </code>
 </pre>
 </div>
@@ -160,7 +167,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

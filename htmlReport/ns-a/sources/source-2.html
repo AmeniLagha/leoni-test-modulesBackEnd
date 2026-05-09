@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ProjetController</title>
+  <title>Coverage Report > TechnicalFileHistoryRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,64 +19,27 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.projet</a>
+    <a href="../index.html">com.example.security.fichierTechnique.TechnicalFileHistory</a>
 </div>
 
-<h1>Coverage Summary for Class: ProjetController (com.example.security.projet)</h1>
+<h1>Coverage Summary for Class: TechnicalFileHistoryRepository (com.example.security.fichierTechnique.TechnicalFileHistory)</h1>
 
 <table class="coverageStats">
 
 <tr>
   <th class="name">Class</th>
-<th class="coverageStat 
-">
-  Method, %
-</th>
-<th class="coverageStat 
-">
-  Line, %
-</th>
-</tr>
-<tr>
-  <td class="name">ProjetController</td>
-<td class="coverageStat">
-  <span class="percent">
-    12,5%
-  </span>
-  <span class="absValue">
-    (1/8)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    11,1%
-  </span>
-  <span class="absValue">
-    (1/9)
-  </span>
-</td>
 </tr>
   <tr>
-    <td class="name">ProjetController$$SpringCGLIB$$0</td>
+    <td class="name">TechnicalFileHistoryRepository$MockitoMock$ywPZsxZG</td>
+  </tr>
+  <tr>
+    <td class="name">TechnicalFileHistoryRepository$MockitoMock$ywPZsxZG$auxiliary$5ukvzFVC</td>
+  </tr>
+  <tr>
+    <td class="name">TechnicalFileHistoryRepository$MockitoMock$ywPZsxZG$auxiliary$cBCykVgJ</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
-<td class="coverageStat">
-  <span class="percent">
-    12,5%
-  </span>
-  <span class="absValue">
-    (1/8)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    11,1%
-  </span>
-  <span class="absValue">
-    (1/9)
-  </span>
-</td>
 </tr>
 </table>
 
@@ -85,65 +48,18 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;// ProjetController.java
-&nbsp;package com.example.security.projet;
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.fichierTechnique.TechnicalFileHistory;
 &nbsp;
-&nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.http.HttpStatus;
-&nbsp;import org.springframework.http.ResponseEntity;
-&nbsp;import org.springframework.security.access.prepost.PreAuthorize;
-&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
 &nbsp;import java.util.List;
 &nbsp;
-&nbsp;@RestController
-&nbsp;@RequestMapping(&quot;/api/v1/projets&quot;)
-<b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ProjetController {
+&nbsp;@Repository
+&nbsp;public interface TechnicalFileHistoryRepository extends JpaRepository&lt;TechnicalFileHistory, Long&gt; {
 &nbsp;
-&nbsp;    private final ProjetService projetService;
-&nbsp;
-&nbsp;    @GetMapping
-&nbsp;    public ResponseEntity&lt;List&lt;ProjetDto&gt;&gt; getAllProjets() {
-<b class="nc">&nbsp;        return ResponseEntity.ok(projetService.getAllProjets());</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @GetMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ProjetDto&gt; getProjetById(@PathVariable Long id) {
-<b class="nc">&nbsp;        return ResponseEntity.ok(projetService.getProjetById(id));</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @PostMapping
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ProjetDto&gt; createProjet(@RequestBody ProjetDto dto) {
-<b class="nc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(projetService.createProjet(dto));</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @PutMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ProjetDto&gt; updateProjet(@PathVariable Long id, @RequestBody ProjetDto dto) {
-<b class="nc">&nbsp;        return ResponseEntity.ok(projetService.updateProjet(id, dto));</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;Void&gt; deleteProjet(@PathVariable Long id) {
-<b class="nc">&nbsp;        projetService.deleteProjet(id);</b>
-<b class="nc">&nbsp;        return ResponseEntity.noContent().build();</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    // ProjetController.java - Ajouter cet endpoint
-&nbsp;    @GetMapping(&quot;/site/{siteName}&quot;)
-&nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
-&nbsp;    public ResponseEntity&lt;List&lt;ProjetDto&gt;&gt; getProjetsBySiteName(@PathVariable String siteName) {
-<b class="nc">&nbsp;        return ResponseEntity.ok(projetService.getProjetsBySiteName(siteName));</b>
-&nbsp;    }
-&nbsp;    // ProjetController.java - Ajouter cet endpoint
-&nbsp;    @GetMapping(&quot;/active&quot;)
-&nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
-&nbsp;    public ResponseEntity&lt;List&lt;ProjetDto&gt;&gt; getActiveProjets() {
-<b class="nc">&nbsp;        return ResponseEntity.ok(projetService.getActiveProjets());</b>
-&nbsp;    }
+&nbsp;    List&lt;TechnicalFileHistory&gt; findByTechnicalFileId(Long technicalFileId);
+&nbsp;    List&lt;TechnicalFileHistory&gt; findByTechnicalFileItemId(Long technicalFileItemId);
 &nbsp;}
 </code>
 </pre>
@@ -168,7 +84,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-01 14:00</div>
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
 </div>
 </body>
 </html>

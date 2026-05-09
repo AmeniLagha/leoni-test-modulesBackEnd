@@ -1,0 +1,159 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ComplianceRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.conformité</a>
+</div>
+
+<h1>Coverage Summary for Class: ComplianceRepository (com.example.security.conformité)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">ComplianceRepository$MockitoMock$bKeJQ0Jf</td>
+  </tr>
+  <tr>
+    <td class="name">ComplianceRepository$MockitoMock$bKeJQ0Jf$auxiliary$gt6FRA0j</td>
+  </tr>
+  <tr>
+    <td class="name">ComplianceRepository$MockitoMock$bKeJQ0Jf$auxiliary$OFTrvjkt</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.conformité;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetStatus;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface ComplianceRepository extends JpaRepository&lt;Compliance, Long&gt; {
+&nbsp;
+&nbsp;    List&lt;Compliance&gt; findByChargeSheetId(Long chargeSheetId);
+&nbsp;
+&nbsp;
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;SELECT c
+&nbsp;FROM Compliance c
+&nbsp;JOIN c.item i
+&nbsp;JOIN i.chargeSheet cs
+&nbsp;WHERE cs.project = :project
+&nbsp;AND cs.status = :status
+&nbsp;&quot;&quot;&quot;)
+&nbsp;    List&lt;Compliance&gt; findByProjectAndChargeSheetStatus(
+&nbsp;            String project,
+&nbsp;            ChargeSheetStatus status
+&nbsp;    );
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;    SELECT c
+&nbsp;    FROM Compliance c
+&nbsp;    JOIN c.item i
+&nbsp;    JOIN i.chargeSheet cs
+&nbsp;    WHERE cs.project = :project
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Compliance&gt; findByProject(String project);
+&nbsp;    // Ajoutez ces méthodes
+&nbsp;    List&lt;Compliance&gt; findByItemId(Long itemId);
+&nbsp;
+&nbsp;    List&lt;Compliance&gt; findByReceptionHistoryId(Long receptionHistoryId);
+&nbsp;
+&nbsp;    @Query(&quot;SELECT COUNT(c) FROM Compliance c WHERE c.item.id = :itemId&quot;)
+&nbsp;    int countByItemId(@Param(&quot;itemId&quot;) Long itemId);
+&nbsp;
+&nbsp;    @Query(&quot;&quot;&quot;
+&nbsp;    SELECT c
+&nbsp;    FROM Compliance c
+&nbsp;    JOIN c.item i
+&nbsp;    JOIN i.chargeSheet cs
+&nbsp;    WHERE cs.project = :project
+&nbsp;    AND cs.status IN :statuses
+&nbsp;    &quot;&quot;&quot;)
+&nbsp;    List&lt;Compliance&gt; findByProjectAndChargeSheetStatusIn(
+&nbsp;            String project,
+&nbsp;            List&lt;ChargeSheetStatus&gt; statuses
+&nbsp;    );
+&nbsp;
+&nbsp;
+&nbsp;    // 📊 NOUVELLES MÉTHODES POUR LES STATISTIQUES DE CONFORMITÉ
+&nbsp;
+&nbsp;    // Compter les conformités par mois pour un projet spécifique
+&nbsp;    @Query(value = &quot;&quot;&quot;
+&nbsp;    SELECT DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) as month, COUNT(c.id) as count 
+&nbsp;    FROM compliance c 
+&nbsp;    JOIN charge_sheet_item i ON c.charge_sheet_item_id = i.id 
+&nbsp;    JOIN charge_sheet cs ON i.charge_sheet_id = cs.id 
+&nbsp;    WHERE cs.project = ? 
+&nbsp;    GROUP BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) 
+&nbsp;    ORDER BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) DESC
+&nbsp;    &quot;&quot;&quot;, nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForProject(String project);
+&nbsp;
+&nbsp;    // Compter les conformités par mois pour tous les projets (Admin)
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) as month, COUNT(c.id) as count &quot; +
+&nbsp;            &quot;FROM compliance c &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(c.created_at, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForAllProjects();
+&nbsp;
+&nbsp;    @Query(&quot;SELECT c FROM Compliance c WHERE c.item.id = :itemId&quot;)
+&nbsp;    List&lt;Compliance&gt; findByChargeSheetItemId(@Param(&quot;itemId&quot;) Long itemId);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-08 13:30</div>
+</div>
+</body>
+</html>
