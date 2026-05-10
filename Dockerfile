@@ -20,30 +20,11 @@ WORKDIR /app
 
 RUN mkdir -p /app/uploads
 
-# ✅ ARG redéclaré APRÈS le FROM
-ARG SIGNOZ_ACCESS_TOKEN
-ARG SIGNOZ_ENDPOINT
-
-# ✅ Vérifier que le token est bien reçu
-RUN echo "Token reçu: ${SIGNOZ_ACCESS_TOKEN}"
-
-# ✅ Créer le fichier avec le token
-RUN echo "otel.service.name=leoni-backend" > /app/otel-agent.properties && \
-    echo "otel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443" >> /app/otel-agent.properties && \
-    echo "otel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN}" >> /app/otel-agent.properties && \
-    echo "otel.exporter.otlp.protocol=http/protobuf" >> /app/otel-agent.properties && \
-    echo "otel.traces.exporter=otlp" >> /app/otel-agent.properties && \
-    echo "otel.metrics.exporter=otlp" >> /app/otel-agent.properties && \
-    echo "otel.logs.exporter=otlp" >> /app/otel-agent.properties
-
-# ✅ Vérifier le contenu du fichier
-RUN cat /app/otel-agent.properties
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.31.0/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
 
 ENV SPRING_PROFILES_ACTIVE=docker
-ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.javaagent.configuration-file=/app/otel-agent.properties"
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# ✅ Le token vient des variables d'environnement Clever Cloud au runtime
+ENTRYPOINT ["sh", "-c", "java -Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.service.name=leoni-backend -Dotel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443 -Dotel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN} -Dotel.exporter.otlp.protocol=http/protobuf -Dotel.traces.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.logs.exporter=otlp -jar app.jar"]
