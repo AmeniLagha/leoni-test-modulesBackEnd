@@ -30,17 +30,15 @@ RUN echo "otel.service.name=leoni-backend" > /app/otel-agent.properties && \
     echo "otel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN}" >> /app/otel-agent.properties && \
     echo "otel.exporter.otlp.protocol=http/protobuf" >> /app/otel-agent.properties && \
     echo "otel.traces.exporter=otlp" >> /app/otel-agent.properties && \
-    echo "otel.metrics.exporter=none" >> /app/otel-agent.properties && \
-    echo "otel.logs.exporter=none" >> /app/otel-agent.properties
+    echo "otel.metrics.exporter=otlp" >> /app/otel-agent.properties && \
+    echo "otel.logs.exporter=otlp" >> /app/otel-agent.properties
 
-# Télécharger l'agent OpenTelemetry
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.31.0/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
-
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
 
 ENV SPRING_PROFILES_ACTIVE=docker
-ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.config=/app/otel-agent.properties"
+ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.javaagent.configuration-file=/app/otel-agent.properties"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
