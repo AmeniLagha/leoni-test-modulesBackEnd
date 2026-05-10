@@ -20,11 +20,14 @@ WORKDIR /app
 
 RUN mkdir -p /app/uploads
 
-# Récupérer le token depuis les build-args
+# ✅ ARG redéclaré APRÈS le FROM
 ARG SIGNOZ_ACCESS_TOKEN
 ARG SIGNOZ_ENDPOINT
 
-# Créer le fichier de configuration OTEL avec la bonne clé
+# ✅ Vérifier que le token est bien reçu
+RUN echo "Token reçu: ${SIGNOZ_ACCESS_TOKEN}"
+
+# ✅ Créer le fichier avec le token
 RUN echo "otel.service.name=leoni-backend" > /app/otel-agent.properties && \
     echo "otel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443" >> /app/otel-agent.properties && \
     echo "otel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN}" >> /app/otel-agent.properties && \
@@ -33,6 +36,8 @@ RUN echo "otel.service.name=leoni-backend" > /app/otel-agent.properties && \
     echo "otel.metrics.exporter=otlp" >> /app/otel-agent.properties && \
     echo "otel.logs.exporter=otlp" >> /app/otel-agent.properties
 
+# ✅ Vérifier le contenu du fichier
+RUN cat /app/otel-agent.properties
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.31.0/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
 

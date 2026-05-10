@@ -112,10 +112,10 @@ jobs:
       - name: Build Docker image with SigNoz
         run: |
           docker build --no-cache \
-            --build-arg SIGNOZ_ENDPOINT=${{ secrets.SIGNOZ_ENDPOINT }} \
-            --build-arg SIGNOZ_ACCESS_TOKEN=${{ secrets.SIGNOZ_ACCESS_TOKEN }} \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
-            -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} .
+          --build-arg SIGNOZ_ACCESS_TOKEN=${{ secrets.SIGNOZ_ACCESS_TOKEN }} \
+          --build-arg SIGNOZ_ENDPOINT=${{ secrets.SIGNOZ_ENDPOINT }} \
+          -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:latest \
+          -t ${{ secrets.DOCKER_USERNAME }}/leoni-backend:${{ github.sha }} .
 
       - name: Push Docker images
         run: |
