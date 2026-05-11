@@ -102,7 +102,7 @@ public class Claim {
     private String imagePath;
 
     @Lob
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = true)
     private String description;
 
     @Column(name = "priority", length = 20)
