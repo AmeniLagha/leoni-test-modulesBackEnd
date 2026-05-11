@@ -18,7 +18,10 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+
+# ✅ Créer un volume pour les uploads
+VOLUME /app/uploads
 
 ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.31.0/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
