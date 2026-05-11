@@ -50,7 +50,7 @@ public class User implements UserDetails {
         return role.getAuthorities();
     }
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "site_id", nullable = false)
+    @JoinColumn(name = "site_id", nullable = true)
     private Site site;
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

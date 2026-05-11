@@ -32,13 +32,13 @@ public class RegisterRequest {
     @NotNull(message = "Le matricule est obligatoire")
     private Integer matricule;
 
-    @NotBlank(message = "Le projet est obligatoire")
+
     private List<String> projets;
 
 
     @NotNull(message = "Le rôle est obligatoire")
     private Role role;
 
-    @NotNull(message = "Le site est obligatoire")
+
     private String siteName;
 }

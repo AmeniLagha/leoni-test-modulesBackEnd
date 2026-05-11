@@ -40,37 +40,63 @@ public class AuthenticationService {
     private final ProjetRepository projetRepository ;
 
     public AuthenticationResponse register(RegisterRequest request) {
+
         if (repository.existsByEmail(request.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
         }
-
-        // Vérifier si le matricule existe déjà
         if (repository.existsByMatricule(request.getMatricule())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Matricule déjà utilisé"); // ✅ Modifié
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Matricule déjà utilisé");
         }
-        Site site = siteRepository.findByName(request.getSiteName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site non trouvé: " + request.getSiteName()));
-        Set<Projet> projets = new HashSet<>();
-        for (String projetName : request.getProjets()) {
-            Projet projet = projetRepository.findByName(projetName)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Projet non trouvé: " + projetName));
-            projets.add(projet);
-        }
-        var user = User.builder()
+
+        User.UserBuilder userBuilder = User.builder()
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
                 .email(request.getEmail())
                 .matricule(request.getMatricule())
-                .projets(projets)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
-                .site(site)
-                .createdAt(LocalDateTime.now())
-                .build();
+                .createdAt(LocalDateTime.now());
+
+        // ✅ ADMIN : Pas besoin de site ni projets
+        if (request.getRole() == Role.ADMIN) {
+            userBuilder.site(null);
+            userBuilder.projets(new HashSet<>());
+        }
+        // ✅ Autres rôles : Validation OBLIGATOIRE
+        else {
+            // Validation SITE
+            if (request.getSiteName() == null || request.getSiteName().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Le site est obligatoire pour le rôle: " + request.getRole());
+            }
+
+            Site site = siteRepository.findByName(request.getSiteName())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Site non trouvé: " + request.getSiteName()));
+            userBuilder.site(site);
+
+            // Validation PROJETS
+            if (request.getProjets() == null || request.getProjets().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Au moins un projet est obligatoire pour le rôle: " + request.getRole());
+            }
+
+            Set<Projet> projets = new HashSet<>();
+            for (String projetName : request.getProjets()) {
+                Projet projet = projetRepository.findByName(projetName)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Projet non trouvé: " + projetName));
+                projets.add(projet);
+            }
+            userBuilder.projets(projets);
+        }
+
+        var user = userBuilder.build();
         var savedUser = repository.save(user);
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
         saveUserToken(savedUser, jwtToken);
+
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
