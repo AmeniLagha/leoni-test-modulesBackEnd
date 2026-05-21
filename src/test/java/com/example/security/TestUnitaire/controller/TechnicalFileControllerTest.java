@@ -99,6 +99,7 @@ class TechnicalFileControllerTest {
     private ChargeSheetItem testItem;
     private TechnicalFile testTechnicalFile;
     private TechnicalFileItem testTechnicalFileItem;
+    private TechnicalFileService testTechnicalFileService;
 
     private String uniqueId;
 
@@ -473,5 +474,126 @@ class TechnicalFileControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").exists());
         // Ne vérifie pas l'existence de firstVersion car peut être vide
+    }
+    // ==================== TESTS POUR ROLE MP ====================
+
+    @Test
+    void validateItem_AsMp_ShouldValidateAfterMc() throws Exception {
+        // Créer un item validé par MC
+        TechnicalFileItem preValidatedItem = TechnicalFileItem.builder()
+                .technicalFile(testTechnicalFile)
+                .chargeSheetItem(testItem)
+                .technicianName("Pre Validated")
+                .position("Position X")
+                .validationStatus(TechnicalFileItemStatus.VALIDATED_MC)
+                .createdBy(ppUser.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+        preValidatedItem = technicalFileItemRepository.save(preValidatedItem);
+
+        testTechnicalFile.getTechnicalFileItems().add(preValidatedItem);
+        technicalFileRepository.save(testTechnicalFile);
+
+        mockMvc.perform(put("/api/v1/technical-files/items/" + preValidatedItem.getId() + "/validate")
+                        .header("Authorization", "Bearer " + mpToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Item validé avec succès par MP"))
+                .andExpect(jsonPath("$.data.validationStatus").value("VALIDATED_MP"));
+    }
+    // ==================== TESTS AVEC ID INVALIDE ====================
+
+    @Test
+    void getTechnicalFileById_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(get("/api/v1/technical-files/99999")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().is5xxServerError())  // ← 500 au lieu de 404
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Technical file not found"));
+    }
+
+    @Test
+    void getTechnicalFileItem_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(get("/api/v1/technical-files/items/99999")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().is5xxServerError())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void updateTechnicalFileItem_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        TechnicalFileDto.UpdateItemDto dto = TechnicalFileDto.UpdateItemDto.builder()
+                .technicianName("Updated")
+                .build();
+
+        mockMvc.perform(put("/api/v1/technical-files/items/99999")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void deleteTechnicalFileItem_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(delete("/api/v1/technical-files/items/99999")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void validateItem_WithInvalidId_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(put("/api/v1/technical-files/items/99999/validate")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().is5xxServerError());
+    }
+    // ==================== CAN VALIDATE POUR DIFFÉRENTS RÔLES ====================
+
+    @Test
+    void canValidateItem_AsMc_ShouldReturnFalseWhenStatusIsDraft() throws Exception {
+        mockMvc.perform(get("/api/v1/technical-files/items/" + testTechnicalFileItem.getId() + "/can-validate")
+                        .header("Authorization", "Bearer " + mcToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(false));
+    }
+    @Test
+    void addItemToTechnicalFile_WithInvalidTechnicalFileId_ShouldReturnNotFound() throws Exception {
+        TechnicalFileDto.AddItemDto dto = TechnicalFileDto.AddItemDto.builder()
+                .chargeSheetItemId(testItem.getId())
+                .technicianName("New Tech")
+                .build();
+
+        mockMvc.perform(post("/api/v1/technical-files/99999/items")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void addItemToTechnicalFile_WithInvalidItemId_ShouldReturnNotFound() throws Exception {
+        TechnicalFileDto.AddItemDto dto = TechnicalFileDto.AddItemDto.builder()
+                .chargeSheetItemId(99999L)
+                .technicianName("New Tech")
+                .build();
+
+        mockMvc.perform(post("/api/v1/technical-files/" + testTechnicalFile.getId() + "/items")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
+    }
+    @Test
+    void createTechnicalFile_WithEmptyItems_ShouldReturnBadRequest() throws Exception {
+        TechnicalFileDto.CreateDto dto = TechnicalFileDto.CreateDto.builder()
+                .reference("TF-002_" + uniqueId)
+                .items(List.of())  // Liste vide
+                .build();
+
+        mockMvc.perform(post("/api/v1/technical-files")
+                        .header("Authorization", "Bearer " + ppToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
     }
 }

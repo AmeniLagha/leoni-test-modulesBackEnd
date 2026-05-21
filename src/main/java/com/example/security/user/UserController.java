@@ -16,6 +16,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur REST pour la gestion des utilisateurs.
+ * <p>
+ * Ce contrôleur expose les endpoints permettant de gérer les comptes utilisateurs,
+ * de récupérer les informations de l'utilisateur courant, de réinitialiser les mots
+ * de passe et de gérer les codes de vérification.
+ * </p>
+ *
+ * <p><strong>Fonctionnalités principales :</strong></p>
+ * <ul>
+ *     <li>Liste des utilisateurs (réservé ADMIN)</li>
+ *     <li>Informations de l'utilisateur courant (/me)</li>
+ *     <li>Création, modification, suppression d'utilisateurs (ADMIN)</li>
+ *     <li>Réinitialisation de mot de passe (forgot-password, reset-password)</li>
+ *     <li>Vérification par code de vérification (send-verification-code, verify-code)</li>
+ *     <li>Validation de token de réinitialisation</li>
+ *     <li>Changement de mot de passe par l'administrateur</li>
+ * </ul>
+ *
+ * <p><strong>Sécurité :</strong>
+ * La plupart des endpoints sont protégés par des annotations {@code @PreAuthorize}
+ * pour restreindre l'accès selon les rôles et permissions.</p>
+ *
+ * @author LAGHA AMENI
+ * @version 1.0
+ * @see UserService
+ * @see UserRepository
+ * @see VerificationCodeService
+ * @since Sprint 2
+ */
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @Tag(name = "Users", description = "Gestion des utilisateurs, récupération info, réinitialisation mot de passe et codes de vérification")
@@ -26,6 +56,24 @@ public class UserController {
     private final UserService service;
     private final UserRepository repository;
     private final VerificationCodeService verificationCodeService;
+    // ============================================================
+    // ENDPOINTS - LISTE ET INFORMATIONS UTILISATEURS
+    // ============================================================
+
+    /**
+     * Récupère la liste de tous les utilisateurs avec leurs permissions.
+     * <p>
+     * Endpoint réservé aux administrateurs. Retourne une liste d'objets
+     * {@link UserDto} contenant les informations de chaque utilisateur
+     * ainsi que leurs permissions associées.
+     * </p>
+     *
+     * @return ResponseEntity contenant une {@link ApiResponse} avec la liste
+     *         des utilisateurs et leurs permissions
+     *
+     * @see UserDto
+     * @see Permission
+     */
     @GetMapping
     @Operation(summary = "Lister tous les utilisateurs", description = "Récupère tous les utilisateurs avec leurs permissions")
     @PreAuthorize("hasAuthority('admin:readuser')")
@@ -38,7 +86,20 @@ public class UserController {
         );
         return ResponseEntity.ok(response);
     }
-
+    /**
+     * Récupère les informations de l'utilisateur actuellement connecté.
+     * <p>
+     * Cet endpoint retourne les informations détaillées de l'utilisateur
+     * courant, y compris son identité, son site, son rôle et la liste
+     * de ses permissions. Accessible à tout utilisateur authentifié.
+     * </p>
+     *
+     * @return ResponseEntity contenant une {@link ApiResponse} avec les
+     *         informations de l'utilisateur connecté (id, nom, email,
+     *         matricule, site, rôle, permissions, dates de création/modification)
+     *
+     * @throws RuntimeException si l'utilisateur n'est pas trouvé en base
+     */
     @GetMapping("/me")
     @Operation(summary = "Infos utilisateur courant", description = "Récupère les informations de l'utilisateur connecté")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser() {
@@ -77,7 +138,21 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // --- Supprimer un utilisateur ---
+    // ============================================================
+    // ENDPOINTS - GESTION DES UTILISATEURS (CRUD)
+    // ============================================================
+
+    /**
+     * Supprime un utilisateur par son identifiant.
+     * <p>
+     * Endpoint réservé aux administrateurs. Supprime définitivement
+     * l'utilisateur de la base de données.
+     * </p>
+     *
+     * @param id L'identifiant de l'utilisateur à supprimer
+     * @return ResponseEntity contenant une {@link ApiResponse} indiquant
+     *         le succès ou l'échec de l'opération
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un utilisateur", description = "Supprime un utilisateur par ID (ADMIN uniquement)")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Integer id) {
@@ -94,7 +169,18 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // --- Mettre à jour un utilisateur ---
+    /**
+     * Met à jour les informations d'un utilisateur.
+     * <p>
+     * Endpoint réservé aux administrateurs. Permet de modifier les
+     * informations d'un utilisateur existant.
+     * </p>
+     *
+     * @param id L'identifiant de l'utilisateur à modifier
+     * @param userDto Les nouvelles informations de l'utilisateur
+     * @return ResponseEntity contenant une {@link ApiResponse} avec
+     *         les informations mises à jour de l'utilisateur
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Modifier un utilisateur", description = "Met à jour les informations d'un utilisateur par ID (ADMIN uniquement)")
     @PutMapping("/{id}")
@@ -114,8 +200,24 @@ public class UserController {
         );
         return ResponseEntity.ok(response);
     }
-    // UserController.java - Modifier getProjectEmails()
+    // ============================================================
+    // ENDPOINTS - EMAILS PAR PROJET ET SITE
+    // ============================================================
 
+    /**
+     * Récupère les adresses email des utilisateurs du même projet.
+     * <p>
+     * Cette méthode est utilisée pour les notifications par email.
+     * Le comportement varie selon le rôle de l'utilisateur courant :
+     * <ul>
+     *     <li>ADMIN : récupère tous les emails de tous les utilisateurs</li>
+     *     <li>Autres rôles : récupère les emails des utilisateurs du même projet</li>
+     * </ul>
+     * </p>
+     *
+     * @return ResponseEntity contenant une {@link ApiResponse} avec la liste
+     *         des adresses email
+     */
     @GetMapping("/project-emails")
     @Operation(summary = "Emails du projet", description = "Récupère les emails des utilisateurs selon le projet et le rôle de l'utilisateur courant")
     public ResponseEntity<ApiResponse<List<String>>> getProjectEmails() {
@@ -148,7 +250,16 @@ public class UserController {
         );
         return ResponseEntity.ok(response);
     }
-
+    /**
+     * Récupère les adresses email des utilisateurs filtrés par projet et site.
+     * <p>
+     * Cette méthode combine deux filtres : le projet et le site de l'utilisateur
+     * courant. Elle est utilisée pour les notifications ciblées.
+     * </p>
+     *
+     * @return ResponseEntity contenant une {@link ApiResponse} avec la liste
+     *         des adresses email correspondant aux critères
+     */
     @GetMapping("/project-site-emails")
     public ResponseEntity<ApiResponse<List<String>>> getEmailsByProjectAndSite() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -180,7 +291,22 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // --- Réinitialisation mot de passe ---
+    // ============================================================
+    // ENDPOINTS - RÉINITIALISATION MOT DE PASSE
+    // ============================================================
+
+    /**
+     * Demande une réinitialisation de mot de passe.
+     * <p>
+     * Envoie un email contenant un lien de réinitialisation à l'adresse
+     * spécifiée si elle existe dans le système.
+     * </p>
+     *
+     * @param request DTO contenant l'adresse email de l'utilisateur
+     * @return ResponseEntity contenant une {@link ApiResponse} avec un message
+     *         de confirmation (même si l'email n'existe pas, pour des raisons
+     *         de sécurité)
+     */
     @PostMapping("/forgot-password")
     @Operation(summary = "Demander réinitialisation mot de passe", description = "Envoie un email pour réinitialiser le mot de passe")
     public ResponseEntity<ApiResponse<Map<String, String>>> forgotPassword(@RequestBody PasswordResetRequestDto request) {
@@ -203,6 +329,17 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    /**
+     * Réinitialise le mot de passe avec un token de validation.
+     * <p>
+     * Cette méthode est appelée après que l'utilisateur a cliqué sur le lien
+     * reçu par email et a saisi son nouveau mot de passe.
+     * </p>
+     *
+     * @param request DTO contenant l'email, le nouveau mot de passe et le token
+     * @return ResponseEntity contenant une {@link ApiResponse} indiquant le succès
+     *         ou l'échec de la réinitialisation
+     */
     @PostMapping("/reset-password")
     @Operation(summary = "Réinitialiser mot de passe", description = "Réinitialise le mot de passe via un token")
     public ResponseEntity<ApiResponse<Map<String, String>>> resetPassword(@RequestBody PasswordResetDto request) {
@@ -233,8 +370,20 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    // ============================================================
+    // ENDPOINTS - VALIDATION D'EMAIL ET MATRICULE
+    // ============================================================
+
     /**
-     * Vérifier si un email existe
+     * Vérifie si une adresse email existe déjà dans le système.
+     * <p>
+     * Endpoint utilisé par le frontend pour valider en temps réel
+     * l'unicité de l'email lors de la création ou modification d'un utilisateur.
+     * </p>
+     *
+     * @param email L'adresse email à vérifier (paramètre de requête)
+     * @return ResponseEntity contenant une {@link ApiResponse} avec un booléen
+     *         {@code true} si l'email existe, {@code false} sinon
      */
     @GetMapping("/check-email")
     @Operation(summary = "Vérifier si email existe", description = "Retourne true si l'email existe dans le système")
@@ -250,8 +399,17 @@ public class UserController {
         );
         return ResponseEntity.ok(response);
     }
-// UserController.java - Ajouter cette méthode
-
+    /**
+     * Vérifie si un matricule existe déjà dans le système.
+     * <p>
+     * Endpoint utilisé par le frontend pour valider en temps réel
+     * l'unicité du matricule lors de la création ou modification d'un utilisateur.
+     * </p>
+     *
+     * @param matricule Le matricule à vérifier (paramètre de requête)
+     * @return ResponseEntity contenant une {@link ApiResponse} avec un booléen
+     *         {@code true} si le matricule existe, {@code false} sinon
+     */
     @GetMapping("/check-matricule")
     @Operation(summary = "Vérifier si matricule existe", description = "Retourne true si le matricule existe déjà")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkMatriculeExists(@RequestParam Integer matricule) {
@@ -266,12 +424,20 @@ public class UserController {
         );
         return ResponseEntity.ok(response);
     }
-    // --- Gestion code de vérification ---
+    // ============================================================
+    // ENDPOINTS - CODE DE VÉRIFICATION
+    // ============================================================
+
     /**
-     * Envoyer un code de vérification par email
-     */
-    /**
-     * Vérifier l'email et envoyer un code de vérification
+     * Envoie un code de vérification par email.
+     * <p>
+     * Cette méthode est utilisée pour la vérification en deux étapes
+     * avant l'envoi du lien de réinitialisation.
+     * </p>
+     *
+     * @param request Map contenant l'adresse email (clé "email")
+     * @return ResponseEntity contenant une {@link ApiResponse} indiquant
+     *         si le code a bien été envoyé
      */
     @PostMapping("/send-verification-code")
     @Operation(summary = "Envoyer code de vérification", description = "Envoie un code à l'email pour validation")
@@ -299,7 +465,15 @@ public class UserController {
     }
 
     /**
-     * Vérifier le code saisi par l'utilisateur
+     * Vérifie le code saisi par l'utilisateur.
+     * <p>
+     * Cette méthode valide le code de vérification envoyé par email
+     * avant de permettre la réinitialisation du mot de passe.
+     * </p>
+     *
+     * @param request Map contenant l'adresse email (clé "email") et le code (clé "code")
+     * @return ResponseEntity contenant une {@link ApiResponse} avec un booléen
+     *         {@code true} si le code est valide, {@code false} sinon
      */
     @PostMapping("/verify-code")
     @Operation(summary = "Vérifier code", description = "Vérifie le code saisi par l'utilisateur")
@@ -319,7 +493,15 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     /**
-     * Envoyer le lien de réinitialisation (après vérification du code)
+     * Envoie le lien de réinitialisation après vérification du code.
+     * <p>
+     * Cette méthode est appelée après que l'utilisateur a validé son code
+     * de vérification. Elle envoie alors le vrai lien de réinitialisation.
+     * </p>
+     *
+     * @param request Map contenant l'adresse email (clé "email")
+     * @return ResponseEntity contenant une {@link ApiResponse} indiquant
+     *         si le lien a bien été envoyé
      */
     @PostMapping("/send-reset-link")
     @Operation(summary = "Envoyer lien réinitialisation", description = "Envoie le lien de réinitialisation après vérification du code")
@@ -347,7 +529,22 @@ public class UserController {
         }
     }
 
+    // ============================================================
+    // ENDPOINTS - VALIDATION DE TOKEN
+    // ============================================================
 
+    /**
+     * Valide un token de réinitialisation de mot de passe.
+     * <p>
+     * Cette méthode vérifie si un token de réinitialisation est valide
+     * (non expiré, non utilisé, existant). Elle est utilisée par le frontend
+     * pour vérifier le lien avant d'afficher le formulaire de réinitialisation.
+     * </p>
+     *
+     * @param token Le token de réinitialisation à valider (paramètre de requête)
+     * @return ResponseEntity contenant une {@link ApiResponse} avec un booléen
+     *         {@code true} si le token est valide, {@code false} sinon
+     */
     @GetMapping("/validate-reset-token")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> validateResetToken(@RequestParam String token) {
         try {
@@ -372,7 +569,23 @@ public class UserController {
         }
     }
 
+    // ============================================================
+    // ENDPOINTS - CHANGEMENT DE MOT DE PASSE PAR ADMIN
+    // ============================================================
 
+    /**
+     * Change le mot de passe d'un utilisateur (réservé ADMIN).
+     * <p>
+     * Permet à un administrateur de modifier le mot de passe d'un utilisateur
+     * sans connaître l'ancien mot de passe. Utile pour le support ou le
+     * déblocage de comptes.
+     * </p>
+     *
+     * @param id L'identifiant de l'utilisateur concerné
+     * @param request Map contenant le nouveau mot de passe (clé "newPassword")
+     * @return ResponseEntity contenant une {@link ApiResponse} indiquant
+     *         le succès ou l'échec de l'opération
+     */
     @PutMapping("/{id}/change-password")
     public ResponseEntity<ApiResponse<Map<String, Object>>> changeUserPassword(
             @PathVariable Integer id,

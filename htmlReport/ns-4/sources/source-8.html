@@ -56,26 +56,26 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    80%
+    83,3%
   </span>
   <span class="absValue">
-    (4/5)
+    (5/6)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    71,4%
+    61,5%
   </span>
   <span class="absValue">
-    (10/14)
+    (16/26)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    90%
+    69,8%
   </span>
   <span class="absValue">
-    (27/30)
+    (30/43)
   </span>
 </td>
 </tr>
@@ -93,6 +93,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import org.springframework.stereotype.Service;
 &nbsp;import org.springframework.web.multipart.MultipartFile;
 &nbsp;
+&nbsp;import jakarta.annotation.PostConstruct;
 &nbsp;import java.io.IOException;
 &nbsp;import java.nio.file.Files;
 &nbsp;import java.nio.file.Path;
@@ -105,14 +106,25 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;    @Value(&quot;${file.upload-dir:uploads}&quot;)
 &nbsp;    private String uploadDir;
 &nbsp;
+&nbsp;    @PostConstruct
+&nbsp;    public void init() {
+&nbsp;        try {
+<b class="fc">&nbsp;            Path uploadPath = Paths.get(uploadDir);</b>
+<b class="pc">&nbsp;            if (!Files.exists(uploadPath)) {</b>
+<b class="nc">&nbsp;                Files.createDirectories(uploadPath);</b>
+<b class="nc">&nbsp;                System.out.println(&quot;✅ Dossier d&#39;upload créé: &quot; + uploadPath.toAbsolutePath());</b>
+&nbsp;            }
+<b class="fc">&nbsp;            System.out.println(&quot;📁 Dossier d&#39;upload configuré: &quot; + uploadPath.toAbsolutePath());</b>
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur création dossier upload: &quot; + e.getMessage());</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
 &nbsp;    /**
-&nbsp;     * Sauvegarde une image dans un dossier spécifique
-&nbsp;     * @param file Le fichier à sauvegarder
-&nbsp;     * @param subFolder Le sous-dossier (ex: &quot;claims&quot;, &quot;charge-sheets&quot;, &quot;technical-files&quot;)
-&nbsp;     * @return Le chemin complet du fichier
+&nbsp;     * Sauvegarde une image - Fonctionne en DEV et PROD
 &nbsp;     */
 &nbsp;    public String saveImage(MultipartFile file, String subFolder) throws IOException {
-&nbsp;        // Créer le chemin complet: uploads/claims/
+&nbsp;        // Créer le dossier spécifique
 <b class="fc">&nbsp;        Path uploadPath = Paths.get(uploadDir, subFolder);</b>
 <b class="fc">&nbsp;        if (!Files.exists(uploadPath)) {</b>
 <b class="fc">&nbsp;            Files.createDirectories(uploadPath);</b>
@@ -120,7 +132,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;
 &nbsp;        // Générer un nom de fichier unique
 <b class="fc">&nbsp;        String originalFilename = file.getOriginalFilename();</b>
-<b class="pc">&nbsp;        String fileExtension = originalFilename != null ?</b>
+<b class="pc">&nbsp;        String fileExtension = originalFilename != null &amp;&amp; originalFilename.contains(&quot;.&quot;) ?</b>
 <b class="fc">&nbsp;                originalFilename.substring(originalFilename.lastIndexOf(&quot;.&quot;)) : &quot;.jpg&quot;;</b>
 <b class="fc">&nbsp;        String filename = UUID.randomUUID().toString() + fileExtension;</b>
 &nbsp;
@@ -128,42 +140,64 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="fc">&nbsp;        Path filePath = uploadPath.resolve(filename);</b>
 <b class="fc">&nbsp;        Files.copy(file.getInputStream(), filePath);</b>
 &nbsp;
-&nbsp;        // Retourner le chemin relatif
-<b class="fc">&nbsp;        return uploadDir + &quot;/&quot; + subFolder + &quot;/&quot; + filename;</b>
+&nbsp;        // ✅ Retourner le chemin RELATIF (sans uploadDir) - fonctionne partout
+<b class="fc">&nbsp;        return subFolder + &quot;/&quot; + filename;</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    public byte[] getImage(String fullPath) throws IOException {
-&nbsp;        // fullPath doit être comme &quot;claims/filename.jpg&quot;
-&nbsp;        // Nettoyer le chemin au cas où
-<b class="fc">&nbsp;        String cleanPath = fullPath;</b>
+&nbsp;    /**
+&nbsp;     * Récupère une image - Fonctionne en DEV et PROD
+&nbsp;     */
+&nbsp;    public byte[] getImage(String storedPath) throws IOException {
+&nbsp;        // storedPath est comme &quot;charge-sheets/uuid.jpg&quot;
+&nbsp;
+&nbsp;        // Nettoyer le chemin (supprimer les préfixes indésirables)
+<b class="fc">&nbsp;        String cleanPath = storedPath;</b>
+&nbsp;
+&nbsp;        // Supprimer &quot;uploads/&quot; si présent (anciennes données)
+<b class="fc">&nbsp;        if (cleanPath.startsWith(&quot;uploads/&quot;)) {</b>
+<b class="fc">&nbsp;            cleanPath = cleanPath.substring(8);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Supprimer &quot;./&quot; si présent
 <b class="pc">&nbsp;        if (cleanPath.startsWith(&quot;./&quot;)) {</b>
 <b class="nc">&nbsp;            cleanPath = cleanPath.substring(2);</b>
 &nbsp;        }
-<b class="fc">&nbsp;        if (cleanPath.startsWith(&quot;uploads/&quot;)) {</b>
-<b class="fc">&nbsp;            cleanPath = cleanPath.substring(8); // enlever &quot;uploads/&quot;</b>
+&nbsp;
+&nbsp;        // Supprimer &quot;/app/uploads/&quot; si présent (pour les cas particuliers)
+<b class="pc">&nbsp;        if (cleanPath.startsWith(&quot;/app/uploads/&quot;)) {</b>
+<b class="nc">&nbsp;            cleanPath = cleanPath.substring(12);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        // Construire le chemin complet
 <b class="fc">&nbsp;        Path filePath = Paths.get(uploadDir, cleanPath);</b>
 &nbsp;
-<b class="fc">&nbsp;        System.out.println(&quot;=== DÉBOGAGE IMAGE ===&quot;);</b>
-<b class="fc">&nbsp;        System.out.println(&quot;fullPath original: &quot; + fullPath);</b>
-<b class="fc">&nbsp;        System.out.println(&quot;cleanPath: &quot; + cleanPath);</b>
-<b class="fc">&nbsp;        System.out.println(&quot;Chemin complet: &quot; + filePath.toAbsolutePath());</b>
-<b class="fc">&nbsp;        System.out.println(&quot;Fichier existe: &quot; + Files.exists(filePath));</b>
+&nbsp;        // Logs de débogage (utiles pour identifier les problèmes)
+<b class="pc">&nbsp;        if (System.getProperty(&quot;spring.profiles.active&quot;, &quot;&quot;).contains(&quot;docker&quot;) ||</b>
+<b class="pc">&nbsp;                System.getenv(&quot;SPRING_PROFILES_ACTIVE&quot;) != null) {</b>
+<b class="nc">&nbsp;            System.out.println(&quot;📸 [DEBUG] storedPath: &quot; + storedPath);</b>
+<b class="nc">&nbsp;            System.out.println(&quot;📸 [DEBUG] cleanPath: &quot; + cleanPath);</b>
+<b class="nc">&nbsp;            System.out.println(&quot;📸 [DEBUG] uploadDir: &quot; + uploadDir);</b>
+<b class="nc">&nbsp;            System.out.println(&quot;📸 [DEBUG] fullPath: &quot; + filePath.toAbsolutePath());</b>
+<b class="nc">&nbsp;            System.out.println(&quot;📸 [DEBUG] fileExists: &quot; + Files.exists(filePath));</b>
+&nbsp;        }
 &nbsp;
 <b class="fc">&nbsp;        if (!Files.exists(filePath)) {</b>
-<b class="fc">&nbsp;            throw new IOException(&quot;Fichier non trouvé: &quot; + filePath.toAbsolutePath());</b>
+<b class="fc">&nbsp;            throw new IOException(&quot;Image non trouvée: &quot; + filePath.toAbsolutePath());</b>
 &nbsp;        }
 &nbsp;
 <b class="fc">&nbsp;        return Files.readAllBytes(filePath);</b>
 &nbsp;    }
+&nbsp;
 &nbsp;    /**
 &nbsp;     * Supprime une image
 &nbsp;     */
-&nbsp;    public void deleteImage(String fullPath) throws IOException {
-<b class="pc">&nbsp;        if (fullPath != null &amp;&amp; !fullPath.isEmpty()) {</b>
-<b class="fc">&nbsp;            Path filePath = Paths.get(fullPath);</b>
+&nbsp;    public void deleteImage(String storedPath) throws IOException {
+<b class="pc">&nbsp;        if (storedPath != null &amp;&amp; !storedPath.isEmpty()) {</b>
+<b class="fc">&nbsp;            String cleanPath = storedPath;</b>
+<b class="pc">&nbsp;            if (cleanPath.startsWith(&quot;uploads/&quot;)) {</b>
+<b class="nc">&nbsp;                cleanPath = cleanPath.substring(8);</b>
+&nbsp;            }
+<b class="fc">&nbsp;            Path filePath = Paths.get(uploadDir, cleanPath);</b>
 <b class="fc">&nbsp;            Files.deleteIfExists(filePath);</b>
 &nbsp;        }
 &nbsp;    }
@@ -175,7 +209,6 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;        Path filePath = Paths.get(uploadDir, subFolder, filename);</b>
 <b class="nc">&nbsp;        return Files.readAllBytes(filePath);</b>
 &nbsp;    }
-&nbsp;
 &nbsp;}
 </code>
 </pre>
@@ -200,7 +233,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

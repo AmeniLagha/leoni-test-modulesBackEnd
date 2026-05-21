@@ -389,5 +389,31 @@ class ComplianceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
+    @Test
+    void createForItem_WhenQuantityIsZero_ShouldReturnEmpty() throws Exception {
+        testItem.setQuantityOfTestModules(0);
+        itemRepository.save(testItem);
 
+        mockMvc.perform(post("/api/v1/compliance/create-for-item/" + testItem.getId())
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+    @Test
+    void prepareComplianceForItem_WithNoReceptions_ShouldReturnEmpty() throws Exception {
+        // Créer un item sans réception associée
+        ChargeSheetItem newItem = ChargeSheetItem.builder()
+                .chargeSheet(testChargeSheet)
+                .itemNumber("2_" + uniqueId)
+                .quantityOfTestModules(5)
+                .build();
+        newItem = itemRepository.save(newItem);
+
+        mockMvc.perform(get("/api/v1/compliance/prepare/" + newItem.getId())
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
 }

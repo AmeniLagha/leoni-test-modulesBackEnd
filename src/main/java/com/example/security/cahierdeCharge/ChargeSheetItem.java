@@ -11,6 +11,39 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Entité représentant un item technique (connecteur) dans un cahier des charges.
+ * <p>
+ * Cette classe modélise un connecteur ou composant technique faisant partie
+ * d'un cahier des charges. Chaque item contient plus de 150 attributs techniques
+ * organisés en catégories : identification, critères de test standard,
+ * équipements de test, système de test, prix et métadonnées.
+ * </p>
+ *
+ * <p><strong>Catégories d'attributs :</strong></p>
+ * <ul>
+ *     <li><strong>Identification</strong> : Numéro d'item, référence, quantité, image</li>
+ *     <li><strong>Critères de test standard</strong> : Tests de boîtier, fixation, électriques</li>
+ *     <li><strong>Équipements de test</strong> : PTU, GTU, module LED, etc.</li>
+ *     <li><strong>Système de test</strong> : Table LEONI, rails, plaques, etc.</li>
+ *     <li><strong>Prix</strong> : Prix unitaire et prix total</li>
+ *     <li><strong>Métadonnées</strong> : Statut, audit (création/modification)</li>
+ * </ul>
+ *
+ * <p><strong>Relations :</strong></p>
+ * <ul>
+ *     <li>ManyToOne avec {@link ChargeSheet} : un item appartient à un cahier</li>
+ *     <li>ManyToOne avec {@link TechnicalFile} : un item peut être dans un dossier technique</li>
+ *     <li>OneToMany avec {@link ReceptionHistory} : historique des réceptions</li>
+ * </ul>
+ *
+ * @author LAGHA AMENI
+ * @version 1.0
+ * @see ChargeSheet
+ * @see TechnicalFile
+ * @see ReceptionHistory
+ * @since Sprint 5
+ */
 @Entity
 @Table(name = "charge_sheet_item")
 @Data
@@ -18,20 +51,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChargeSheetItem {
-
+    /**
+     * Identifiant unique de l'item technique.
+     * <p>
+     * Clé primaire générée automatiquement par la base de données.
+     * </p>
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "charge_sheet_id", nullable = false)
-    @JsonIgnore
-    private ChargeSheet chargeSheet;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "technical_file_id", nullable = true)
-    @JsonIgnore
-    private TechnicalFile technicalFile;
-
     // === ITEM IDENTIFICATION ===
     @Column(name = "item_number", length = 10)
     private String itemNumber;
@@ -376,6 +404,15 @@ public class ChargeSheetItem {
 
     @Column(name = "updated_at")
     private LocalDate updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "charge_sheet_id", nullable = false)
+    @JsonIgnore
+    private ChargeSheet chargeSheet;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "technical_file_id", nullable = true)
+    @JsonIgnore
+    private TechnicalFile technicalFile;
     @OneToMany(mappedBy = "item")
     @JsonIgnore
     private List<ReceptionHistory> receptionHistories;

@@ -15,7 +15,44 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
-
+/**
+ * Service pour la gestion des cahiers des charges.
+ * <p>
+ * Cette classe contient la logique métier pour l'ensemble des opérations
+ * liées aux cahiers des charges : création, modification, suppression,
+ * gestion des items techniques, workflow de validation, gestion des réceptions,
+ * statistiques et notifications.
+ * </p>
+ *
+ * <p><strong>Fonctionnalités principales :</strong></p>
+ * <ul>
+ *     <li><strong>CRUD des cahiers</strong> : Création, lecture, modification, suppression</li>
+ *     <li><strong>Gestion des items</strong> : Ajout, modification technique, suppression</li>
+ *     <li><strong>Workflow de validation</strong> : Validation ING, PT, retour à ING</li>
+ *     <li><strong>Gestion des réceptions</strong> : Préparation, confirmation partielle/complète, historique</li>
+ *     <li><strong>Statistiques</strong> : Dashboard, variations mensuelles, statistiques de réception</li>
+ *     <li><strong>Notifications</strong> : Emails automatiques pour toutes les actions importantes</li>
+ * </ul>
+ *
+ * <p><strong>Workflow des statuts :</strong></p>
+ * <pre>
+ * DRAFT → VALIDATED_ING → TECH_FILLED → VALIDATED_PT → SENT_TO_SUPPLIER → RECEIVED_FROM_SUPPLIER → COMPLETED
+ *    ↑_______________________|
+ *    (retour à DRAFT possible par PT)
+ * </pre>
+ *
+ * <p><strong>Isolation des données :</strong>
+ * Les méthodes respectent l'isolation multi-sites : un utilisateur non-ADMIN
+ * ne voit que les cahiers de son site et de ses projets associés.</p>
+ *
+ * @author LAGHA AMENI
+ * @version 1.0
+ * @see ChargeSheet
+ * @see ChargeSheetItem
+ * @see ChargeSheetRepository
+ * @see GlobalNotificationService
+ * @since Sprint 4
+ */
 @Service
 @RequiredArgsConstructor
 public class ChargeSheetService {
@@ -23,12 +60,26 @@ public class ChargeSheetService {
     private final ChargeSheetRepository repository;
     private final ChargeSheetItemRepository itemRepository;
     private final GlobalNotificationService notificationService;
-    private final UserRepository userRepository;
-    // Ajoutez cette dépendance
     private final ReceptionHistoryRepository receptionHistoryRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
+    // ============================================================
+    // CRÉATION ET MODIFICATION DU CAHIER
+    // ============================================================
 
+    /**
+     * Crée un nouveau cahier des charges.
+     * <p>
+     * Cette méthode crée un cahier en statut DRAFT, associé au site de l'utilisateur
+     * connecté. Un item par défaut est créé si aucun item n'est fourni.
+     * Une notification email est envoyée à tous les utilisateurs du projet et du site.
+     * </p>
+     *
+     * @param dto Les informations de création (infos générales + items)
+     * @return Le cahier des charges créé
+     * @throws RuntimeException si l'utilisateur tente de créer un cahier pour un autre site
+     */
     @Transactional
     public ChargeSheet createChargeSheet(ChargeSheetDto.CreateDto dto) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -75,69 +126,141 @@ public class ChargeSheetService {
 
         return finalSheet;
     }
-    private String buildChargeSheetCreatedText(ChargeSheet chargeSheet) {
-        int numberOfItems = chargeSheet.getItems().size();
+    /**
+     * Met à jour les informations générales d'un cahier des charges.
+     * <p>
+     * La modification n'est possible que lorsque le cahier est en statut DRAFT
+     * et que l'utilisateur est ING ou ADMIN.
+     * </p>
+     *
+     * @return Le cahier mis à jour
+     * @throws RuntimeException si le statut n'est pas DRAFT ou si l'utilisateur n'a pas les droits
+     */
+    public ChargeSheet updateChargeSheet(Long id, ChargeSheetDto.UpdateGeneralDto dto) {
+        ChargeSheet sheet = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
 
-        StringBuilder text = new StringBuilder();
+        // Vérifier que le statut est DRAFT
+        if (sheet.getStatus() != ChargeSheetStatus.DRAFT) {
+            throw new RuntimeException("Cannot update charge sheet when status is not DRAFT");
+        }
 
-        text.append("Objet : LEONI - Nouveau Cahier des Charges N°").append(chargeSheet.getOrderNumber()).append("\n\n");
+        // Vérifier les permissions (l'utilisateur doit être ING du même projet)
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userSite = currentUser.getSiteName();
+        String userProjectsString = currentUser.getProjetsNames();
+        List<String> userProjects = userProjectsString != null ?
+                Arrays.asList(userProjectsString.split(", ")) :
+                List.of();
+        if (!sheet.getPlant().equals(userSite)) {
+            throw new RuntimeException("Vous ne pouvez modifier que les cahiers de votre site: " + userSite);
+        }
+        if (!currentUser.getRole().name().equals("ING") && !currentUser.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Only ING can update charge sheets");
+        }
 
-        text.append("Bonjour,\n\n");
-        text.append("Un nouveau cahier des charges vient d'être créé dans le système LEONI Quality Management.\n");
-        text.append("Veuillez trouver ci-dessous les informations principales.\n\n");
+        if (!currentUser.getRole().name().equals("ADMIN") &&
+                !userProjects.contains(sheet.getProject())) {
+            throw new RuntimeException("You can only update charge sheets from your projects");
+        }
 
-        // Informations générales
-        text.append("=== INFORMATIONS GENERALES ===\n\n");
-        text.append("N° Cahier : #").append(chargeSheet.getId()).append("\n");
-        text.append("N° Commande : ").append(chargeSheet.getOrderNumber()).append("\n");
-        text.append("Site de production : ").append(chargeSheet.getPlant()).append("\n");
-        text.append("Projet : ").append(chargeSheet.getProject()).append("\n");
-        text.append("Référence Harnais : ").append(chargeSheet.getHarnessRef()).append("\n");
-        text.append("Émis par : ").append(chargeSheet.getIssuedBy()).append("\n");
-        text.append("Email contact : ").append(chargeSheet.getEmailAddress()).append("\n");
-        text.append("Téléphone : ").append(chargeSheet.getPhoneNumber()).append("\n");
-        text.append("Centre de coût : ").append(chargeSheet.getCostCenterNumber()).append("\n");
-        text.append("Date de création : ").append(formatDate(chargeSheet.getDate())).append("\n");
-        text.append("Date livraison souhaitée : ").append(formatDate(chargeSheet.getPreferredDeliveryDate())).append("\n\n");
+        // Mettre à jour les champs
 
-        // Détail des items
-        text.append("=== DETAIL DES ITEMS ===\n\n");
-        text.append("Nombre total d'items : ").append(numberOfItems).append(" item(s)\n\n");
-        text.append("⚠️ Les fiches techniques des modules de test doivent être complétées avant validation.\n\n");
+        sheet.setProject(dto.getProject());
+        sheet.setHarnessRef(dto.getHarnessRef());
+        sheet.setPhoneNumber(dto.getPhoneNumber());
+        sheet.setOrderNumber(dto.getOrderNumber());
+        sheet.setCostCenterNumber(dto.getCostCenterNumber());
+        sheet.setDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null);
+        sheet.setPreferredDeliveryDate(dto.getPreferredDeliveryDate() != null ?
+                LocalDate.parse(dto.getPreferredDeliveryDate()) : null);
 
-        // À noter
-        text.append("=== A NOTER ===\n");
-        text.append("- Ce cahier des charges est actuellement en statut BROUILLON\n");
-        text.append("- La validation par le service ING est requise avant transmission au fournisseur\n");
-        text.append("- Les délais de livraison doivent être respectés selon la date souhaitée\n\n");
+        sheet.setUpdatedBy(currentUser.getEmail());
+        sheet.setUpdatedAt(LocalDate.now());
 
-        text.append("---\n");
-        text.append("LEONI Wiring Systems - Quality Management System\n");
-        text.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
-
-        return text.toString();
+        return repository.save(sheet);
     }
     /**
-     * Échappe les caractères HTML pour éviter les injections et les erreurs d'affichage
+     * Supprime définitivement un cahier des charges.
+     * <p>
+     * Cette méthode supprime le cahier et tous ses items associés
+     * (grâce à la cascade définie dans l'entité).
+     * Une notification email est envoyée.
+     * </p>
+     *
+     * @throws RuntimeException si le cahier n'existe pas
      */
-    private String escapeHtml(String text) {
-        if (text == null) return "-";
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
+    @Transactional
+    public void deleteChargeSheet(Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+
+        ChargeSheet chargeSheet = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Charge sheet not found with id: " + id));
+
+        // Supprimer le cahier (les items seront supprimés automatiquement grâce à cascade)
+        repository.delete(chargeSheet);
+
+        // Notification
+        notificationService.notifyDocumentDeletedToProjectAndSite(
+                "Cahier des Charges",
+                id,
+                null,
+                currentUser.getEmail(),
+                chargeSheet.getProject(),
+                chargeSheet.getPlant()
+        );
     }
+    // ============================================================
+    // GESTION DES ITEMS TECHNIQUES
+    // ============================================================
 
     /**
-     * Formate une date LocalDate en string lisible
+     * Ajoute un nouvel item technique à un cahier des charges.
+     *
+     * @return Le cahier mis à jour
+     * @throws RuntimeException si le cahier ou l'item n'existe pas
      */
-    private String formatDate(LocalDate date) {
-        if (date == null) return "Non spécifiée";
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        return date.format(formatter);
-    }
+    @Transactional
+    public ChargeSheet addItem(Long sheetId, ChargeSheetDto.ItemDto itemDto) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
 
+        ChargeSheet chargeSheet = repository.findById(sheetId)
+                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
+
+        ChargeSheetItem item = mapToItem(itemDto, chargeSheet, currentUser);
+        chargeSheet.addItem(item);
+
+        ChargeSheet updated = repository.save(chargeSheet);
+
+        notificationService.notifyChargeSheetUpdatedToProjectAndSite(
+                sheetId,
+                "Nouvel item ajouté: " + item.getItemNumber(),
+                currentUser.getEmail(),
+                "ING",
+                chargeSheet.getProject(),
+                chargeSheet.getPlant()
+        );
+
+        return updated;
+    }
+    /**
+     * Met à jour les champs techniques d'un item.
+     * <p>
+     * Cette méthode est utilisée par les techniciens (PT) pour saisir les
+     * 150+ attributs techniques d'un connecteur.
+     * Elle met automatiquement à jour le statut global du cahier si tous les
+     * items sont remplis.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier contenant l'item
+     * @param itemId L'identifiant de l'item à modifier
+     * @param dto Les valeurs techniques à mettre à jour
+     * @return L'item mis à jour
+     * @throws RuntimeException si l'item n'appartient pas au cahier
+     */
     @Transactional
     public ChargeSheetItem updateTechnicalFields(Long sheetId, Long itemId, ChargeSheetDto.UpdateTechDto dto) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -173,53 +296,13 @@ public class ChargeSheetService {
 
         return updated;
     }
-    private void updateGlobalStatusAfterItemUpdate(ChargeSheet sheet) {
-        // Vérifier si tous les items sont TECH_FILLED
-        boolean allItemsFilled = sheet.getItems().stream()
-                .allMatch(item -> "TECH_FILLED".equals(item.getItemStatus()));
-
-        // Si tous les items sont remplis
-        if (allItemsFilled) {
-            ChargeSheetStatus currentStatus = sheet.getStatus();
-
-            if (currentStatus == ChargeSheetStatus.DRAFT) {
-                // DRAFT -> TECH_FILLED (les items sont remplis mais ING n'a pas encore validé)
-                sheet.setStatus(ChargeSheetStatus.TECH_FILLED);
-                repository.save(sheet);
-            } else if (currentStatus == ChargeSheetStatus.VALIDATED_ING) {
-                // ✅ Si ING a déjà validé et tous les items sont remplis
-                // On passe à TECH_FILLED (en attendant validation PT)
-                sheet.setStatus(ChargeSheetStatus.TECH_FILLED);
-                repository.save(sheet);
-            }
-        }
-    }
-
-    @Transactional
-    public ChargeSheet addItem(Long sheetId, ChargeSheetDto.ItemDto itemDto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-
-        ChargeSheet chargeSheet = repository.findById(sheetId)
-                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
-
-        ChargeSheetItem item = mapToItem(itemDto, chargeSheet, currentUser);
-        chargeSheet.addItem(item);
-
-        ChargeSheet updated = repository.save(chargeSheet);
-
-        notificationService.notifyChargeSheetUpdatedToProjectAndSite(
-                sheetId,
-                "Nouvel item ajouté: " + item.getItemNumber(),
-                currentUser.getEmail(),
-                "ING",
-                chargeSheet.getProject(),
-                chargeSheet.getPlant()
-        );
-
-        return updated;
-    }
-
+    /**
+     * Supprime un item d'un cahier des charges.
+     *
+     * @param sheetId L'identifiant du cahier parent
+     * @param itemId L'identifiant de l'item à supprimer
+     * @throws RuntimeException si l'item n'appartient pas au cahier
+     */
     @Transactional
     public void removeItem(Long sheetId, Long itemId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -249,19 +332,45 @@ public class ChargeSheetService {
                 chargeSheet.getPlant()
         );
     }
+    // ============================================================
+    // CONSULTATION
+    // ============================================================
 
+    /**
+     * Récupère un cahier des charges par son identifiant.
+     *
+     * @return Le cahier trouvé
+     * @throws RuntimeException si le cahier n'existe pas
+     */
     public ChargeSheet getChargeSheetById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
     }
-
+    /**
+     * Récupère la vue complète d'un cahier (DTO avec tous les items).
+     *
+     * @param id L'identifiant du cahier
+     * @return Le DTO complet du cahier
+     */
     public ChargeSheetDto.CompleteDto getChargeSheetComplete(Long id) {
         ChargeSheet chargeSheet = getChargeSheetById(id);
         return mapToCompleteDto(chargeSheet);
     }
-
-    // ChargeSheetService.java - Modifier la méthode getAllChargeSheets()
-
+    /**
+     * Récupère la liste de tous les cahiers des charges.
+     * <p>
+     * Les résultats sont filtrés selon le rôle et le site de l'utilisateur connecté :
+     * <ul>
+     *     <li>ADMIN : voit tous les cahiers</li>
+     *     <li>ING : voit les cahiers de ses projets et site</li>
+     *     <li>PT : voit les cahiers validés par ING</li>
+     *     <li>PP : voit les cahiers validés par PT</li>
+     *     <li>MC/MP : voit uniquement les cahiers COMPLETED</li>
+     * </ul>
+     * </p>
+     *
+     * @return Liste des DTO complets des cahiers
+     */
     public List<ChargeSheetDto.CompleteDto> getAllChargeSheets() {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -341,322 +450,21 @@ public class ChargeSheetService {
                 .map(this::mapToCompleteDto)
                 .collect(Collectors.toList());
     }
+    // ============================================================
+    // WORKFLOW DE VALIDATION
+    // ============================================================
 
-
-    public ChargeSheet save(ChargeSheet chargeSheet) {
-        return repository.save(chargeSheet);
-    }
-
-    public ChargeSheetDto.ItemDto mapToItemDtoPublic(ChargeSheetItem item) {
-        return mapToItemDto(item);
-    }
-
-    // === Méthodes privées ===
-
-    private ChargeSheetItem mapToItem(ChargeSheetDto.ItemDto dto, ChargeSheet sheet, User user) {
-        return ChargeSheetItem.builder()
-                .chargeSheet(sheet)
-                .itemNumber(dto.getItemNumber())
-                .samplesExist(dto.getSamplesExist())
-                .ways(dto.getWays())
-                .housingColour(dto.getHousingColour())
-                .testModuleExistInDatabase(dto.getTestModuleExistInDatabase())
-                .housingReferenceLeoni(dto.getHousingReferenceLeoni())
-                .housingReferenceSupplierCustomer(dto.getHousingReferenceSupplierCustomer())
-                .referenceSealsClipsCableTiesCap(dto.getReferenceSealsClipsCableTiesCap())
-                .realConnectorPicture(dto.getRealConnectorPicture())
-                .quantityOfTestModules(dto.getQuantityOfTestModules())
-                .itemStatus("DRAFT")
-                .createdBy(user.getEmail())
-                .createdAt(LocalDate.now())
-                .build();
-    }
-
-    private ChargeSheetItem createDefaultItem(ChargeSheet sheet, User user) {
-        return ChargeSheetItem.builder()
-                .chargeSheet(sheet)
-                .itemNumber("1")
-                .samplesExist("No")
-                .quantityOfTestModules(1)
-                .itemStatus("DRAFT")
-                .createdBy(user.getEmail())
-                .createdAt(LocalDate.now())
-                .build();
-    }
-
-    private void updateItemFromDto(ChargeSheetItem item, ChargeSheetDto.UpdateTechDto dto) {
-        if (dto.getHousingReferenceLeoni() != null) {
-            item.setHousingReferenceLeoni(dto.getHousingReferenceLeoni());
-        }
-        if (dto.getQuantityOfTestModules() != null) {
-            item.setQuantityOfTestModules(dto.getQuantityOfTestModules());
-        }
-        item.setOutsideHousingExist(dto.getOutsideHousingExist());
-        item.setInsideHousingExist(dto.getInsideHousingExist());
-        item.setMechanicalCoding(dto.getMechanicalCoding());
-        item.setElectricalCoding(dto.getElectricalCoding());
-        item.setCpaExistOpen(dto.getCpaExistOpen());
-        item.setCpaExistClosed(dto.getCpaExistClosed());
-        item.setCoverHoodExist(dto.getCoverHoodExist());
-        item.setCoverHoodClosed(dto.getCoverHoodClosed());
-        item.setCapExist(dto.getCapExist());
-        item.setBayonetCapExist(dto.getBayonetCapExist());
-        item.setBracketExist(dto.getBracketExist());
-        item.setBracketOpen(dto.getBracketOpen());
-        item.setBracketClosed(dto.getBracketClosed());
-        item.setLatchWingExist(dto.getLatchWingExist());
-        item.setSliderExist(dto.getSliderExist());
-        item.setSliderOpen(dto.getSliderOpen());
-        item.setSliderClosed(dto.getSliderClosed());
-        item.setSecondaryLockExist(dto.getSecondaryLockExist());
-        item.setSecondaryLockOpen(dto.getSecondaryLockOpen());
-        item.setSecondaryLockClosed(dto.getSecondaryLockClosed());
-        item.setOffsetTest(dto.getOffsetTest());
-        item.setPushBackTest(dto.getPushBackTest());
-        item.setTerminalOrientation(dto.getTerminalOrientation());
-        item.setTerminalDifferentiation(dto.getTerminalDifferentiation());
-        item.setAirbagTestViaServiceWindow(dto.getAirbagTestViaServiceWindow());
-        item.setLeakTestPressure(dto.getLeakTestPressure());
-        item.setLeakTestVacuum(dto.getLeakTestVacuum());
-        item.setSealExist(dto.getSealExist());
-        item.setCableTieExist(dto.getCableTieExist());
-        item.setCableTieLeft(dto.getCableTieLeft());
-        item.setCableTieRight(dto.getCableTieRight());
-        item.setCableTieMiddle(dto.getCableTieMiddle());
-        item.setCableTieLeftRight(dto.getCableTieLeftRight());
-        item.setClipExist(dto.getClipExist());
-        item.setScrewExist(dto.getScrewExist());
-        item.setNutExist(dto.getNutExist());
-        item.setConvolutedConduitExist(dto.getConvolutedConduitExist());
-        item.setConvolutedConduitClosed(dto.getConvolutedConduitClosed());
-        item.setAntennaOnlyPresenceTest(dto.getAntennaOnlyPresenceTest());
-        item.setAntennaOnlyContactingOfShield(dto.getAntennaOnlyContactingOfShield());
-        item.setAntennaContactingOfShieldAndCoreWire(dto.getAntennaContactingOfShieldAndCoreWire());
-        item.setRingTerminal(dto.getRingTerminal());
-        item.setDiameterInside(dto.getDiameterInside());
-        item.setDiameterOutside(dto.getDiameterOutside());
-        item.setSingleContact(dto.getSingleContact());
-        item.setHeatShrinkExist(dto.getHeatShrinkExist());
-        item.setOpenShuntsAirbag(dto.getOpenShuntsAirbag());
-        item.setFlowTest(dto.getFlowTest());
-        item.setSolidMetalContour(dto.getSolidMetalContour());
-        item.setMetalContourAdjustable(dto.getMetalContourAdjustable());
-        item.setGrommetExist(dto.getGrommetExist());
-        item.setGrommetOrientation(dto.getGrommetOrientation());
-        item.setCableChannelExist(dto.getCableChannelExist());
-        item.setCableChannelClosed(dto.getCableChannelClosed());
-        item.setColourDetectionPrepared(dto.getColourDetectionPrepared());
-        item.setExtraLED(dto.getExtraLED());
-        item.setSpring(dto.getSpring());
-        item.setOtherDetection(dto.getOtherDetection());
-        item.setSpacerClosingUnit(dto.getSpacerClosingUnit());
-        item.setLeakTestComplex(dto.getLeakTestComplex());
-        item.setPinStraightnessCheck(dto.getPinStraightnessCheck());
-        item.setPresenceTestOfOneSideConnectedShield(dto.getPresenceTestOfOneSideConnectedShield());
-        item.setContrastDetectionGreyValueSensor(dto.getContrastDetectionGreyValueSensor());
-        item.setColourDetection(dto.getColourDetection());
-        item.setAttenuationWithModeScrambler(dto.getAttenuationWithModeScrambler());
-        item.setAttenuationWithoutModeScrambler(dto.getAttenuationWithoutModeScrambler());
-        item.setInsulationResistance(dto.getInsulationResistance());
-        item.setHighVoltageModule(dto.getHighVoltageModule());
-        item.setKelvinMeasurementHV(dto.getKelvinMeasurementHV());
-        item.setActuatorTestHV(dto.getActuatorTestHV());
-        item.setChargingSystemElectrical(dto.getChargingSystemElectrical());
-        item.setPtuPipeTestUnit(dto.getPtuPipeTestUnit());
-        item.setGtuGrommetTestUnit(dto.getGtuGrommetTestUnit());
-        item.setLedLEDTestModule(dto.getLedLEDTestModule());
-        item.setTigTerminalInsertionGuidance(dto.getTigTerminalInsertionGuidance());
-        item.setLinBusFunctionalityTest(dto.getLinBusFunctionalityTest());
-        item.setCanBusFunctionalityTest(dto.getCanBusFunctionalityTest());
-        item.setEsdConformModule(dto.getEsdConformModule());
-        item.setFixedBlock(dto.getFixedBlock());
-        item.setMovingBlock(dto.getMovingBlock());
-        item.setTiltModule(dto.getTiltModule());
-        item.setSlideModule(dto.getSlideModule());
-        item.setHandAdapter(dto.getHandAdapter());
-        item.setLsmLeoniSmartModule(dto.getLsmLeoniSmartModule());
-        item.setLeoniStandardTestTable(dto.getLeoniStandardTestTable());
-        item.setMetalRailsFasteningSystem(dto.getMetalRailsFasteningSystem());
-        item.setMetalPlatesFasteningSystem(dto.getMetalPlatesFasteningSystem());
-        item.setQuickConnectionByCanonConnector(dto.getQuickConnectionByCanonConnector());
-        item.setTestBoard(dto.getTestBoard());
-        item.setWeetech(dto.getWeetech());
-        item.setBak(dto.getBak());
-        item.setOgc(dto.getOgc());
-        item.setAdaptronicHighVoltage(dto.getAdaptronicHighVoltage());
-        item.setEmdepHVBananaPlug(dto.getEmdepHVBananaPlug());
-        item.setLeoniEMOStandardHV(dto.getLeoniEMOStandardHV());
-        item.setClipOrientation(dto.getClipOrientation());
-        item.setUnitPrice(dto.getUnitPrice());
-        item.setTotalPrice(dto.getTotalPrice());
-    }
-
-
-    private ChargeSheetDto.CompleteDto mapToCompleteDto(ChargeSheet sheet) {
-        List<ChargeSheetDto.ItemDto> itemDtos = sheet.getItems().stream()
-                .map(this::mapToItemDto)
-                .collect(Collectors.toList());
-
-        return ChargeSheetDto.CompleteDto.builder()
-                .id(sheet.getId())
-                .plant(sheet.getPlant())
-                .project(sheet.getProject())
-                .harnessRef(sheet.getHarnessRef())
-                .issuedBy(sheet.getIssuedBy())
-                .emailAddress(sheet.getEmailAddress())
-                .phoneNumber(sheet.getPhoneNumber())
-                .orderNumber(sheet.getOrderNumber())
-                .costCenterNumber(sheet.getCostCenterNumber())
-                .date(sheet.getDate())
-                .preferredDeliveryDate(sheet.getPreferredDeliveryDate())
-                .items(itemDtos)
-                .status(sheet.getStatus())
-                .createdBy(sheet.getCreatedBy())
-                .createdAt(sheet.getCreatedAt())
-                .updatedBy(sheet.getUpdatedBy())
-                .updatedAt(sheet.getUpdatedAt())
-                .build();
-    }
-
-    private ChargeSheetDto.ItemDto mapToItemDto(ChargeSheetItem item) {
-        return ChargeSheetDto.ItemDto.builder()
-                .id(item.getId())
-                .itemNumber(item.getItemNumber())
-                .samplesExist(item.getSamplesExist())
-                .ways(item.getWays())
-                .housingColour(item.getHousingColour())
-                .testModuleExistInDatabase(item.getTestModuleExistInDatabase())
-                .housingReferenceLeoni(item.getHousingReferenceLeoni())
-                .housingReferenceSupplierCustomer(item.getHousingReferenceSupplierCustomer())
-                .referenceSealsClipsCableTiesCap(item.getReferenceSealsClipsCableTiesCap())
-                .realConnectorPicture(item.getRealConnectorPicture())
-                .quantityOfTestModules(item.getQuantityOfTestModules())
-                .outsideHousingExist(item.getOutsideHousingExist())
-                .insideHousingExist(item.getInsideHousingExist())
-                .mechanicalCoding(item.getMechanicalCoding())
-                .electricalCoding(item.getElectricalCoding())
-                .cpaExistOpen(item.getCpaExistOpen())
-                .cpaExistClosed(item.getCpaExistClosed())
-                .coverHoodExist(item.getCoverHoodExist())
-                .coverHoodClosed(item.getCoverHoodClosed())
-                .capExist(item.getCapExist())
-                .bayonetCapExist(item.getBayonetCapExist())
-                .bracketExist(item.getBracketExist())
-                .bracketOpen(item.getBracketOpen())
-                .bracketClosed(item.getBracketClosed())
-                .latchWingExist(item.getLatchWingExist())
-                .sliderExist(item.getSliderExist())
-                .sliderOpen(item.getSliderOpen())
-                .sliderClosed(item.getSliderClosed())
-                .secondaryLockExist(item.getSecondaryLockExist())
-                .secondaryLockOpen(item.getSecondaryLockOpen())
-                .secondaryLockClosed(item.getSecondaryLockClosed())
-                .offsetTest(item.getOffsetTest())
-                .pushBackTest(item.getPushBackTest())
-                .terminalOrientation(item.getTerminalOrientation())
-                .terminalDifferentiation(item.getTerminalDifferentiation())
-                .airbagTestViaServiceWindow(item.getAirbagTestViaServiceWindow())
-                .leakTestPressure(item.getLeakTestPressure())
-                .leakTestVacuum(item.getLeakTestVacuum())
-                .sealExist(item.getSealExist())
-                .cableTieExist(item.getCableTieExist())
-                .cableTieLeft(item.getCableTieLeft())
-                .cableTieRight(item.getCableTieRight())
-                .cableTieMiddle(item.getCableTieMiddle())
-                .cableTieLeftRight(item.getCableTieLeftRight())
-                .clipExist(item.getClipExist())
-                .screwExist(item.getScrewExist())
-                .nutExist(item.getNutExist())
-                .convolutedConduitExist(item.getConvolutedConduitExist())
-                .convolutedConduitClosed(item.getConvolutedConduitClosed())
-                .antennaOnlyPresenceTest(item.getAntennaOnlyPresenceTest())
-                .antennaOnlyContactingOfShield(item.getAntennaOnlyContactingOfShield())
-                .antennaContactingOfShieldAndCoreWire(item.getAntennaContactingOfShieldAndCoreWire())
-                .ringTerminal(item.getRingTerminal())
-                .diameterInside(item.getDiameterInside())
-                .diameterOutside(item.getDiameterOutside())
-                .singleContact(item.getSingleContact())
-                .heatShrinkExist(item.getHeatShrinkExist())
-                .openShuntsAirbag(item.getOpenShuntsAirbag())
-                .flowTest(item.getFlowTest())
-                .solidMetalContour(item.getSolidMetalContour())
-                .metalContourAdjustable(item.getMetalContourAdjustable())
-                .grommetExist(item.getGrommetExist())
-                .grommetOrientation(item.getGrommetOrientation())
-                .cableChannelExist(item.getCableChannelExist())
-                .cableChannelClosed(item.getCableChannelClosed())
-                .colourDetectionPrepared(item.getColourDetectionPrepared())
-                .extraLED(item.getExtraLED())
-                .spring(item.getSpring())
-                .otherDetection(item.getOtherDetection())
-                .spacerClosingUnit(item.getSpacerClosingUnit())
-                .leakTestComplex(item.getLeakTestComplex())
-                .pinStraightnessCheck(item.getPinStraightnessCheck())
-                .presenceTestOfOneSideConnectedShield(item.getPresenceTestOfOneSideConnectedShield())
-                .contrastDetectionGreyValueSensor(item.getContrastDetectionGreyValueSensor())
-                .colourDetection(item.getColourDetection())
-                .attenuationWithModeScrambler(item.getAttenuationWithModeScrambler())
-                .attenuationWithoutModeScrambler(item.getAttenuationWithoutModeScrambler())
-                .insulationResistance(item.getInsulationResistance())
-                .highVoltageModule(item.getHighVoltageModule())
-                .kelvinMeasurementHV(item.getKelvinMeasurementHV())
-                .actuatorTestHV(item.getActuatorTestHV())
-                .chargingSystemElectrical(item.getChargingSystemElectrical())
-                .ptuPipeTestUnit(item.getPtuPipeTestUnit())
-                .gtuGrommetTestUnit(item.getGtuGrommetTestUnit())
-                .ledLEDTestModule(item.getLedLEDTestModule())
-                .tigTerminalInsertionGuidance(item.getTigTerminalInsertionGuidance())
-                .linBusFunctionalityTest(item.getLinBusFunctionalityTest())
-                .canBusFunctionalityTest(item.getCanBusFunctionalityTest())
-                .esdConformModule(item.getEsdConformModule())
-                .fixedBlock(item.getFixedBlock())
-                .movingBlock(item.getMovingBlock())
-                .tiltModule(item.getTiltModule())
-                .slideModule(item.getSlideModule())
-                .handAdapter(item.getHandAdapter())
-                .lsmLeoniSmartModule(item.getLsmLeoniSmartModule())
-                .leoniStandardTestTable(item.getLeoniStandardTestTable())
-                .metalRailsFasteningSystem(item.getMetalRailsFasteningSystem())
-                .metalPlatesFasteningSystem(item.getMetalPlatesFasteningSystem())
-                .quickConnectionByCanonConnector(item.getQuickConnectionByCanonConnector())
-                .testBoard(item.getTestBoard())
-                .weetech(item.getWeetech())
-                .bak(item.getBak())
-                .ogc(item.getOgc())
-                .adaptronicHighVoltage(item.getAdaptronicHighVoltage())
-                .emdepHVBananaPlug(item.getEmdepHVBananaPlug())
-                .leoniEMOStandardHV(item.getLeoniEMOStandardHV())
-                .clipOrientation(item.getClipOrientation())
-                .unitPrice(item.getUnitPrice())
-                .totalPrice(item.getTotalPrice())
-                .itemStatus(item.getItemStatus())
-                .createdBy(item.getCreatedBy())
-                .createdAt(item.getCreatedAt())
-                .updatedBy(item.getUpdatedBy())
-                .updatedAt(item.getUpdatedAt())
-                .build();
-    }
-    @Transactional
-    public void deleteChargeSheet(Long id) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-
-        ChargeSheet chargeSheet = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Charge sheet not found with id: " + id));
-
-        // Supprimer le cahier (les items seront supprimés automatiquement grâce à cascade)
-        repository.delete(chargeSheet);
-
-        // Notification
-        notificationService.notifyDocumentDeletedToProjectAndSite(
-                "Cahier des Charges",
-                id,
-                null,
-                currentUser.getEmail(),
-                chargeSheet.getProject(),
-                chargeSheet.getPlant()
-        );
-    }
+    /**
+     * Valide un cahier par l'ingénieur (ING).
+     * <p>
+     * Fait passer le statut de DRAFT à VALIDATED_ING.
+     * Une notification email est envoyée aux équipes PT.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier à valider
+     * @return Le cahier validé
+     * @throws RuntimeException si l'utilisateur n'est pas ING ou si le statut n'est pas DRAFT
+     */
     @Transactional
     public ChargeSheet validateByIng(Long sheetId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -692,6 +500,17 @@ public class ChargeSheetService {
         );
         return validated;
     }
+    /**
+     * Valide un cahier par le technicien (PT).
+     * <p>
+     * Fait passer le statut de VALIDATED_ING ou TECH_FILLED à VALIDATED_PT.
+     * Vérifie que tous les items sont en statut TECH_FILLED avant validation.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier à valider
+     * @return Le cahier validé
+     * @throws RuntimeException si l'utilisateur n'est pas PT ou si des items ne sont pas remplis
+     */
     @Transactional
     public ChargeSheet validateByPt(Long sheetId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -760,77 +579,81 @@ public class ChargeSheetService {
 
         return validated;
     }
-    // ChargeSheetService.java - Modifier getDashboardStats()
-
-    public Map<String, Object> getDashboardStats() {
+    /**
+     * Retourne un cahier à l'ingénieur pour corrections.
+     * <p>
+     * Permet au PT de retourner un cahier à ING avec une justification.
+     * Le statut repasse à DRAFT et tous les items repassent en DRAFT.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier
+     * @param reason La raison du retour
+     * @return Le cahier retourné
+     * @throws RuntimeException si l'utilisateur n'est pas PT ou si le statut n'est pas approprié
+     */
+    @Transactional
+    public ChargeSheet revertToIng(Long sheetId, String reason) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) auth.getPrincipal();
-        String userRole = currentUser.getRole().name();
-        String userProjectsString = currentUser.getProjetsNames();
-        String userSite = currentUser.getSiteName();  // ✅ AJOUTER
 
-        Map<String, Object> stats = new HashMap<>();
-
-        stats.put("userRole", userRole);
-        stats.put("userProject", userProjectsString);
-        stats.put("userSite", userSite);  // ✅ AJOUTER
-        stats.put("projectName", userProjectsString);
-
-        if (userRole.equals("ADMIN")) {
-            // ADMIN voit tout
-            long totalSheets = repository.count();
-            long pendingIng = repository.countByStatus(ChargeSheetStatus.DRAFT);
-            long pendingPt = repository.countByStatus(ChargeSheetStatus.VALIDATED_ING);
-            long pendingFinal = repository.countByStatus(ChargeSheetStatus.VALIDATED_PT);
-            long completed = repository.countByStatus(ChargeSheetStatus.COMPLETED);
-            long techFilled = repository.countByStatus(ChargeSheetStatus.TECH_FILLED);
-
-            stats.put("totalSheets", totalSheets);
-            stats.put("pendingIng", pendingIng);
-            stats.put("pendingPt", pendingPt);
-            stats.put("pendingFinal", pendingFinal);
-            stats.put("completed", completed);
-            stats.put("techFilled", techFilled);
-
-            double completionRate = totalSheets > 0 ? (completed * 100.0 / totalSheets) : 0;
-            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
-        }
-        else {
-            // ✅ Pour les autres rôles, filtrer par projet ET site
-            List<String> userProjects = userProjectsString != null ?
-                    Arrays.asList(userProjectsString.split(", ")) :
-                    List.of();
-
-            long totalSheets = 0;
-            long pendingIng = 0;
-            long pendingPt = 0;
-            long pendingFinal = 0;
-            long completed = 0;
-            long techFilled = 0;
-
-            // ✅ Additionner les statistiques pour chaque projet
-            for (String project : userProjects) {
-                totalSheets += repository.countByProjectAndPlant(project, userSite);
-                pendingIng += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.DRAFT);
-                pendingPt += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.VALIDATED_ING);
-                pendingFinal += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.VALIDATED_PT);
-                completed += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.COMPLETED);
-                techFilled += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.TECH_FILLED);
-            }
-
-            stats.put("totalSheets", totalSheets);
-            stats.put("pendingIng", pendingIng);
-            stats.put("pendingPt", pendingPt);
-            stats.put("pendingFinal", pendingFinal);
-            stats.put("completed", completed);
-            stats.put("techFilled", techFilled);
-
-            double completionRate = totalSheets > 0 ? (completed * 100.0 / totalSheets) : 0;
-            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new RuntimeException("Veuillez indiquer la raison du retour à ING");
         }
 
-        return stats;
+        ChargeSheet chargeSheet = repository.findById(sheetId)
+                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
+
+        // Vérifier que l'utilisateur est PT ou ADMIN
+        if (!currentUser.getRole().name().equals("PT") && !currentUser.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Seul PT ou ADMIN peut retourner un cahier à ING");
+        }
+
+        // Vérifier que le statut actuel est VALIDATED_ING ou TECH_FILLED
+        if (chargeSheet.getStatus() != ChargeSheetStatus.VALIDATED_ING &&
+                chargeSheet.getStatus() != ChargeSheetStatus.TECH_FILLED) {
+            throw new RuntimeException("Seul un cahier au statut VALIDATED_ING ou TECH_FILLED peut être retourné à ING");
+        }
+
+        // ✅ CORRECTION : Retourner au statut DRAFT (pas VALIDATED_ING)
+        // Pour que ING puisse tout modifier (général + items)
+        chargeSheet.setStatus(ChargeSheetStatus.DRAFT);
+        chargeSheet.setUpdatedBy(currentUser.getEmail());
+        chargeSheet.setUpdatedAt(LocalDate.now());
+
+        // Remettre tous les items en DRAFT
+        for (ChargeSheetItem item : chargeSheet.getItems()) {
+            item.setItemStatus("DRAFT");
+            itemRepository.save(item);
+        }
+
+        ChargeSheet reverted = repository.save(chargeSheet);
+
+        // Notification avec la raison
+        notificationService.notifyChargeSheetUpdatedToProjectAndSite(
+                sheetId,
+                "Retourné à ING par PT pour corrections. Raison: " + reason + " - Le cahier est maintenant en mode BROUILLON",
+                currentUser.getEmail(),
+                "PT",
+                chargeSheet.getProject(),
+                chargeSheet.getPlant()
+        );
+
+        return reverted;
     }
+    // ============================================================
+    // GESTION DES STATUTS (ENVOI FOURNISSEUR, RÉCEPTION, COMPLÉTION)
+    // ============================================================
+
+    /**
+     * Envoie un cahier au fournisseur.
+     * <p>
+     * Fait passer le statut de VALIDATED_PT à SENT_TO_SUPPLIER.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier
+     * @return Le cahier mis à jour
+     * @throws RuntimeException si l'utilisateur n'est pas PT ou si le statut n'est pas VALIDATED_PT
+     */
     @Transactional
     public ChargeSheet sendToSupplier(Long sheetId) {
 
@@ -856,6 +679,16 @@ public class ChargeSheetService {
 
         return repository.save(sheet);
     }
+    /**
+     * Confirme la réception d'un cahier.
+     * <p>
+     * Fait passer le statut de SENT_TO_SUPPLIER à RECEIVED_FROM_SUPPLIER.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier
+     * @return Le cahier mis à jour
+     * @throws RuntimeException si l'utilisateur n'est pas PT ou si le statut n'est pas SENT_TO_SUPPLIER
+     */
     @Transactional
     public ChargeSheet confirmReception(Long sheetId) {
 
@@ -881,6 +714,16 @@ public class ChargeSheetService {
 
         return repository.save(sheet);
     }
+    /**
+     * Marque un cahier comme complété.
+     * <p>
+     * Fait passer le statut de RECEIVED_FROM_SUPPLIER à COMPLETED.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier
+     * @return Le cahier mis à jour
+     * @throws RuntimeException si l'utilisateur n'est pas PT ou si le statut n'est pas RECEIVED_FROM_SUPPLIER
+     */
     @Transactional
     public ChargeSheet completeChargeSheet(Long sheetId) {
 
@@ -906,55 +749,19 @@ public class ChargeSheetService {
 
         return repository.save(sheet);
     }
-    public ChargeSheet updateChargeSheet(Long id, ChargeSheetDto.UpdateGeneralDto dto) {
-        ChargeSheet sheet = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
-
-        // Vérifier que le statut est DRAFT
-        if (sheet.getStatus() != ChargeSheetStatus.DRAFT) {
-            throw new RuntimeException("Cannot update charge sheet when status is not DRAFT");
-        }
-
-        // Vérifier les permissions (l'utilisateur doit être ING du même projet)
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-        String userSite = currentUser.getSiteName();
-        String userProjectsString = currentUser.getProjetsNames();
-        List<String> userProjects = userProjectsString != null ?
-                Arrays.asList(userProjectsString.split(", ")) :
-                List.of();
-        if (!sheet.getPlant().equals(userSite)) {
-            throw new RuntimeException("Vous ne pouvez modifier que les cahiers de votre site: " + userSite);
-        }
-        if (!currentUser.getRole().name().equals("ING") && !currentUser.getRole().name().equals("ADMIN")) {
-            throw new RuntimeException("Only ING can update charge sheets");
-        }
-
-        if (!currentUser.getRole().name().equals("ADMIN") &&
-                !userProjects.contains(sheet.getProject())) {
-            throw new RuntimeException("You can only update charge sheets from your projects");
-        }
-
-        // Mettre à jour les champs
-
-        sheet.setProject(dto.getProject());
-        sheet.setHarnessRef(dto.getHarnessRef());
-        sheet.setPhoneNumber(dto.getPhoneNumber());
-        sheet.setOrderNumber(dto.getOrderNumber());
-        sheet.setCostCenterNumber(dto.getCostCenterNumber());
-        sheet.setDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null);
-        sheet.setPreferredDeliveryDate(dto.getPreferredDeliveryDate() != null ?
-                LocalDate.parse(dto.getPreferredDeliveryDate()) : null);
-
-        sheet.setUpdatedBy(currentUser.getEmail());
-        sheet.setUpdatedAt(LocalDate.now());
-
-        return repository.save(sheet);
-    }
-    // ============ MÉTHODES DE RÉCEPTION ============
+    // ============================================================
+    // GESTION DES RÉCEPTIONS
+    // ============================================================
 
     /**
-     * Prépare les données pour la réception (quantités commandées, déjà reçues, restantes)
+     * Prépare les données nécessaires pour la réception.
+     * <p>
+     * Calcule pour chaque item les quantités commandées, déjà reçues et restantes.
+     * </p>
+     *
+     * @param sheetId L'identifiant du cahier
+     * @return Les données de réception préparées
+     * @throws RuntimeException si le statut n'est pas SENT_TO_SUPPLIER
      */
     public ReceptionDto.ReceptionResponseDto prepareReceptionData(Long sheetId) {
         ChargeSheet sheet = repository.findById(sheetId)
@@ -1002,18 +809,18 @@ public class ChargeSheetService {
                 .complete(isComplete)
                 .build();
     }
-
     /**
-     * Confirme une réception partielle avec les quantités saisies
-     */
-    /**
-     * Confirme une réception partielle avec les quantités saisies
-     */
-    /**
-     * Confirme une réception partielle avec les quantités saisies
-     */
-    /**
-     * Confirme une réception partielle avec les quantités saisies
+     * Confirme une réception (partielle ou complète).
+     * <p>
+     * Enregistre les quantités reçues, génère les fiches de conformité,
+     * met à jour les quantités restantes. Si tous les items sont reçus,
+     * le statut passe automatiquement à RECEIVED_FROM_SUPPLIER.
+     * Une notification email détaillée est envoyée.
+     * </p>
+     *
+     * @param request Les détails de la réception
+     * @return Le résultat de la réception
+     * @throws RuntimeException si la quantité reçue dépasse la quantité commandée
      */
     @Transactional
     public ReceptionDto.ReceptionResponseDto confirmPartialReception(ReceptionDto.ReceptionRequestDto request) {
@@ -1137,122 +944,10 @@ public class ChargeSheetService {
                 .build();
     }
     /**
-     * Envoie une notification email pour la réception
-     */
-    private void sendReceptionNotification(ChargeSheet sheet, ReceptionDto.ReceptionRequestDto request,
-                                            List<ReceptionHistory> newHistories,
-                                            Map<Long, Integer> totalReceivedMap,
-                                            Map<Long, Integer> oldTotals,
-                                            User currentUser) {
-
-        String subject = "LEONI - Réception enregistrée - Cahier N°" + sheet.getOrderNumber();
-
-        StringBuilder textMessage = new StringBuilder();
-
-        textMessage.append("Objet : ").append(subject).append("\n\n");
-
-        textMessage.append("Bonjour,\n\n");
-        textMessage.append("Une réception de marchandises vient d'être enregistrée dans le système.\n\n");
-
-        // Informations générales
-        textMessage.append("=== INFORMATIONS GENERALES ===\n\n");
-        textMessage.append("N° Cahier des charges : ").append(sheet.getOrderNumber()).append("\n");
-        textMessage.append("Projet : ").append(sheet.getProject()).append("\n");
-        textMessage.append("Site de production : ").append(sheet.getPlant()).append("\n");
-        textMessage.append("N° Bon de livraison : ").append(request.getDeliveryNoteNumber()).append("\n");
-        textMessage.append("Date de réception : ").append(formatDate(request.getReceptionDate())).append("\n");
-        textMessage.append("Réceptionné par : ").append(currentUser.getEmail()).append("\n");
-        if (request.getComments() != null && !request.getComments().isEmpty()) {
-            textMessage.append("Commentaires : ").append(request.getComments()).append("\n");
-        }
-        textMessage.append("\n");
-
-        // Détails des items reçus
-        textMessage.append("=== DETAIL DES ARTICLES REÇUS ===\n\n");
-        for (ReceptionHistory history : newHistories) {
-            textMessage.append("Article N° : ").append(history.getItem().getItemNumber()).append("\n");
-            textMessage.append("Quantité reçue : ").append(history.getQuantityReceived()).append("\n");
-            textMessage.append("Total avant : ").append(history.getPreviousTotalReceived()).append("\n");
-            textMessage.append("Total après : ").append(history.getNewTotalReceived()).append("\n");
-            textMessage.append("Quantité commandée : ").append(history.getQuantityOrdered()).append("\n");
-
-            String status;
-            if (history.getNewTotalReceived() >= history.getQuantityOrdered()) {
-                status = "COMPLET";
-            } else {
-                int remaining = history.getQuantityOrdered() - history.getNewTotalReceived();
-                status = "PARTIEL (" + remaining + " restant)";
-            }
-            textMessage.append("Statut : ").append(status).append("\n\n");
-        }
-
-        // Récapitulatif complet
-        textMessage.append("=== RECAPITULATIF COMPLET PAR ARTICLE ===\n\n");
-        for (ChargeSheetItem item : sheet.getItems()) {
-            int totalReceived = totalReceivedMap.getOrDefault(item.getId(), 0);
-            int quantityOrdered = item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0;
-            int remaining = quantityOrdered - totalReceived;
-
-            String status;
-            if (remaining == 0) {
-                status = "COMPLET";
-            } else if (totalReceived > 0) {
-                status = "PARTIEL";
-            } else {
-                status = "EN ATTENTE";
-            }
-
-            textMessage.append("Article N° : ").append(item.getItemNumber()).append("\n");
-            textMessage.append("Quantité commandée : ").append(quantityOrdered).append("\n");
-            textMessage.append("Total reçu : ").append(totalReceived).append("\n");
-            textMessage.append("Restant à recevoir : ").append(remaining).append("\n");
-            textMessage.append("Statut : ").append(status).append("\n\n");
-        }
-
-        // Message de statut global
-        boolean allComplete = totalReceivedMap.entrySet().stream().allMatch(entry -> {
-            ChargeSheetItem item = itemRepository.findById(entry.getKey()).orElse(null);
-            return item != null && entry.getValue() >= (item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0);
-        });
-
-        if (allComplete) {
-            textMessage.append("=== RECEPTION COMPLETE ===\n");
-            textMessage.append("Tous les articles commandés ont été reçus.\n");
-            textMessage.append("Le cahier des charges passe automatiquement en statut RECEIVED_FROM_SUPPLIER.\n\n");
-        } else {
-            int remainingItems = 0;
-            int totalRemaining = 0;
-            for (ChargeSheetItem item : sheet.getItems()) {
-                int totalReceived = totalReceivedMap.getOrDefault(item.getId(), 0);
-                int quantityOrdered = item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0;
-                if (totalReceived < quantityOrdered) {
-                    remainingItems++;
-                    totalRemaining += (quantityOrdered - totalReceived);
-                }
-            }
-            textMessage.append("=== RECEPTION PARTIELLE ===\n");
-            textMessage.append("Il reste ").append(totalRemaining).append(" article(s) à recevoir répartis sur ").append(remainingItems).append(" référence(s).\n");
-            textMessage.append("Une nouvelle notification sera envoyée lors de la prochaine réception.\n\n");
-        }
-
-        textMessage.append("=== A NOTER ===\n");
-        textMessage.append("- Les fiches de conformité doivent être créées pour chaque article reçu\n");
-        textMessage.append("- Les articles partiellement reçus feront l'objet d'un suivi automatique\n");
-        textMessage.append("- En cas de non-conformité, veuillez créer une réclamation\n\n");
-
-        textMessage.append("---\n");
-        textMessage.append("LEONI Wiring Systems - Quality Management System\n");
-        textMessage.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
-
-        // Envoyer la notification
-        notificationService.sendNotificationToProjectAndSiteUsers(subject, textMessage.toString(), sheet.getProject(), sheet.getPlant());
-    }
-    private String formatDate(String dateStr) {
-        if (dateStr == null || dateStr.isEmpty()) return "Non spécifiée";
-        return dateStr;
-    }
-    /**
-     * Récupère l'historique des réceptions
+     * Récupère l'historique des réceptions d'un cahier.
+     *
+     * @param sheetId L'identifiant du cahier
+     * @return Liste des DTO d'historique des réceptions
      */
     public List<ReceptionHistoryDto> getReceptionHistoryDto(Long sheetId) {
         List<ReceptionHistory> histories = receptionHistoryRepository.findByChargeSheetIdOrderByCreatedAtDesc(sheetId);
@@ -1278,10 +973,96 @@ public class ChargeSheetService {
                     .build();
         }).collect(Collectors.toList());
     }
-// Dans ChargeSheetService.java - Modifiez les méthodes pour l'admin
+    // ============================================================
+    // STATISTIQUES
+    // ============================================================
 
     /**
-     * Calcule la variation entre deux mois spécifiques
+     * Récupère les statistiques pour le tableau de bord.
+     * <p>
+     * Retourne : nombre de cahiers par statut, répartition par projet,
+     * réclamations par priorité, évolution mensuelle.
+     * Les résultats sont filtrés par site et projet selon l'utilisateur.
+     * </p>
+     *
+     * @return Map contenant les statistiques du dashboard
+     */
+    public Map<String, Object> getDashboardStats() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) auth.getPrincipal();
+        String userRole = currentUser.getRole().name();
+        String userProjectsString = currentUser.getProjetsNames();
+        String userSite = currentUser.getSiteName();  // ✅ AJOUTER
+
+        Map<String, Object> stats = new HashMap<>();
+
+        stats.put("userRole", userRole);
+        stats.put("userProject", userProjectsString);
+        stats.put("userSite", userSite);  // ✅ AJOUTER
+        stats.put("projectName", userProjectsString);
+
+        if (userRole.equals("ADMIN")) {
+            // ADMIN voit tout
+            long totalSheets = repository.count();
+            long pendingIng = repository.countByStatus(ChargeSheetStatus.DRAFT);
+            long pendingPt = repository.countByStatus(ChargeSheetStatus.VALIDATED_ING);
+            long pendingFinal = repository.countByStatus(ChargeSheetStatus.VALIDATED_PT);
+            long completed = repository.countByStatus(ChargeSheetStatus.COMPLETED);
+            long techFilled = repository.countByStatus(ChargeSheetStatus.TECH_FILLED);
+
+            stats.put("totalSheets", totalSheets);
+            stats.put("pendingIng", pendingIng);
+            stats.put("pendingPt", pendingPt);
+            stats.put("pendingFinal", pendingFinal);
+            stats.put("completed", completed);
+            stats.put("techFilled", techFilled);
+
+            double completionRate = totalSheets > 0 ? (completed * 100.0 / totalSheets) : 0;
+            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+        }
+        else {
+            // ✅ Pour les autres rôles, filtrer par projet ET site
+            List<String> userProjects = userProjectsString != null ?
+                    Arrays.asList(userProjectsString.split(", ")) :
+                    List.of();
+
+            long totalSheets = 0;
+            long pendingIng = 0;
+            long pendingPt = 0;
+            long pendingFinal = 0;
+            long completed = 0;
+            long techFilled = 0;
+
+            // ✅ Additionner les statistiques pour chaque projet
+            for (String project : userProjects) {
+                totalSheets += repository.countByProjectAndPlant(project, userSite);
+                pendingIng += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.DRAFT);
+                pendingPt += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.VALIDATED_ING);
+                pendingFinal += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.VALIDATED_PT);
+                completed += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.COMPLETED);
+                techFilled += repository.countByProjectAndPlantAndStatus(project, userSite, ChargeSheetStatus.TECH_FILLED);
+            }
+
+            stats.put("totalSheets", totalSheets);
+            stats.put("pendingIng", pendingIng);
+            stats.put("pendingPt", pendingPt);
+            stats.put("pendingFinal", pendingFinal);
+            stats.put("completed", completed);
+            stats.put("techFilled", techFilled);
+
+            double completionRate = totalSheets > 0 ? (completed * 100.0 / totalSheets) : 0;
+            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+        }
+
+        return stats;
+    }
+    /**
+     * Calcule la variation du nombre de cahiers entre deux mois spécifiques.
+     *
+     * @param project Le nom du projet (peut être null pour ADMIN)
+     * @param month1 Premier mois (format YYYY-MM)
+     * @param month2 Deuxième mois (format YYYY-MM)
+     * @return Map contenant la variation calculée
      */
     public Map<String, Object> getVariationBetweenMonths(String project, String month1, String month2) {
         List<Object[]> results;
@@ -1362,7 +1143,11 @@ public class ChargeSheetService {
     }
 
     /**
-     * Récupère les statistiques de création mensuelles
+     * Récupère les statistiques de création mensuelles.
+     *
+     * @param project Le nom du projet (peut être null)
+     * @param numberOfMonths Nombre de mois à analyser
+     * @return DTO contenant les statistiques mensuelles
      */
     public MonthlyStatsDto getMonthlyCreationStats(String project, int numberOfMonths) {
         List<Object[]> results;
@@ -1479,7 +1264,10 @@ public class ChargeSheetService {
     }
 
     /**
-     * Version simplifiée pour le dashboard avec les deux derniers mois
+     * Calcule automatiquement la variation entre les deux derniers mois disponibles.
+     *
+     * @param project Le nom du projet (peut être null)
+     * @return Map contenant la variation calculée
      */
     public Map<String, Object> getLastTwoMonthsVariation(String project) {
         List<Object[]> results;
@@ -1559,81 +1347,13 @@ public class ChargeSheetService {
 
         return result;
     }
-
-    private String getInterpretation(String trend, double variation, long currentCount, long previousCount) {
-        if (trend.equals("hausse")) {
-            if (variation > 50) {
-                return String.format("📈 Forte augmentation de %.1f%% (%d vs %d)", variation, currentCount, previousCount);
-            } else {
-                return String.format("📈 Augmentation de %.1f%% (%d vs %d)", variation, currentCount, previousCount);
-            }
-        } else if (trend.equals("baisse")) {
-            if (variation < -50) {
-                return String.format("📉 Forte baisse de %.1f%% (%d vs %d)", Math.abs(variation), currentCount, previousCount);
-            } else {
-                return String.format("📉 Baisse de %.1f%% (%d vs %d)", Math.abs(variation), currentCount, previousCount);
-            }
-        } else {
-            return String.format("➡️ Stable (%d créations pour les deux mois)", currentCount);
-        }
-    }
-    // ChargeSheetService.java - Modifier la méthode
-
-    // ChargeSheetService.java - Version sans champ en base
-
-    // ChargeSheetService.java - Corriger la méthode revertToIng
-
-    @Transactional
-    public ChargeSheet revertToIng(Long sheetId, String reason) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) auth.getPrincipal();
-
-        if (reason == null || reason.trim().isEmpty()) {
-            throw new RuntimeException("Veuillez indiquer la raison du retour à ING");
-        }
-
-        ChargeSheet chargeSheet = repository.findById(sheetId)
-                .orElseThrow(() -> new RuntimeException("Charge sheet not found"));
-
-        // Vérifier que l'utilisateur est PT ou ADMIN
-        if (!currentUser.getRole().name().equals("PT") && !currentUser.getRole().name().equals("ADMIN")) {
-            throw new RuntimeException("Seul PT ou ADMIN peut retourner un cahier à ING");
-        }
-
-        // Vérifier que le statut actuel est VALIDATED_ING ou TECH_FILLED
-        if (chargeSheet.getStatus() != ChargeSheetStatus.VALIDATED_ING &&
-                chargeSheet.getStatus() != ChargeSheetStatus.TECH_FILLED) {
-            throw new RuntimeException("Seul un cahier au statut VALIDATED_ING ou TECH_FILLED peut être retourné à ING");
-        }
-
-        // ✅ CORRECTION : Retourner au statut DRAFT (pas VALIDATED_ING)
-        // Pour que ING puisse tout modifier (général + items)
-        chargeSheet.setStatus(ChargeSheetStatus.DRAFT);
-        chargeSheet.setUpdatedBy(currentUser.getEmail());
-        chargeSheet.setUpdatedAt(LocalDate.now());
-
-        // Remettre tous les items en DRAFT
-        for (ChargeSheetItem item : chargeSheet.getItems()) {
-            item.setItemStatus("DRAFT");
-            itemRepository.save(item);
-        }
-
-        ChargeSheet reverted = repository.save(chargeSheet);
-
-        // Notification avec la raison
-        notificationService.notifyChargeSheetUpdatedToProjectAndSite(
-                sheetId,
-                "Retourné à ING par PT pour corrections. Raison: " + reason + " - Le cahier est maintenant en mode BROUILLON",
-                currentUser.getEmail(),
-                "PT",
-                chargeSheet.getProject(),
-                chargeSheet.getPlant()
-        );
-
-        return reverted;
-    }
     /**
-     * Récupère les statistiques de réception
+     * Récupère les statistiques de réception.
+     *
+     * @param project Le nom du projet (peut être null)
+     * @param site Le nom du site (peut être null)
+     * @param numberOfMonths Nombre de mois à analyser
+     * @return DTO contenant les statistiques de réception
      */
     public ReceptionStatisticsDto getReceptionStatistics(String project, String site, int numberOfMonths) {
 
@@ -1770,10 +1490,571 @@ public class ChargeSheetService {
 
         return (Long) query.getSingleResult();
     }
+    // ============================================================
+    // MÉTHODES DE CONVERSION ET UTILITAIRES PRIVÉES
+    // ============================================================
 
     /**
-     * Récupère les statistiques par item
+     * Convertit un DTO CreateDto en entité ChargeSheet.
+     *
+     * @param dto Le DTO de création
+     * @param sheet Le cahier parent
+     * @param user L'utilisateur courant
+     * @return L'entité ChargeSheetItem créée
      */
+    private ChargeSheetItem mapToItem(ChargeSheetDto.ItemDto dto, ChargeSheet sheet, User user) {
+        return ChargeSheetItem.builder()
+                .chargeSheet(sheet)
+                .itemNumber(dto.getItemNumber())
+                .samplesExist(dto.getSamplesExist())
+                .ways(dto.getWays())
+                .housingColour(dto.getHousingColour())
+                .testModuleExistInDatabase(dto.getTestModuleExistInDatabase())
+                .housingReferenceLeoni(dto.getHousingReferenceLeoni())
+                .housingReferenceSupplierCustomer(dto.getHousingReferenceSupplierCustomer())
+                .referenceSealsClipsCableTiesCap(dto.getReferenceSealsClipsCableTiesCap())
+                .realConnectorPicture(dto.getRealConnectorPicture())
+                .quantityOfTestModules(dto.getQuantityOfTestModules())
+                .itemStatus("DRAFT")
+                .createdBy(user.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+    }
+    /**
+     * Met à jour un item à partir d'un DTO UpdateTechDto.
+     *
+     * @param item L'item à mettre à jour
+     * @param dto Les nouvelles valeurs techniques
+     */
+    private void updateItemFromDto(ChargeSheetItem item, ChargeSheetDto.UpdateTechDto dto) {
+        if (dto.getHousingReferenceLeoni() != null) {
+            item.setHousingReferenceLeoni(dto.getHousingReferenceLeoni());
+        }
+        if (dto.getQuantityOfTestModules() != null) {
+            item.setQuantityOfTestModules(dto.getQuantityOfTestModules());
+        }
+        item.setOutsideHousingExist(dto.getOutsideHousingExist());
+        item.setInsideHousingExist(dto.getInsideHousingExist());
+        item.setMechanicalCoding(dto.getMechanicalCoding());
+        item.setElectricalCoding(dto.getElectricalCoding());
+        item.setCpaExistOpen(dto.getCpaExistOpen());
+        item.setCpaExistClosed(dto.getCpaExistClosed());
+        item.setCoverHoodExist(dto.getCoverHoodExist());
+        item.setCoverHoodClosed(dto.getCoverHoodClosed());
+        item.setCapExist(dto.getCapExist());
+        item.setBayonetCapExist(dto.getBayonetCapExist());
+        item.setBracketExist(dto.getBracketExist());
+        item.setBracketOpen(dto.getBracketOpen());
+        item.setBracketClosed(dto.getBracketClosed());
+        item.setLatchWingExist(dto.getLatchWingExist());
+        item.setSliderExist(dto.getSliderExist());
+        item.setSliderOpen(dto.getSliderOpen());
+        item.setSliderClosed(dto.getSliderClosed());
+        item.setSecondaryLockExist(dto.getSecondaryLockExist());
+        item.setSecondaryLockOpen(dto.getSecondaryLockOpen());
+        item.setSecondaryLockClosed(dto.getSecondaryLockClosed());
+        item.setOffsetTest(dto.getOffsetTest());
+        item.setPushBackTest(dto.getPushBackTest());
+        item.setTerminalOrientation(dto.getTerminalOrientation());
+        item.setTerminalDifferentiation(dto.getTerminalDifferentiation());
+        item.setAirbagTestViaServiceWindow(dto.getAirbagTestViaServiceWindow());
+        item.setLeakTestPressure(dto.getLeakTestPressure());
+        item.setLeakTestVacuum(dto.getLeakTestVacuum());
+        item.setSealExist(dto.getSealExist());
+        item.setCableTieExist(dto.getCableTieExist());
+        item.setCableTieLeft(dto.getCableTieLeft());
+        item.setCableTieRight(dto.getCableTieRight());
+        item.setCableTieMiddle(dto.getCableTieMiddle());
+        item.setCableTieLeftRight(dto.getCableTieLeftRight());
+        item.setClipExist(dto.getClipExist());
+        item.setScrewExist(dto.getScrewExist());
+        item.setNutExist(dto.getNutExist());
+        item.setConvolutedConduitExist(dto.getConvolutedConduitExist());
+        item.setConvolutedConduitClosed(dto.getConvolutedConduitClosed());
+        item.setAntennaOnlyPresenceTest(dto.getAntennaOnlyPresenceTest());
+        item.setAntennaOnlyContactingOfShield(dto.getAntennaOnlyContactingOfShield());
+        item.setAntennaContactingOfShieldAndCoreWire(dto.getAntennaContactingOfShieldAndCoreWire());
+        item.setRingTerminal(dto.getRingTerminal());
+        item.setDiameterInside(dto.getDiameterInside());
+        item.setDiameterOutside(dto.getDiameterOutside());
+        item.setSingleContact(dto.getSingleContact());
+        item.setHeatShrinkExist(dto.getHeatShrinkExist());
+        item.setOpenShuntsAirbag(dto.getOpenShuntsAirbag());
+        item.setFlowTest(dto.getFlowTest());
+        item.setSolidMetalContour(dto.getSolidMetalContour());
+        item.setMetalContourAdjustable(dto.getMetalContourAdjustable());
+        item.setGrommetExist(dto.getGrommetExist());
+        item.setGrommetOrientation(dto.getGrommetOrientation());
+        item.setCableChannelExist(dto.getCableChannelExist());
+        item.setCableChannelClosed(dto.getCableChannelClosed());
+        item.setColourDetectionPrepared(dto.getColourDetectionPrepared());
+        item.setExtraLED(dto.getExtraLED());
+        item.setSpring(dto.getSpring());
+        item.setOtherDetection(dto.getOtherDetection());
+        item.setSpacerClosingUnit(dto.getSpacerClosingUnit());
+        item.setLeakTestComplex(dto.getLeakTestComplex());
+        item.setPinStraightnessCheck(dto.getPinStraightnessCheck());
+        item.setPresenceTestOfOneSideConnectedShield(dto.getPresenceTestOfOneSideConnectedShield());
+        item.setContrastDetectionGreyValueSensor(dto.getContrastDetectionGreyValueSensor());
+        item.setColourDetection(dto.getColourDetection());
+        item.setAttenuationWithModeScrambler(dto.getAttenuationWithModeScrambler());
+        item.setAttenuationWithoutModeScrambler(dto.getAttenuationWithoutModeScrambler());
+        item.setInsulationResistance(dto.getInsulationResistance());
+        item.setHighVoltageModule(dto.getHighVoltageModule());
+        item.setKelvinMeasurementHV(dto.getKelvinMeasurementHV());
+        item.setActuatorTestHV(dto.getActuatorTestHV());
+        item.setChargingSystemElectrical(dto.getChargingSystemElectrical());
+        item.setPtuPipeTestUnit(dto.getPtuPipeTestUnit());
+        item.setGtuGrommetTestUnit(dto.getGtuGrommetTestUnit());
+        item.setLedLEDTestModule(dto.getLedLEDTestModule());
+        item.setTigTerminalInsertionGuidance(dto.getTigTerminalInsertionGuidance());
+        item.setLinBusFunctionalityTest(dto.getLinBusFunctionalityTest());
+        item.setCanBusFunctionalityTest(dto.getCanBusFunctionalityTest());
+        item.setEsdConformModule(dto.getEsdConformModule());
+        item.setFixedBlock(dto.getFixedBlock());
+        item.setMovingBlock(dto.getMovingBlock());
+        item.setTiltModule(dto.getTiltModule());
+        item.setSlideModule(dto.getSlideModule());
+        item.setHandAdapter(dto.getHandAdapter());
+        item.setLsmLeoniSmartModule(dto.getLsmLeoniSmartModule());
+        item.setLeoniStandardTestTable(dto.getLeoniStandardTestTable());
+        item.setMetalRailsFasteningSystem(dto.getMetalRailsFasteningSystem());
+        item.setMetalPlatesFasteningSystem(dto.getMetalPlatesFasteningSystem());
+        item.setQuickConnectionByCanonConnector(dto.getQuickConnectionByCanonConnector());
+        item.setTestBoard(dto.getTestBoard());
+        item.setWeetech(dto.getWeetech());
+        item.setBak(dto.getBak());
+        item.setOgc(dto.getOgc());
+        item.setAdaptronicHighVoltage(dto.getAdaptronicHighVoltage());
+        item.setEmdepHVBananaPlug(dto.getEmdepHVBananaPlug());
+        item.setLeoniEMOStandardHV(dto.getLeoniEMOStandardHV());
+        item.setClipOrientation(dto.getClipOrientation());
+        item.setUnitPrice(dto.getUnitPrice());
+        item.setTotalPrice(dto.getTotalPrice());
+    }
+    /**
+     * Convertit une entité ChargeSheet en DTO CompleteDto.
+     *
+     * @param sheet L'entité ChargeSheet
+     * @return Le DTO complet
+     */
+    private ChargeSheetDto.CompleteDto mapToCompleteDto(ChargeSheet sheet) {
+        List<ChargeSheetDto.ItemDto> itemDtos = sheet.getItems().stream()
+                .map(this::mapToItemDto)
+                .collect(Collectors.toList());
+
+        return ChargeSheetDto.CompleteDto.builder()
+                .id(sheet.getId())
+                .plant(sheet.getPlant())
+                .project(sheet.getProject())
+                .harnessRef(sheet.getHarnessRef())
+                .issuedBy(sheet.getIssuedBy())
+                .emailAddress(sheet.getEmailAddress())
+                .phoneNumber(sheet.getPhoneNumber())
+                .orderNumber(sheet.getOrderNumber())
+                .costCenterNumber(sheet.getCostCenterNumber())
+                .date(sheet.getDate())
+                .preferredDeliveryDate(sheet.getPreferredDeliveryDate())
+                .items(itemDtos)
+                .status(sheet.getStatus())
+                .createdBy(sheet.getCreatedBy())
+                .createdAt(sheet.getCreatedAt())
+                .updatedBy(sheet.getUpdatedBy())
+                .updatedAt(sheet.getUpdatedAt())
+                .build();
+    }
+    /**
+     * Convertit une entité ChargeSheetItem en DTO ItemDto.
+     *
+     * @param item L'entité ChargeSheetItem
+     * @return Le DTO ItemDto
+     */
+    private ChargeSheetDto.ItemDto mapToItemDto(ChargeSheetItem item) {
+        return ChargeSheetDto.ItemDto.builder()
+                .id(item.getId())
+                .itemNumber(item.getItemNumber())
+                .samplesExist(item.getSamplesExist())
+                .ways(item.getWays())
+                .housingColour(item.getHousingColour())
+                .testModuleExistInDatabase(item.getTestModuleExistInDatabase())
+                .housingReferenceLeoni(item.getHousingReferenceLeoni())
+                .housingReferenceSupplierCustomer(item.getHousingReferenceSupplierCustomer())
+                .referenceSealsClipsCableTiesCap(item.getReferenceSealsClipsCableTiesCap())
+                .realConnectorPicture(item.getRealConnectorPicture())
+                .quantityOfTestModules(item.getQuantityOfTestModules())
+                .outsideHousingExist(item.getOutsideHousingExist())
+                .insideHousingExist(item.getInsideHousingExist())
+                .mechanicalCoding(item.getMechanicalCoding())
+                .electricalCoding(item.getElectricalCoding())
+                .cpaExistOpen(item.getCpaExistOpen())
+                .cpaExistClosed(item.getCpaExistClosed())
+                .coverHoodExist(item.getCoverHoodExist())
+                .coverHoodClosed(item.getCoverHoodClosed())
+                .capExist(item.getCapExist())
+                .bayonetCapExist(item.getBayonetCapExist())
+                .bracketExist(item.getBracketExist())
+                .bracketOpen(item.getBracketOpen())
+                .bracketClosed(item.getBracketClosed())
+                .latchWingExist(item.getLatchWingExist())
+                .sliderExist(item.getSliderExist())
+                .sliderOpen(item.getSliderOpen())
+                .sliderClosed(item.getSliderClosed())
+                .secondaryLockExist(item.getSecondaryLockExist())
+                .secondaryLockOpen(item.getSecondaryLockOpen())
+                .secondaryLockClosed(item.getSecondaryLockClosed())
+                .offsetTest(item.getOffsetTest())
+                .pushBackTest(item.getPushBackTest())
+                .terminalOrientation(item.getTerminalOrientation())
+                .terminalDifferentiation(item.getTerminalDifferentiation())
+                .airbagTestViaServiceWindow(item.getAirbagTestViaServiceWindow())
+                .leakTestPressure(item.getLeakTestPressure())
+                .leakTestVacuum(item.getLeakTestVacuum())
+                .sealExist(item.getSealExist())
+                .cableTieExist(item.getCableTieExist())
+                .cableTieLeft(item.getCableTieLeft())
+                .cableTieRight(item.getCableTieRight())
+                .cableTieMiddle(item.getCableTieMiddle())
+                .cableTieLeftRight(item.getCableTieLeftRight())
+                .clipExist(item.getClipExist())
+                .screwExist(item.getScrewExist())
+                .nutExist(item.getNutExist())
+                .convolutedConduitExist(item.getConvolutedConduitExist())
+                .convolutedConduitClosed(item.getConvolutedConduitClosed())
+                .antennaOnlyPresenceTest(item.getAntennaOnlyPresenceTest())
+                .antennaOnlyContactingOfShield(item.getAntennaOnlyContactingOfShield())
+                .antennaContactingOfShieldAndCoreWire(item.getAntennaContactingOfShieldAndCoreWire())
+                .ringTerminal(item.getRingTerminal())
+                .diameterInside(item.getDiameterInside())
+                .diameterOutside(item.getDiameterOutside())
+                .singleContact(item.getSingleContact())
+                .heatShrinkExist(item.getHeatShrinkExist())
+                .openShuntsAirbag(item.getOpenShuntsAirbag())
+                .flowTest(item.getFlowTest())
+                .solidMetalContour(item.getSolidMetalContour())
+                .metalContourAdjustable(item.getMetalContourAdjustable())
+                .grommetExist(item.getGrommetExist())
+                .grommetOrientation(item.getGrommetOrientation())
+                .cableChannelExist(item.getCableChannelExist())
+                .cableChannelClosed(item.getCableChannelClosed())
+                .colourDetectionPrepared(item.getColourDetectionPrepared())
+                .extraLED(item.getExtraLED())
+                .spring(item.getSpring())
+                .otherDetection(item.getOtherDetection())
+                .spacerClosingUnit(item.getSpacerClosingUnit())
+                .leakTestComplex(item.getLeakTestComplex())
+                .pinStraightnessCheck(item.getPinStraightnessCheck())
+                .presenceTestOfOneSideConnectedShield(item.getPresenceTestOfOneSideConnectedShield())
+                .contrastDetectionGreyValueSensor(item.getContrastDetectionGreyValueSensor())
+                .colourDetection(item.getColourDetection())
+                .attenuationWithModeScrambler(item.getAttenuationWithModeScrambler())
+                .attenuationWithoutModeScrambler(item.getAttenuationWithoutModeScrambler())
+                .insulationResistance(item.getInsulationResistance())
+                .highVoltageModule(item.getHighVoltageModule())
+                .kelvinMeasurementHV(item.getKelvinMeasurementHV())
+                .actuatorTestHV(item.getActuatorTestHV())
+                .chargingSystemElectrical(item.getChargingSystemElectrical())
+                .ptuPipeTestUnit(item.getPtuPipeTestUnit())
+                .gtuGrommetTestUnit(item.getGtuGrommetTestUnit())
+                .ledLEDTestModule(item.getLedLEDTestModule())
+                .tigTerminalInsertionGuidance(item.getTigTerminalInsertionGuidance())
+                .linBusFunctionalityTest(item.getLinBusFunctionalityTest())
+                .canBusFunctionalityTest(item.getCanBusFunctionalityTest())
+                .esdConformModule(item.getEsdConformModule())
+                .fixedBlock(item.getFixedBlock())
+                .movingBlock(item.getMovingBlock())
+                .tiltModule(item.getTiltModule())
+                .slideModule(item.getSlideModule())
+                .handAdapter(item.getHandAdapter())
+                .lsmLeoniSmartModule(item.getLsmLeoniSmartModule())
+                .leoniStandardTestTable(item.getLeoniStandardTestTable())
+                .metalRailsFasteningSystem(item.getMetalRailsFasteningSystem())
+                .metalPlatesFasteningSystem(item.getMetalPlatesFasteningSystem())
+                .quickConnectionByCanonConnector(item.getQuickConnectionByCanonConnector())
+                .testBoard(item.getTestBoard())
+                .weetech(item.getWeetech())
+                .bak(item.getBak())
+                .ogc(item.getOgc())
+                .adaptronicHighVoltage(item.getAdaptronicHighVoltage())
+                .emdepHVBananaPlug(item.getEmdepHVBananaPlug())
+                .leoniEMOStandardHV(item.getLeoniEMOStandardHV())
+                .clipOrientation(item.getClipOrientation())
+                .unitPrice(item.getUnitPrice())
+                .totalPrice(item.getTotalPrice())
+                .itemStatus(item.getItemStatus())
+                .createdBy(item.getCreatedBy())
+                .createdAt(item.getCreatedAt())
+                .updatedBy(item.getUpdatedBy())
+                .updatedAt(item.getUpdatedAt())
+                .build();
+    }
+    /**
+     * Envoie une notification email pour une réception.
+     *
+     * @param sheet Le cahier concerné
+     * @param request La requête de réception
+     * @param newHistories Les historiques créés
+     * @param totalReceivedMap Map des totaux reçus
+     * @param oldTotals Map des anciens totaux
+     * @param currentUser L'utilisateur courant
+     */
+    private void sendReceptionNotification(ChargeSheet sheet, ReceptionDto.ReceptionRequestDto request,
+                                           List<ReceptionHistory> newHistories,
+                                           Map<Long, Integer> totalReceivedMap,
+                                           Map<Long, Integer> oldTotals,
+                                           User currentUser) {
+
+        String subject = "LEONI - Réception enregistrée - Cahier N°" + sheet.getOrderNumber();
+
+        StringBuilder textMessage = new StringBuilder();
+
+        textMessage.append("Objet : ").append(subject).append("\n\n");
+
+        textMessage.append("Bonjour,\n\n");
+        textMessage.append("Une réception de marchandises vient d'être enregistrée dans le système.\n\n");
+
+        // Informations générales
+        textMessage.append("=== INFORMATIONS GENERALES ===\n\n");
+        textMessage.append("N° Cahier des charges : ").append(sheet.getOrderNumber()).append("\n");
+        textMessage.append("Projet : ").append(sheet.getProject()).append("\n");
+        textMessage.append("Site de production : ").append(sheet.getPlant()).append("\n");
+        textMessage.append("N° Bon de livraison : ").append(request.getDeliveryNoteNumber()).append("\n");
+        textMessage.append("Date de réception : ").append(formatDate(request.getReceptionDate())).append("\n");
+        textMessage.append("Réceptionné par : ").append(currentUser.getEmail()).append("\n");
+        if (request.getComments() != null && !request.getComments().isEmpty()) {
+            textMessage.append("Commentaires : ").append(request.getComments()).append("\n");
+        }
+        textMessage.append("\n");
+
+        // Détails des items reçus
+        textMessage.append("=== DETAIL DES ARTICLES REÇUS ===\n\n");
+        for (ReceptionHistory history : newHistories) {
+            textMessage.append("Article N° : ").append(history.getItem().getItemNumber()).append("\n");
+            textMessage.append("Quantité reçue : ").append(history.getQuantityReceived()).append("\n");
+            textMessage.append("Total avant : ").append(history.getPreviousTotalReceived()).append("\n");
+            textMessage.append("Total après : ").append(history.getNewTotalReceived()).append("\n");
+            textMessage.append("Quantité commandée : ").append(history.getQuantityOrdered()).append("\n");
+
+            String status;
+            if (history.getNewTotalReceived() >= history.getQuantityOrdered()) {
+                status = "COMPLET";
+            } else {
+                int remaining = history.getQuantityOrdered() - history.getNewTotalReceived();
+                status = "PARTIEL (" + remaining + " restant)";
+            }
+            textMessage.append("Statut : ").append(status).append("\n\n");
+        }
+
+        // Récapitulatif complet
+        textMessage.append("=== RECAPITULATIF COMPLET PAR ARTICLE ===\n\n");
+        for (ChargeSheetItem item : sheet.getItems()) {
+            int totalReceived = totalReceivedMap.getOrDefault(item.getId(), 0);
+            int quantityOrdered = item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0;
+            int remaining = quantityOrdered - totalReceived;
+
+            String status;
+            if (remaining == 0) {
+                status = "COMPLET";
+            } else if (totalReceived > 0) {
+                status = "PARTIEL";
+            } else {
+                status = "EN ATTENTE";
+            }
+
+            textMessage.append("Article N° : ").append(item.getItemNumber()).append("\n");
+            textMessage.append("Quantité commandée : ").append(quantityOrdered).append("\n");
+            textMessage.append("Total reçu : ").append(totalReceived).append("\n");
+            textMessage.append("Restant à recevoir : ").append(remaining).append("\n");
+            textMessage.append("Statut : ").append(status).append("\n\n");
+        }
+
+        // Message de statut global
+        boolean allComplete = totalReceivedMap.entrySet().stream().allMatch(entry -> {
+            ChargeSheetItem item = itemRepository.findById(entry.getKey()).orElse(null);
+            return item != null && entry.getValue() >= (item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0);
+        });
+
+        if (allComplete) {
+            textMessage.append("=== RECEPTION COMPLETE ===\n");
+            textMessage.append("Tous les articles commandés ont été reçus.\n");
+            textMessage.append("Le cahier des charges passe automatiquement en statut RECEIVED_FROM_SUPPLIER.\n\n");
+        } else {
+            int remainingItems = 0;
+            int totalRemaining = 0;
+            for (ChargeSheetItem item : sheet.getItems()) {
+                int totalReceived = totalReceivedMap.getOrDefault(item.getId(), 0);
+                int quantityOrdered = item.getQuantityOfTestModules() != null ? item.getQuantityOfTestModules() : 0;
+                if (totalReceived < quantityOrdered) {
+                    remainingItems++;
+                    totalRemaining += (quantityOrdered - totalReceived);
+                }
+            }
+            textMessage.append("=== RECEPTION PARTIELLE ===\n");
+            textMessage.append("Il reste ").append(totalRemaining).append(" article(s) à recevoir répartis sur ").append(remainingItems).append(" référence(s).\n");
+            textMessage.append("Une nouvelle notification sera envoyée lors de la prochaine réception.\n\n");
+        }
+
+        textMessage.append("=== A NOTER ===\n");
+        textMessage.append("- Les fiches de conformité doivent être créées pour chaque article reçu\n");
+        textMessage.append("- Les articles partiellement reçus feront l'objet d'un suivi automatique\n");
+        textMessage.append("- En cas de non-conformité, veuillez créer une réclamation\n\n");
+
+        textMessage.append("---\n");
+        textMessage.append("LEONI Wiring Systems - Quality Management System\n");
+        textMessage.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
+
+        // Envoyer la notification
+        notificationService.sendNotificationToProjectAndSiteUsers(subject, textMessage.toString(), sheet.getProject(), sheet.getPlant());
+    }
+    /**
+     * Formate une date pour l'affichage.
+     *
+     * @param date La date à formater
+     * @return La date formatée (dd/MM/yyyy)
+     */
+    /**
+     * Formate une date LocalDate en string lisible
+     */
+
+    private String formatDate(LocalDate date) {
+        if (date == null) return "Non spécifiée";
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        return date.format(formatter);
+    }
+    private String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) return "Non spécifiée";
+        return dateStr;
+    }
+
+
+    private String buildChargeSheetCreatedText(ChargeSheet chargeSheet) {
+        int numberOfItems = chargeSheet.getItems().size();
+
+        StringBuilder text = new StringBuilder();
+
+        text.append("Objet : LEONI - Nouveau Cahier des Charges N°").append(chargeSheet.getOrderNumber()).append("\n\n");
+
+        text.append("Bonjour,\n\n");
+        text.append("Un nouveau cahier des charges vient d'être créé dans le système LEONI Quality Management.\n");
+        text.append("Veuillez trouver ci-dessous les informations principales.\n\n");
+
+        // Informations générales
+        text.append("=== INFORMATIONS GENERALES ===\n\n");
+        text.append("N° Cahier : #").append(chargeSheet.getId()).append("\n");
+        text.append("N° Commande : ").append(chargeSheet.getOrderNumber()).append("\n");
+        text.append("Site de production : ").append(chargeSheet.getPlant()).append("\n");
+        text.append("Projet : ").append(chargeSheet.getProject()).append("\n");
+        text.append("Référence Harnais : ").append(chargeSheet.getHarnessRef()).append("\n");
+        text.append("Émis par : ").append(chargeSheet.getIssuedBy()).append("\n");
+        text.append("Email contact : ").append(chargeSheet.getEmailAddress()).append("\n");
+        text.append("Téléphone : ").append(chargeSheet.getPhoneNumber()).append("\n");
+        text.append("Centre de coût : ").append(chargeSheet.getCostCenterNumber()).append("\n");
+        text.append("Date de création : ").append(formatDate(chargeSheet.getDate())).append("\n");
+        text.append("Date livraison souhaitée : ").append(formatDate(chargeSheet.getPreferredDeliveryDate())).append("\n\n");
+
+        // Détail des items
+        text.append("=== DETAIL DES ITEMS ===\n\n");
+        text.append("Nombre total d'items : ").append(numberOfItems).append(" item(s)\n\n");
+        text.append("⚠️ Les fiches techniques des modules de test doivent être complétées avant validation.\n\n");
+
+        // À noter
+        text.append("=== A NOTER ===\n");
+        text.append("- Ce cahier des charges est actuellement en statut BROUILLON\n");
+        text.append("- La validation par le service ING est requise avant transmission au fournisseur\n");
+        text.append("- Les délais de livraison doivent être respectés selon la date souhaitée\n\n");
+
+        text.append("---\n");
+        text.append("LEONI Wiring Systems - Quality Management System\n");
+        text.append("Cet email est généré automatiquement, merci de ne pas y répondre.\n");
+
+        return text.toString();
+    }
+    /**
+     * Échappe les caractères HTML pour éviter les injections et les erreurs d'affichage
+     */
+    private String escapeHtml(String text) {
+        if (text == null) return "-";
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+
+
+
+    private void updateGlobalStatusAfterItemUpdate(ChargeSheet sheet) {
+        // Vérifier si tous les items sont TECH_FILLED
+        boolean allItemsFilled = sheet.getItems().stream()
+                .allMatch(item -> "TECH_FILLED".equals(item.getItemStatus()));
+
+        // Si tous les items sont remplis
+        if (allItemsFilled) {
+            ChargeSheetStatus currentStatus = sheet.getStatus();
+
+            if (currentStatus == ChargeSheetStatus.DRAFT) {
+                // DRAFT -> TECH_FILLED (les items sont remplis mais ING n'a pas encore validé)
+                sheet.setStatus(ChargeSheetStatus.TECH_FILLED);
+                repository.save(sheet);
+            } else if (currentStatus == ChargeSheetStatus.VALIDATED_ING) {
+                // ✅ Si ING a déjà validé et tous les items sont remplis
+                // On passe à TECH_FILLED (en attendant validation PT)
+                sheet.setStatus(ChargeSheetStatus.TECH_FILLED);
+                repository.save(sheet);
+            }
+        }
+    }
+
+
+
+
+
+
+    public ChargeSheet save(ChargeSheet chargeSheet) {
+        return repository.save(chargeSheet);
+    }
+
+    public ChargeSheetDto.ItemDto mapToItemDtoPublic(ChargeSheetItem item) {
+        return mapToItemDto(item);
+    }
+
+    // === Méthodes privées ===
+
+
+
+    private ChargeSheetItem createDefaultItem(ChargeSheet sheet, User user) {
+        return ChargeSheetItem.builder()
+                .chargeSheet(sheet)
+                .itemNumber("1")
+                .samplesExist("No")
+                .quantityOfTestModules(1)
+                .itemStatus("DRAFT")
+                .createdBy(user.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+    }
+
+
+
+
+    private String getInterpretation(String trend, double variation, long currentCount, long previousCount) {
+        if (trend.equals("hausse")) {
+            if (variation > 50) {
+                return String.format("📈 Forte augmentation de %.1f%% (%d vs %d)", variation, currentCount, previousCount);
+            } else {
+                return String.format("📈 Augmentation de %.1f%% (%d vs %d)", variation, currentCount, previousCount);
+            }
+        } else if (trend.equals("baisse")) {
+            if (variation < -50) {
+                return String.format("📉 Forte baisse de %.1f%% (%d vs %d)", Math.abs(variation), currentCount, previousCount);
+            } else {
+                return String.format("📉 Baisse de %.1f%% (%d vs %d)", Math.abs(variation), currentCount, previousCount);
+            }
+        } else {
+            return String.format("➡️ Stable (%d créations pour les deux mois)", currentCount);
+        }
+    }
+
     private List<ReceptionStatisticsDto.ItemReceptionStats> getItemReceptionStats(String project, String site) {
         String jpql = """
         SELECT 

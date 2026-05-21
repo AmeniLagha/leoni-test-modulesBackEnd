@@ -11,12 +11,82 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+/**
+ * Service pour la gestion du stockage des images sur disque.
+ * <p>
+ * Cette classe fournit les opérations nécessaires pour sauvegarder, récupérer
+ * et supprimer des images associées aux différents modules de l'application
+ * (cahiers des charges, réclamations, etc.).
+ * </p>
+ *
+ * <p><strong>Fonctionnalités principales :</strong></p>
+ * <ul>
+ *     <li>Sauvegarde d'images avec génération de noms de fichiers uniques (UUID)</li>
+ *     <li>Récupération d'images pour affichage (bytes)</li>
+ *     <li>Suppression d'images</li>
+ *     <li>Organisation en sous-dossiers par entité (charge-sheets, claims, etc.)</li>
+ *     <li>Nettoyage automatique des chemins pour compatibilité DEV et PROD</li>
+ * </ul>
+ *
+ * <p><strong>Configuration :</strong></p>
+ * <ul>
+ *     <li>Le dossier racine d'upload est configurable via {@code file.upload-dir} (défaut: "uploads")</li>
+ *     <li>Les images sont stockées dans des sous-dossiers comme {@code charge-sheets/}, {@code claims/}</li>
+ *     <li>Le service crée automatiquement les dossiers manquants au démarrage</li>
+ * </ul>
+ *
+ * <p><strong>Formats d'image supportés :</strong></p>
+ * <ul>
+ *     <li>JPEG/JPG (.jpg, .jpeg)</li>
+ *     <li>PNG (.png)</li>
+ *     <li>GIF (.gif)</li>
+ *     <li>BMP (.bmp)</li>
+ *     <li>WEBP (.webp)</li>
+ * </ul>
+ *
+ * <p><strong>Compatibilité :</strong>
+ * Le service fonctionne aussi bien en développement local que dans les environnements
+ * de production (Docker, Render, Clever Cloud). Les chemins sont automatiquement
+ * nettoyés pour s'adapter aux différents contextes.</p>
+ *
+ * @author LAGHA AMENI
+ * @version 1.0
+ * @see ChargeSheetImageController
+ * @see com.example.security.reclamation.ClaimController
+ * @since Sprint 4
+ */
 @Service
 public class ImageStorageService {
-
+    /**
+     * Répertoire racine de stockage des images.
+     * <p>
+     * Configurable via la propriété {@code file.upload-dir} dans
+     * {@code application.properties} ou {@code application.yml}.
+     * Valeur par défaut : "uploads".
+     * </p>
+     * <p><strong>Exemples :</strong></p>
+     * <ul>
+     *     <li>DEV local : "uploads"</li>
+     *     <li>Docker : "/app/uploads"</li>
+     *     <li>Clever Cloud : "./uploads"</li>
+     * </ul>
+     */
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
-
+    /**
+     * Initialise le service au démarrage de l'application.
+     * <p>
+     * Cette méthode est exécutée automatiquement après l'injection des dépendances.
+     * Elle crée le dossier racine d'upload s'il n'existe pas.
+     * </p>
+     *
+     * <p><strong>Actions effectuées :</strong></p>
+     * <ul>
+     *     <li>Vérifie l'existence du dossier d'upload</li>
+     *     <li>Crée le dossier et ses parents si nécessaire</li>
+     *     <li>Affiche des logs pour le débogage</li>
+     * </ul>
+     */
     @PostConstruct
     public void init() {
         try {
@@ -32,7 +102,25 @@ public class ImageStorageService {
     }
 
     /**
-     * Sauvegarde une image - Fonctionne en DEV et PROD
+     * Sauvegarde une image sur le disque.
+     * <p>
+     * Cette méthode génère un nom de fichier unique (UUID) tout en conservant
+     * l'extension d'origine. L'image est stockée dans un sous-dossier spécifié.
+     * </p>
+     *
+     * <p><strong>Processus :</strong></p>
+     * <ol>
+     *     <li>Crée le sous-dossier s'il n'existe pas</li>
+     *     <li>Extrait l'extension du fichier original</li>
+     *     <li>Génère un nom unique avec UUID</li>
+     *     <li>Sauvegarde le fichier sur le disque</li>
+     *     <li>Retourne le chemin relatif (sous-dossier + nom)</li>
+     * </ol>
+     *
+     * @param file Le fichier image à sauvegarder (MultipartFile)
+     * @param subFolder Le nom du sous-dossier (ex: "charge-sheets", "claims")
+     * @return Le chemin relatif de l'image sauvegardée (ex: "charge-sheets/uuid.jpg")
+     * @throws IOException En cas d'erreur d'écriture du fichier ou de création du dossier
      */
     public String saveImage(MultipartFile file, String subFolder) throws IOException {
         // Créer le dossier spécifique
@@ -56,41 +144,62 @@ public class ImageStorageService {
     }
 
     /**
-     * Récupère une image - Fonctionne en DEV et PROD
+     * Récupère une image à partir de son chemin stocké.
+     * <p>
+     * Cette méthode nettoie automatiquement le chemin pour gérer les différents
+     * formats de stockage (chemins relatifs, absolus, préfixes indésirables).
+     * Elle retourne les données binaires de l'image pour affichage.
+     * </p>
+     *
+     * @param storedPath Le chemin stocké en base de données
+     * @return Les données binaires de l'image (byte array)
+     * @throws IOException Si l'image n'existe pas ou ne peut pas être lue
      */
     public byte[] getImage(String storedPath) throws IOException {
-        // storedPath est comme "charge-sheets/uuid.jpg"
+        if (storedPath == null || storedPath.isEmpty()) {
+            throw new IOException("Chemin d'image vide");
+        }
 
         // Nettoyer le chemin (supprimer les préfixes indésirables)
         String cleanPath = storedPath;
 
-        // Supprimer "uploads/" si présent (anciennes données)
-        if (cleanPath.startsWith("uploads/")) {
-            cleanPath = cleanPath.substring(8);
-        }
-
-        // Supprimer "./" si présent
-        if (cleanPath.startsWith("./")) {
-            cleanPath = cleanPath.substring(2);
-        }
-
-        // Supprimer "/app/uploads/" si présent (pour les cas particuliers)
+        // ✅ 1. Supprimer "/app/uploads/" (chemin absolu Docker)
         if (cleanPath.startsWith("/app/uploads/")) {
             cleanPath = cleanPath.substring(12);
+            System.out.println("📸 [Nettoyage] Supprimé /app/uploads/ → " + cleanPath);
+        }
+
+        // ✅ 2. Supprimer "uploads/" au début (anciennes données)
+        if (cleanPath.startsWith("uploads/")) {
+            cleanPath = cleanPath.substring(8);
+            System.out.println("📸 [Nettoyage] Supprimé uploads/ → " + cleanPath);
+        }
+
+        // ✅ 3. Supprimer "./" si présent
+        if (cleanPath.startsWith("./")) {
+            cleanPath = cleanPath.substring(2);
+            System.out.println("📸 [Nettoyage] Supprimé ./ → " + cleanPath);
+        }
+
+        // ✅ 4. Si le chemin commence encore par "claims/", c'est bon, sinon ajouter "claims/"
+        // (Pour les cas où on a juste le nom du fichier)
+        if (!cleanPath.startsWith("claims/") && !cleanPath.startsWith("charge-sheets/")) {
+            // Si le chemin ressemble à un UUID avec extension, c'est probablement une image de claim
+            if (cleanPath.matches("[a-f0-9-]+\\.(jpg|jpeg|png|gif|webp)$")) {
+                cleanPath = "claims/" + cleanPath;
+                System.out.println("📸 [Nettoyage] Ajouté claims/ → " + cleanPath);
+            }
         }
 
         // Construire le chemin complet
         Path filePath = Paths.get(uploadDir, cleanPath);
 
-        // Logs de débogage (utiles pour identifier les problèmes)
-        if (System.getProperty("spring.profiles.active", "").contains("docker") ||
-                System.getenv("SPRING_PROFILES_ACTIVE") != null) {
-            System.out.println("📸 [DEBUG] storedPath: " + storedPath);
-            System.out.println("📸 [DEBUG] cleanPath: " + cleanPath);
-            System.out.println("📸 [DEBUG] uploadDir: " + uploadDir);
-            System.out.println("📸 [DEBUG] fullPath: " + filePath.toAbsolutePath());
-            System.out.println("📸 [DEBUG] fileExists: " + Files.exists(filePath));
-        }
+        // Logs de débogage
+        System.out.println("📸 [DEBUG] storedPath: " + storedPath);
+        System.out.println("📸 [DEBUG] cleanPath: " + cleanPath);
+        System.out.println("📸 [DEBUG] uploadDir: " + uploadDir);
+        System.out.println("📸 [DEBUG] fullPath: " + filePath.toAbsolutePath());
+        System.out.println("📸 [DEBUG] fileExists: " + Files.exists(filePath));
 
         if (!Files.exists(filePath)) {
             throw new IOException("Image non trouvée: " + filePath.toAbsolutePath());
@@ -100,7 +209,14 @@ public class ImageStorageService {
     }
 
     /**
-     * Supprime une image
+     * Supprime une image du disque.
+     * <p>
+     * Cette méthode supprime le fichier image si son chemin n'est pas nul ou vide.
+     * Elle nettoie automatiquement le chemin avant suppression.
+     * </p>
+     *
+     * @param storedPath Le chemin de l'image à supprimer (peut être nul ou vide)
+     * @throws IOException En cas d'erreur lors de la suppression du fichier
      */
     public void deleteImage(String storedPath) throws IOException {
         if (storedPath != null && !storedPath.isEmpty()) {
@@ -111,13 +227,5 @@ public class ImageStorageService {
             Path filePath = Paths.get(uploadDir, cleanPath);
             Files.deleteIfExists(filePath);
         }
-    }
-
-    /**
-     * Récupère une image depuis un dossier spécifique
-     */
-    public byte[] getImageFromFolder(String subFolder, String filename) throws IOException {
-        Path filePath = Paths.get(uploadDir, subFolder, filename);
-        return Files.readAllBytes(filePath);
     }
 }

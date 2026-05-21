@@ -123,7 +123,6 @@ class CompliancePreparationServiceTest {
     @Test
     void prepareComplianceForItem_WhenPendingCompliance_ShouldReturnQuantity() {
         when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
-        // ✅ Utiliser ArrayList modifiable
         List<ReceptionHistory> receptions = new ArrayList<>();
         receptions.add(reception1);
         receptions.add(reception2);
@@ -164,7 +163,6 @@ class CompliancePreparationServiceTest {
     void createComplianceForReceivedQuantity_ShouldCreateCorrectNumberOfSheets() {
         when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
 
-        // ✅ Utiliser ArrayList modifiable
         List<ReceptionHistory> receptions = new ArrayList<>();
         receptions.add(reception1);
         receptions.add(reception2);
@@ -186,4 +184,21 @@ class CompliancePreparationServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Item not found");
     }
+    @Test
+    void createComplianceForReceivedQuantity_WithComplexReference_ShouldParseCorrectly() {
+        testItem.setHousingReferenceSupplierCustomer("COMPLEX_5_SUPPLIER_TYPE");
+
+        List<ReceptionHistory> receptions = new ArrayList<>();
+        receptions.add(reception1);
+
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(receptionHistoryRepository.findByItemId(1L)).thenReturn(receptions);  // ← Liste modifiable
+        when(complianceRepository.findByItemId(1L)).thenReturn(new ArrayList<>());  // ← Déjà modifiable
+        when(complianceRepository.save(any(Compliance.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<Compliance> result = compliancePreparationService.createComplianceForReceivedQuantity(1L, 3);
+
+        assertThat(result).isNotEmpty();
+    }
+
 }

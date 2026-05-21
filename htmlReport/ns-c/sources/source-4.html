@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ReceptionStatisticsController</title>
+  <title>Coverage Report > ProjetService</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,21 +19,22 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.reception</a>
+    <a href="../index.html">com.example.security.projet</a>
 </div>
 
-<h1>Coverage Summary for Class: ReceptionStatisticsController (com.example.security.reception)</h1>
+<h1>Coverage Summary for Class: ProjetService (com.example.security.projet)</h1>
 
 <table class="coverageStats">
+
 <tr>
   <th class="name">Class</th>
 <th class="coverageStat 
 ">
-  Class, %
+  Method, %
 </th>
 <th class="coverageStat 
 ">
-  Method, %
+  Branch, %
 </th>
 <th class="coverageStat 
 ">
@@ -41,13 +42,21 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 </tr>
 <tr>
-  <td class="name">ReceptionStatisticsController</td>
+  <td class="name">ProjetService</td>
 <td class="coverageStat">
   <span class="percent">
     100%
   </span>
   <span class="absValue">
-    (1/1)
+    (10/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62,5%
+  </span>
+  <span class="absValue">
+    (10/16)
   </span>
 </td>
 <td class="coverageStat">
@@ -55,19 +64,40 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (2/2)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    100%
-  </span>
-  <span class="absValue">
-    (3/3)
+    (56/56)
   </span>
 </td>
 </tr>
-
+  <tr>
+    <td class="name">ProjetService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (10/10)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    62,5%
+  </span>
+  <span class="absValue">
+    (10/16)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (56/56)
+  </span>
+</td>
+</tr>
 </table>
 
 <br/>
@@ -75,29 +105,127 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.reception;
+<code class="sourceCode" id="sourceCode">&nbsp;// ProjetService.java
+&nbsp;package com.example.security.projet;
 &nbsp;
-&nbsp;
-&nbsp;import com.example.security.cahierdeCharge.ChargeSheetService;
+&nbsp;import com.example.security.site.Site;
+&nbsp;import com.example.security.site.SiteRepository;
 &nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.http.ResponseEntity;
-&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;import org.springframework.web.server.ResponseStatusException;
 &nbsp;
-&nbsp;@RestController
-&nbsp;@RequestMapping(&quot;/api/charge-sheets/statistics&quot;)
+&nbsp;import java.util.List;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;@Service
 <b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ReceptionStatisticsController {
+&nbsp;public class ProjetService {
 &nbsp;
-&nbsp;    private final ChargeSheetService chargeSheetService;
+&nbsp;    private final ProjetRepository projetRepository;
+&nbsp;    private final SiteRepository siteRepository;
 &nbsp;
-&nbsp;    @GetMapping(&quot;/receptions&quot;)
-&nbsp;    public ResponseEntity&lt;ReceptionStatisticsDto&gt; getReceptionStatistics(
-&nbsp;            @RequestParam(required = false) String project,
-&nbsp;            @RequestParam(required = false) String site,
-&nbsp;            @RequestParam(defaultValue = &quot;12&quot;) int months) {
+&nbsp;    public List&lt;ProjetDto&gt; getAllProjets() {
+<b class="fc">&nbsp;        return projetRepository.findAllByOrderByNameAsc().stream()</b>
+<b class="fc">&nbsp;                .map(this::convertToDto)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
 &nbsp;
-<b class="fc">&nbsp;        ReceptionStatisticsDto stats = chargeSheetService.getReceptionStatistics(project, site, months);</b>
-<b class="fc">&nbsp;        return ResponseEntity.ok(stats);</b>
+&nbsp;    public List&lt;ProjetDto&gt; getProjetsBySite(Long siteId) {
+<b class="fc">&nbsp;        Site site = siteRepository.findById(siteId)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+<b class="fc">&nbsp;        return site.getProjets().stream()</b>
+<b class="fc">&nbsp;                .map(this::convertToDto)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public ProjetDto getProjetById(Long id) {
+<b class="fc">&nbsp;        Projet projet = projetRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Projet non trouvé&quot;));</b>
+<b class="fc">&nbsp;        return convertToDto(projet);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public ProjetDto createProjet(ProjetDto dto) {
+<b class="fc">&nbsp;        if (projetRepository.findByName(dto.getName()).isPresent()) {</b>
+<b class="fc">&nbsp;            throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;Un projet avec ce nom existe déjà&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        Projet projet = Projet.builder()</b>
+<b class="fc">&nbsp;                .name(dto.getName())</b>
+<b class="fc">&nbsp;                .description(dto.getDescription())</b>
+<b class="fc">&nbsp;                .active(dto.isActive())</b>
+<b class="fc">&nbsp;                .build();</b>
+&nbsp;
+&nbsp;        // ✅ Ajouter les sites associés
+<b class="pc">&nbsp;        if (dto.getSiteIds() != null &amp;&amp; !dto.getSiteIds().isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;Site&gt; sites = siteRepository.findAllById(dto.getSiteIds());</b>
+<b class="fc">&nbsp;            projet.setSites(sites);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return convertToDto(projetRepository.save(projet));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public ProjetDto updateProjet(Long id, ProjetDto dto) {
+<b class="fc">&nbsp;        Projet projet = projetRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Projet non trouvé&quot;));</b>
+&nbsp;
+<b class="pc">&nbsp;        if (dto.getName() != null &amp;&amp; !dto.getName().equals(projet.getName())) {</b>
+<b class="fc">&nbsp;            if (projetRepository.findByName(dto.getName()).isPresent()) {</b>
+<b class="fc">&nbsp;                throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;Un projet avec ce nom existe déjà&quot;);</b>
+&nbsp;            }
+<b class="fc">&nbsp;            projet.setName(dto.getName());</b>
+&nbsp;        }
+&nbsp;
+<b class="pc">&nbsp;        if (dto.getDescription() != null) {</b>
+<b class="fc">&nbsp;            projet.setDescription(dto.getDescription());</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        projet.setActive(dto.isActive());</b>
+&nbsp;
+&nbsp;        // ✅ Mettre à jour les sites associés
+<b class="pc">&nbsp;        if (dto.getSiteIds() != null) {</b>
+<b class="fc">&nbsp;            List&lt;Site&gt; sites = siteRepository.findAllById(dto.getSiteIds());</b>
+<b class="fc">&nbsp;            projet.setSites(sites);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return convertToDto(projetRepository.save(projet));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public void deleteProjet(Long id) {
+<b class="fc">&nbsp;        Projet projet = projetRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Projet non trouvé&quot;));</b>
+<b class="fc">&nbsp;        projetRepository.delete(projet);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private ProjetDto convertToDto(Projet projet) {
+<b class="fc">&nbsp;        return ProjetDto.builder()</b>
+<b class="fc">&nbsp;                .id(projet.getId())</b>
+<b class="fc">&nbsp;                .name(projet.getName())</b>
+<b class="fc">&nbsp;                .description(projet.getDescription())</b>
+<b class="fc">&nbsp;                .active(projet.isActive())</b>
+<b class="fc">&nbsp;                .siteNames(projet.getSites().stream().map(Site::getName).collect(Collectors.toList()))</b>
+<b class="fc">&nbsp;                .siteIds(projet.getSites().stream().map(Site::getId).collect(Collectors.toList()))</b>
+<b class="fc">&nbsp;                .build();</b>
+&nbsp;    }
+&nbsp;    // ProjetService.java - Ajouter cette méthode
+&nbsp;    public List&lt;ProjetDto&gt; getProjetsBySiteName(String siteName) {
+<b class="fc">&nbsp;        Site site = siteRepository.findByName(siteName)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé: &quot; + siteName));</b>
+&nbsp;
+<b class="fc">&nbsp;        return site.getProjets().stream()</b>
+<b class="fc">&nbsp;                .filter(Projet::isActive)</b>
+<b class="fc">&nbsp;                .map(this::convertToDto)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;    // ProjetService.java - Ajouter cette méthode
+&nbsp;    public List&lt;ProjetDto&gt; getActiveProjets() {
+<b class="fc">&nbsp;        return projetRepository.findAllByActiveTrue().stream()</b>
+<b class="fc">&nbsp;                .map(this::convertToDto)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -123,7 +251,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

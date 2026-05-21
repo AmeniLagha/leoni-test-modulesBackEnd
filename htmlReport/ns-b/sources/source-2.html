@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ProjetController</title>
+  <title>Coverage Report > MetricsService</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,15 +19,18 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.projet</a>
+    <a href="../index.html">com.example.security.monitoring</a>
 </div>
 
-<h1>Coverage Summary for Class: ProjetController (com.example.security.projet)</h1>
+<h1>Coverage Summary for Class: MetricsService (com.example.security.monitoring)</h1>
 
 <table class="coverageStats">
-
 <tr>
   <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
 <th class="coverageStat 
 ">
   Method, %
@@ -38,46 +41,33 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 </tr>
 <tr>
-  <td class="name">ProjetController</td>
+  <td class="name">MetricsService</td>
 <td class="coverageStat">
   <span class="percent">
     100%
   </span>
   <span class="absValue">
-    (8/8)
+    (1/1)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    80%
   </span>
   <span class="absValue">
-    (23/23)
-  </span>
-</td>
-</tr>
-  <tr>
-    <td class="name">ProjetController$$SpringCGLIB$$0</td>
-  </tr>
-<tr>
-  <td class="name"><strong>Total</strong></td>
-<td class="coverageStat">
-  <span class="percent">
-    100%
-  </span>
-  <span class="absValue">
-    (8/8)
+    (4/5)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    100%
+    80%
   </span>
   <span class="absValue">
-    (23/23)
+    (8/10)
   </span>
 </td>
 </tr>
+
 </table>
 
 <br/>
@@ -85,105 +75,43 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;// ProjetController.java
-&nbsp;package com.example.security.projet;
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.monitoring;
 &nbsp;
-&nbsp;import com.example.security.common.ApiResponse;
+&nbsp;import io.micrometer.core.instrument.MeterRegistry;
+&nbsp;import io.micrometer.core.instrument.Timer;
 &nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.http.HttpStatus;
-&nbsp;import org.springframework.http.ResponseEntity;
-&nbsp;import org.springframework.security.access.prepost.PreAuthorize;
-&nbsp;import org.springframework.web.bind.annotation.*;
-&nbsp;import java.util.List;
+&nbsp;import org.springframework.stereotype.Service;
 &nbsp;
-&nbsp;@RestController
-&nbsp;@RequestMapping(&quot;/api/v1/projets&quot;)
+&nbsp;@Service
 <b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ProjetController {
+&nbsp;public class MetricsService {
 &nbsp;
-&nbsp;    private final ProjetService projetService;
+&nbsp;    private final MeterRegistry meterRegistry;
 &nbsp;
-&nbsp;    @GetMapping
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;ProjetDto&gt;&gt;&gt; getAllProjets() {
-<b class="fc">&nbsp;        List&lt;ProjetDto&gt; projets = projetService.getAllProjets();</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;ProjetDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste des projets récupérée avec succès&quot;,
-&nbsp;                projets
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;    @GetMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;ProjetDto&gt;&gt; getProjetById(@PathVariable Long id) {
-<b class="fc">&nbsp;        ProjetDto projet = projetService.getProjetById(id);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;ProjetDto&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Projet récupéré avec succès&quot;,
-&nbsp;                projet
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    public void incrementRequestCount(String endpoint, String method, String status) {
+<b class="fc">&nbsp;        meterRegistry.counter(&quot;http.requests&quot;,</b>
+&nbsp;                &quot;endpoint&quot;, endpoint,
+&nbsp;                &quot;method&quot;, method,
+&nbsp;                &quot;status&quot;, status
+<b class="fc">&nbsp;        ).increment();</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    @PostMapping
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;ProjetDto&gt;&gt; createProjet(@RequestBody ProjetDto dto) {
-<b class="fc">&nbsp;        ProjetDto created = projetService.createProjet(dto);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;ProjetDto&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Projet créé avec succès&quot;,
-&nbsp;                created,
-<b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
+&nbsp;    public Timer.Sample startTimer() {
+<b class="fc">&nbsp;        return Timer.start(meterRegistry);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    @PutMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;ProjetDto&gt;&gt; updateProjet(
-&nbsp;            @PathVariable Long id,
-&nbsp;            @RequestBody ProjetDto dto) {
-<b class="fc">&nbsp;        ProjetDto updated = projetService.updateProjet(id, dto);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;ProjetDto&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Projet mis à jour avec succès&quot;,
-&nbsp;                updated
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    public void stopTimer(Timer.Sample sample, String endpoint, String method) {
+<b class="fc">&nbsp;        sample.stop(Timer.builder(&quot;http.request.duration&quot;)</b>
+<b class="fc">&nbsp;                .tag(&quot;endpoint&quot;, endpoint)</b>
+<b class="fc">&nbsp;                .tag(&quot;method&quot;, method)</b>
+<b class="fc">&nbsp;                .register(meterRegistry));</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
-&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteProjet(@PathVariable Long id) {
-<b class="fc">&nbsp;        projetService.deleteProjet(id);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;Void&gt; response = ApiResponse.success(&quot;Projet supprimé avec succès&quot;);</b>
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    // ProjetController.java - Ajouter cet endpoint
-&nbsp;    @GetMapping(&quot;/site/{siteName}&quot;)
-&nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;ProjetDto&gt;&gt;&gt; getProjetsBySiteName(@PathVariable String siteName) {
-<b class="fc">&nbsp;        List&lt;ProjetDto&gt; projets = projetService.getProjetsBySiteName(siteName);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;ProjetDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste des projets par site récupérée avec succès&quot;,
-&nbsp;                projets
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;    // ProjetController.java - Ajouter cet endpoint
-&nbsp;    @GetMapping(&quot;/active&quot;)
-&nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;ProjetDto&gt;&gt;&gt; getActiveProjets() {
-<b class="fc">&nbsp;        List&lt;ProjetDto&gt; projets = projetService.getActiveProjets();</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;ProjetDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste des projets actifs récupérée avec succès&quot;,
-&nbsp;                projets
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    public void incrementErrorCount(String endpoint, String errorType) {
+<b class="nc">&nbsp;        meterRegistry.counter(&quot;application.errors&quot;,</b>
+&nbsp;                &quot;endpoint&quot;, endpoint,
+&nbsp;                &quot;error_type&quot;, errorType
+<b class="nc">&nbsp;        ).increment();</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -209,7 +137,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

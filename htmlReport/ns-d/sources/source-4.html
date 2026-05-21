@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ClaimService</title>
+  <title>Coverage Report > ReceptionStatisticsController</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,22 +19,21 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.reclamation</a>
+    <a href="../index.html">com.example.security.reception</a>
 </div>
 
-<h1>Coverage Summary for Class: ClaimService (com.example.security.reclamation)</h1>
+<h1>Coverage Summary for Class: ReceptionStatisticsController (com.example.security.reception)</h1>
 
 <table class="coverageStats">
-
 <tr>
   <th class="name">Class</th>
 <th class="coverageStat 
 ">
-  Method, %
+  Class, %
 </th>
 <th class="coverageStat 
 ">
-  Branch, %
+  Method, %
 </th>
 <th class="coverageStat 
 ">
@@ -42,62 +41,33 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 </tr>
 <tr>
-  <td class="name">ClaimService</td>
+  <td class="name">ReceptionStatisticsController</td>
 <td class="coverageStat">
   <span class="percent">
-    95,2%
+    100%
   </span>
   <span class="absValue">
-    (20/21)
+    (1/1)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    36,7%
+    100%
   </span>
   <span class="absValue">
-    (61/166)
+    (2/2)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    80,6%
+    100%
   </span>
   <span class="absValue">
-    (295/366)
-  </span>
-</td>
-</tr>
-  <tr>
-    <td class="name">ClaimService$$SpringCGLIB$$0</td>
-  </tr>
-<tr>
-  <td class="name"><strong>Total</strong></td>
-<td class="coverageStat">
-  <span class="percent">
-    95,2%
-  </span>
-  <span class="absValue">
-    (20/21)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    36,7%
-  </span>
-  <span class="absValue">
-    (61/166)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    80,6%
-  </span>
-  <span class="absValue">
-    (295/366)
+    (3/3)
   </span>
 </td>
 </tr>
+
 </table>
 
 <br/>
@@ -105,702 +75,29 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.reclamation;
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.reception;
 &nbsp;
-&nbsp;import com.example.security.cahierdeCharge.ChargeSheet;
-&nbsp;import com.example.security.cahierdeCharge.ChargeSheetRepository;
-&nbsp;import com.example.security.cahierdeCharge.ImageStorageService;
-&nbsp;import com.example.security.email.GlobalNotificationService;
-&nbsp;import com.example.security.user.User;
+&nbsp;
+&nbsp;import com.example.security.cahierdeCharge.ChargeSheetService;
 &nbsp;import lombok.RequiredArgsConstructor;
-&nbsp;import org.springframework.http.HttpStatus;
-&nbsp;import org.springframework.security.core.Authentication;
-&nbsp;import org.springframework.security.core.context.SecurityContextHolder;
-&nbsp;import org.springframework.stereotype.Service;
-&nbsp;import org.springframework.transaction.annotation.Transactional;
-&nbsp;import org.springframework.web.multipart.MultipartFile;
-&nbsp;import org.springframework.web.server.ResponseStatusException;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.web.bind.annotation.*;
 &nbsp;
-&nbsp;import java.io.IOException;
-&nbsp;import java.time.LocalDate;
-&nbsp;import java.util.Arrays;
-&nbsp;import java.util.HashMap;
-&nbsp;import java.util.List;
-&nbsp;import java.util.Map;
-&nbsp;import java.util.stream.Collectors;
-&nbsp;
-&nbsp;@Service
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/api/charge-sheets/statistics&quot;)
 <b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class ClaimService {
+&nbsp;public class ReceptionStatisticsController {
 &nbsp;
-&nbsp;    private final ClaimRepository repository;
-&nbsp;    private final GlobalNotificationService notificationService;
-&nbsp;    private final ImageStorageService imageStorageService;
-&nbsp;    private final ChargeSheetRepository chargeSheetRepository;
+&nbsp;    private final ChargeSheetService chargeSheetService;
 &nbsp;
-&nbsp;    // ClaimService.java - Modifier la méthode createClaim
+&nbsp;    @GetMapping(&quot;/receptions&quot;)
+&nbsp;    public ResponseEntity&lt;ReceptionStatisticsDto&gt; getReceptionStatistics(
+&nbsp;            @RequestParam(required = false) String project,
+&nbsp;            @RequestParam(required = false) String site,
+&nbsp;            @RequestParam(defaultValue = &quot;12&quot;) int months) {
 &nbsp;
-&nbsp;    // ClaimService.java - Modifier la méthode createClaim
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Claim createClaim(ClaimDto.CreateDto dto) {
-<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;        String currentUserEmail = auth.getName();</b>
-<b class="fc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-&nbsp;        // Récupérer le site de l&#39;utilisateur
-<b class="fc">&nbsp;        String userSite = currentUser.getSiteName();</b>
-&nbsp;
-<b class="fc">&nbsp;        Claim claim = Claim.builder()</b>
-<b class="fc">&nbsp;                .chargeSheetId(dto.getChargeSheetId())</b>
-<b class="fc">&nbsp;                .relatedTo(dto.getRelatedTo())</b>
-<b class="fc">&nbsp;                .relatedId(dto.getRelatedId())</b>
-&nbsp;                // NOUVEAUX CHAMPS
-<b class="pc">&nbsp;                .plant(dto.getPlant() != null ? dto.getPlant() : userSite)</b>
-<b class="fc">&nbsp;                .customer(dto.getCustomer())</b>
-<b class="fc">&nbsp;                .contactPerson(dto.getContactPerson())</b>
-<b class="fc">&nbsp;                .customerEmail(dto.getCustomerEmail())</b>
-<b class="fc">&nbsp;                .customerPhone(dto.getCustomerPhone())</b>
-<b class="fc">&nbsp;                .supplier(dto.getSupplier())</b>
-<b class="fc">&nbsp;                .supplierContactPerson(dto.getSupplierContactPerson())</b>
-<b class="fc">&nbsp;                .orderNumber(dto.getOrderNumber())</b>
-<b class="fc">&nbsp;                .testModuleNumber(dto.getTestModuleNumber())</b>
-<b class="fc">&nbsp;                .testModuleQuantity(dto.getTestModuleQuantity())</b>
-<b class="fc">&nbsp;                .ppoSignature(dto.getPpoSignature())</b>
-<b class="fc">&nbsp;                .problemWhatHappened(dto.getProblemWhatHappened())</b>
-<b class="fc">&nbsp;                .problemWhy(dto.getProblemWhy())</b>
-<b class="fc">&nbsp;                .problemWhenDetected(dto.getProblemWhenDetected())</b>
-<b class="fc">&nbsp;                .problemWhoDetected(dto.getProblemWhoDetected())</b>
-<b class="fc">&nbsp;                .problemWhereDetected(dto.getProblemWhereDetected())</b>
-<b class="fc">&nbsp;                .problemHowDetected(dto.getProblemHowDetected())</b>
-<b class="pc">&nbsp;                .claimDate(dto.getClaimDate() != null ? dto.getClaimDate() : LocalDate.now())</b>
-&nbsp;                // Champs existants
-<b class="fc">&nbsp;                .title(dto.getTitle())</b>
-<b class="fc">&nbsp;                .description(dto.getDescription())</b>
-<b class="pc">&nbsp;                .priority(dto.getPriority() != null ? dto.getPriority() : Claim.Priority.MEDIUM)</b>
-<b class="fc">&nbsp;                .category(dto.getCategory())</b>
-<b class="fc">&nbsp;                .imagePath(dto.getImagePath())</b>
-<b class="fc">&nbsp;                .status(Claim.ClaimStatus.ASSIGNED)</b>
-<b class="fc">&nbsp;                .reportedBy(currentUserEmail)</b>
-<b class="fc">&nbsp;                .reportedDate(LocalDate.now())</b>
-<b class="fc">&nbsp;                .assignedTo(dto.getAssignedTo())</b>
-<b class="pc">&nbsp;                .assignedDate(dto.getAssignedTo() != null ? LocalDate.now() : null)</b>
-<b class="fc">&nbsp;                .createdBy(currentUserEmail)</b>
-<b class="fc">&nbsp;                .createdAt(LocalDate.now())</b>
-<b class="fc">&nbsp;                .build();</b>
-&nbsp;
-<b class="fc">&nbsp;        Claim savedClaim = repository.save(claim);</b>
-&nbsp;
-&nbsp;        // ✅ AJOUTER LA NOTIFICATION À LA PERSONNE ASSIGNÉE
-<b class="pc">&nbsp;        if (savedClaim.getAssignedTo() != null &amp;&amp; !savedClaim.getAssignedTo().isEmpty()) {</b>
-&nbsp;            // Envoyer un email à la personne assignée
-<b class="fc">&nbsp;            String subject = &quot;🔔 Nouvelle réclamation assignée - #&quot; + savedClaim.getId();</b>
-<b class="fc">&nbsp;            String message = String.format(</b>
-&nbsp;                    &quot;Bonjour,\n\n&quot; +
-&nbsp;                            &quot;Une nouvelle réclamation vous a été assignée.\n\n&quot; +
-&nbsp;                            &quot;📋 **Titre:** %s\n&quot; +
-&nbsp;                            &quot;🔴 **Priorité:** %s\n&quot; +
-&nbsp;                            &quot;📝 **Description:** %s\n&quot; +
-&nbsp;                            &quot;👤 **Signalé par:** %s\n&quot; +
-&nbsp;                            &quot;📅 **Date:** %s\n\n&quot; +
-&nbsp;                            &quot;🔗 Veuillez vous connecter à l&#39;application pour traiter cette réclamation.\n\n&quot; +
-&nbsp;                            &quot;Cordialement,\n&quot; +
-&nbsp;                            &quot;L&#39;équipe Qualité Leoni&quot;,
-<b class="fc">&nbsp;                    savedClaim.getTitle(),</b>
-<b class="fc">&nbsp;                    savedClaim.getPriority(),</b>
-<b class="fc">&nbsp;                    savedClaim.getDescription(),</b>
-&nbsp;                    currentUserEmail,
-<b class="fc">&nbsp;                    LocalDate.now()</b>
-&nbsp;            );
-&nbsp;
-<b class="fc">&nbsp;            notificationService.sendNotificationToOneUser(subject, message, savedClaim.getAssignedTo());</b>
-&nbsp;
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        return savedClaim;</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Claim updateClaim(Long id, ClaimDto.UpdateDto dto) {
-&nbsp;        try {
-<b class="fc">&nbsp;            Claim claim = repository.findById(id)</b>
-<b class="fc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
-&nbsp;
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;            // ✅ Récupérer les infos projet et site
-<b class="fc">&nbsp;            String projet = null;</b>
-<b class="fc">&nbsp;            String site = null;</b>
-<b class="fc">&nbsp;            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);</b>
-<b class="pc">&nbsp;            if (chargeSheet != null) {</b>
-<b class="fc">&nbsp;                projet = chargeSheet.getProject();</b>
-<b class="fc">&nbsp;                site = chargeSheet.getPlant();</b>
-&nbsp;            }
-&nbsp;            // Mise à jour des champs de base
-<b class="pc">&nbsp;            if (dto.getTitle() != null) claim.setTitle(dto.getTitle());</b>
-<b class="pc">&nbsp;            if (dto.getDescription() != null) claim.setDescription(dto.getDescription());</b>
-<b class="pc">&nbsp;            if (dto.getPriority() != null) claim.setPriority(dto.getPriority());</b>
-<b class="pc">&nbsp;            if (dto.getCategory() != null) claim.setCategory(dto.getCategory());</b>
-<b class="pc">&nbsp;            if (dto.getImagePath() != null) claim.setImagePath(dto.getImagePath());</b>
-&nbsp;            // Gestion du changement de statut
-<b class="pc">&nbsp;            if (dto.getStatus() != null) {</b>
-<b class="nc">&nbsp;                claim.setStatus(dto.getStatus());</b>
-&nbsp;
-&nbsp;                // Si le statut est ASSIGNED et assignedTo est défini
-<b class="nc">&nbsp;                if (dto.getStatus() == Claim.ClaimStatus.ASSIGNED &amp;&amp; dto.getAssignedTo() != null) {</b>
-<b class="nc">&nbsp;                    claim.setAssignedTo(dto.getAssignedTo());</b>
-<b class="nc">&nbsp;                    claim.setAssignedDate(LocalDate.now());</b>
-&nbsp;                }
-&nbsp;
-&nbsp;                // Si le statut est RESOLVED
-<b class="nc">&nbsp;                if (dto.getStatus() == Claim.ClaimStatus.RESOLVED) {</b>
-<b class="nc">&nbsp;                    claim.setResolvedBy(currentUser.getEmail());</b>
-<b class="nc">&nbsp;                    claim.setResolvedDate(LocalDate.now());</b>
-&nbsp;                }
-&nbsp;
-&nbsp;                // Si le statut est CLOSED
-<b class="nc">&nbsp;                if (dto.getStatus() == Claim.ClaimStatus.CLOSED) {</b>
-<b class="nc">&nbsp;                    claim.setClosedBy(currentUser.getEmail());</b>
-<b class="nc">&nbsp;                    claim.setClosedDate(LocalDate.now());</b>
-&nbsp;                }
-&nbsp;            }
-&nbsp;
-&nbsp;            // Mise à jour de l&#39;assignation
-<b class="pc">&nbsp;            if (dto.getAssignedTo() != null &amp;&amp; !dto.getAssignedTo().equals(claim.getAssignedTo())) {</b>
-<b class="nc">&nbsp;                claim.setAssignedTo(dto.getAssignedTo());</b>
-<b class="nc">&nbsp;                claim.setAssignedDate(LocalDate.now());</b>
-<b class="nc">&nbsp;                claim.setStatus(Claim.ClaimStatus.ASSIGNED);</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // Actions et résolution
-<b class="pc">&nbsp;            if (dto.getActionTaken() != null) claim.setActionTaken(dto.getActionTaken());</b>
-<b class="pc">&nbsp;            if (dto.getResolution() != null) claim.setResolution(dto.getResolution());</b>
-&nbsp;
-&nbsp;            // Dates estimées et réelles
-<b class="pc">&nbsp;            if (dto.getEstimatedResolutionDate() != null) {</b>
-<b class="nc">&nbsp;                claim.setEstimatedResolutionDate(dto.getEstimatedResolutionDate());</b>
-&nbsp;            }
-<b class="pc">&nbsp;            if (dto.getActualResolutionDate() != null) {</b>
-<b class="nc">&nbsp;                claim.setActualResolutionDate(dto.getActualResolutionDate());</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            claim.setUpdatedBy(currentUser.getEmail());</b>
-<b class="fc">&nbsp;            claim.setUpdatedAt(LocalDate.now());</b>
-&nbsp;
-<b class="fc">&nbsp;            Claim updated = repository.save(claim);</b>
-&nbsp;
-&nbsp;            // ✅ Notification modifiée
-<b class="fc">&nbsp;            notificationService.notifyClaimUpdatedToProjectAndSite(</b>
-<b class="fc">&nbsp;                    updated.getId(),</b>
-<b class="fc">&nbsp;                    updated.getTitle(),</b>
-<b class="fc">&nbsp;                    updated.getChargeSheetId(),</b>
-<b class="fc">&nbsp;                    currentUser.getEmail(),</b>
-&nbsp;                    &quot;MODIFIÉE&quot;,
-&nbsp;                    projet,
-&nbsp;                    site
-&nbsp;            );
-&nbsp;
-<b class="fc">&nbsp;            return updated;</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans updateClaim: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-<b class="nc">&nbsp;            return null;</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Claim assignClaim(Long id, ClaimDto.AssignmentDto dto) {
-&nbsp;        try {
-<b class="fc">&nbsp;            Claim claim = repository.findById(id)</b>
-<b class="fc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
-&nbsp;
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-&nbsp;            // ✅ Récupérer les infos projet et site
-<b class="fc">&nbsp;            String projet = null;</b>
-<b class="fc">&nbsp;            String site = null;</b>
-<b class="fc">&nbsp;            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);</b>
-<b class="pc">&nbsp;            if (chargeSheet != null) {</b>
-<b class="fc">&nbsp;                projet = chargeSheet.getProject();</b>
-<b class="fc">&nbsp;                site = chargeSheet.getPlant();</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            String oldAssignedTo = claim.getAssignedTo();</b>
-&nbsp;
-<b class="fc">&nbsp;            claim.setAssignedTo(dto.getAssignedTo());</b>
-<b class="fc">&nbsp;            claim.setAssignedDate(LocalDate.now());</b>
-<b class="fc">&nbsp;            claim.setStatus(Claim.ClaimStatus.ASSIGNED);</b>
-&nbsp;
-<b class="pc">&nbsp;            if (dto.getEstimatedResolutionDate() != null) {</b>
-<b class="fc">&nbsp;                claim.setEstimatedResolutionDate(dto.getEstimatedResolutionDate());</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            claim.setUpdatedBy(currentUser.getEmail());</b>
-<b class="fc">&nbsp;            claim.setUpdatedAt(LocalDate.now());</b>
-&nbsp;
-<b class="fc">&nbsp;            Claim updated = repository.save(claim);</b>
-&nbsp;
-&nbsp;            // ✅ Notification à la nouvelle personne assignée (individuelle)
-<b class="pc">&nbsp;            if (dto.getAssignedTo() != null &amp;&amp; !dto.getAssignedTo().isEmpty()) {</b>
-<b class="fc">&nbsp;                String subject = &quot;🔔 Réclamation assignée - #&quot; + updated.getTitle();</b>
-<b class="fc">&nbsp;                String message = String.format(</b>
-&nbsp;                        &quot;Bonjour,\n\n&quot; +
-&nbsp;                                &quot;Une réclamation vous a été assignée.\n\n&quot; +
-&nbsp;                                &quot;📋 **Titre:** %s\n&quot; +
-&nbsp;                                &quot;🔴 **Priorité:** %s\n&quot; +
-&nbsp;                                &quot;📝 **Description:** %s\n&quot; +
-&nbsp;                                &quot;👤 **Assigné par:** %s\n&quot; +
-&nbsp;                                &quot;📅 **Date d&#39;assignation:** %s\n\n&quot; +
-&nbsp;                                &quot;🔗 Veuillez vous connecter à l&#39;application pour traiter cette réclamation.\n\n&quot; +
-&nbsp;                                &quot;Cordialement,\n&quot; +
-&nbsp;                                &quot;L&#39;équipe Qualité Leoni&quot;,
-<b class="fc">&nbsp;                        updated.getTitle(),</b>
-<b class="fc">&nbsp;                        updated.getPriority(),</b>
-<b class="fc">&nbsp;                        updated.getDescription(),</b>
-<b class="fc">&nbsp;                        currentUser.getEmail(),</b>
-<b class="fc">&nbsp;                        LocalDate.now()</b>
-&nbsp;                );
-&nbsp;
-<b class="fc">&nbsp;                notificationService.sendNotificationToOneUser(subject, message, dto.getAssignedTo());</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // ✅ Notification à tous les utilisateurs du projet et site (optionnel)
-&nbsp;            // Pour informer l&#39;équipe du changement d&#39;assignation
-<b class="pc">&nbsp;            if (oldAssignedTo != null &amp;&amp; !oldAssignedTo.equals(dto.getAssignedTo())) {</b>
-<b class="fc">&nbsp;                notificationService.notifyClaimUpdatedToProjectAndSite(</b>
-<b class="fc">&nbsp;                        updated.getId(),</b>
-<b class="fc">&nbsp;                        updated.getTitle(),</b>
-<b class="fc">&nbsp;                        updated.getChargeSheetId(),</b>
-<b class="fc">&nbsp;                        currentUser.getEmail(),</b>
-<b class="fc">&nbsp;                        &quot;ASSIGNATION MODIFIÉE (de &quot; + oldAssignedTo + &quot; à &quot; + dto.getAssignedTo() + &quot;)&quot;,</b>
-&nbsp;                        projet,
-&nbsp;                        site
-&nbsp;                );
-&nbsp;            } else {
-<b class="fc">&nbsp;                notificationService.notifyClaimUpdatedToProjectAndSite(</b>
-<b class="fc">&nbsp;                        updated.getId(),</b>
-<b class="fc">&nbsp;                        updated.getTitle(),</b>
-<b class="fc">&nbsp;                        updated.getChargeSheetId(),</b>
-<b class="fc">&nbsp;                        currentUser.getEmail(),</b>
-&nbsp;                        &quot;ASSIGNÉE&quot;,
-&nbsp;                        projet,
-&nbsp;                        site
-&nbsp;                );
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            return updated;</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans assignClaim: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-<b class="nc">&nbsp;            return null;</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Claim resolveClaim(Long id, ClaimDto.ResolutionDto dto) {
-&nbsp;        try {
-<b class="fc">&nbsp;            Claim claim = repository.findById(id)</b>
-<b class="fc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
-&nbsp;
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;            // ✅ Récupérer les infos projet et site
-<b class="fc">&nbsp;            String projet = null;</b>
-<b class="fc">&nbsp;            String site = null;</b>
-<b class="fc">&nbsp;            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);</b>
-<b class="pc">&nbsp;            if (chargeSheet != null) {</b>
-<b class="fc">&nbsp;                projet = chargeSheet.getProject();</b>
-<b class="fc">&nbsp;                site = chargeSheet.getPlant();</b>
-&nbsp;            }
-<b class="fc">&nbsp;            claim.setActionTaken(dto.getActionTaken());</b>
-<b class="fc">&nbsp;            claim.setResolution(dto.getResolution());</b>
-<b class="fc">&nbsp;            claim.setResolvedBy(currentUser.getEmail());</b>
-<b class="fc">&nbsp;            claim.setResolvedDate(LocalDate.now());</b>
-&nbsp;
-<b class="pc">&nbsp;            if (dto.getActualResolutionDate() != null) {</b>
-<b class="nc">&nbsp;                claim.setActualResolutionDate(dto.getActualResolutionDate());</b>
-&nbsp;            } else {
-<b class="fc">&nbsp;                claim.setActualResolutionDate(LocalDate.now());</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // ⚡ Fix : statut RESOLVED
-<b class="fc">&nbsp;            claim.setStatus(Claim.ClaimStatus.RESOLVED);</b>
-&nbsp;
-<b class="fc">&nbsp;            claim.setUpdatedBy(currentUser.getEmail());</b>
-<b class="fc">&nbsp;            claim.setUpdatedAt(LocalDate.now());</b>
-&nbsp;
-<b class="fc">&nbsp;            Claim updated = repository.save(claim);</b>
-&nbsp;
-&nbsp;            // ✅ Notification modifiée
-<b class="fc">&nbsp;            notificationService.notifyClaimUpdatedToProjectAndSite(</b>
-<b class="fc">&nbsp;                    updated.getId(),</b>
-<b class="fc">&nbsp;                    updated.getTitle(),</b>
-<b class="fc">&nbsp;                    updated.getChargeSheetId(),</b>
-<b class="fc">&nbsp;                    currentUser.getEmail(),</b>
-&nbsp;                    &quot;RÉSOLUE&quot;,
-&nbsp;                    projet,
-&nbsp;                    site
-&nbsp;            );
-&nbsp;
-&nbsp;
-<b class="fc">&nbsp;            return updated;</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans resolveClaim: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-<b class="nc">&nbsp;            return null;</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public void deleteClaim(Long id) {
-&nbsp;        try {
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;
-<b class="fc">&nbsp;            Claim claim = repository.findById(id)</b>
-<b class="fc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
-&nbsp;
-<b class="fc">&nbsp;            Long chargeSheetId = claim.getChargeSheetId();</b>
-<b class="fc">&nbsp;            String claimTitle = claim.getTitle();</b>
-<b class="fc">&nbsp;            String projet = null;</b>
-<b class="fc">&nbsp;            String site = null;</b>
-<b class="fc">&nbsp;            ChargeSheet chargeSheet = chargeSheetRepository.findById(chargeSheetId).orElse(null);</b>
-<b class="pc">&nbsp;            if (chargeSheet != null) {</b>
-<b class="fc">&nbsp;                projet = chargeSheet.getProject();</b>
-<b class="fc">&nbsp;                site = chargeSheet.getPlant();</b>
-&nbsp;            }
-<b class="fc">&nbsp;            repository.deleteById(id);</b>
-&nbsp;
-&nbsp;            // ✅ Notification modifiée
-<b class="fc">&nbsp;            notificationService.notifyClaimDeletedToProjectAndSite(</b>
-&nbsp;                    &quot;Réclamation: &quot; + claimTitle,
-&nbsp;                    id,
-&nbsp;                    chargeSheetId,
-<b class="fc">&nbsp;                    currentUser.getEmail(),</b>
-&nbsp;                    projet,
-&nbsp;                    site
-&nbsp;            );
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans deleteClaim: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByChargeSheetId(Long chargeSheetId) {
-<b class="fc">&nbsp;        return repository.findByChargeSheetId(chargeSheetId);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByReportedBy(String email) {
-<b class="fc">&nbsp;        return repository.findByReportedBy(email);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByAssignedTo(String email) {
-<b class="fc">&nbsp;        return repository.findByAssignedTo(email);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByStatus(Claim.ClaimStatus status) {
-<b class="fc">&nbsp;        return repository.findByStatus(status);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByPriority(Claim.Priority priority) {
-<b class="fc">&nbsp;        return repository.findByPriority(priority);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByCategory(String category) {
-<b class="fc">&nbsp;        return repository.findByCategory(category);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getClaimsByRelatedItem(String relatedTo, Long relatedId) {
-<b class="nc">&nbsp;        return repository.findByRelatedToAndRelatedId(relatedTo, relatedId);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public Claim getClaimById(Long id) {
-<b class="fc">&nbsp;        return repository.findById(id)</b>
-<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Claim not found&quot;));</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; getAllClaims() {
-&nbsp;        try {
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-<b class="fc">&nbsp;            String userRole = currentUser.getRole().name();</b>
-<b class="fc">&nbsp;            String userProjectsString = currentUser.getProjetsNames();</b>
-<b class="pc">&nbsp;            List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="fc">&nbsp;                    Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="fc">&nbsp;                    List.of();</b>
-<b class="fc">&nbsp;            String userSite = currentUser.getSiteName();</b>
-&nbsp;
-<b class="fc">&nbsp;            List&lt;Claim&gt; allClaims = repository.findAll();</b>
-&nbsp;
-<b class="fc">&nbsp;            if (userRole.equals(&quot;ADMIN&quot;)) {</b>
-<b class="fc">&nbsp;                return allClaims;</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // ✅ Filtrer comme les autres services
-<b class="fc">&nbsp;            return allClaims.stream()</b>
-<b class="fc">&nbsp;                    .filter(claim -&gt; {</b>
-&nbsp;                        // Récupérer le ChargeSheet associé à cette réclamation
-<b class="fc">&nbsp;                        ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);</b>
-<b class="pc">&nbsp;                        if (chargeSheet == null) return false;</b>
-&nbsp;
-&nbsp;                        // Vérifier le site (plant)
-<b class="fc">&nbsp;                        String plant = chargeSheet.getPlant();</b>
-<b class="pc">&nbsp;                        if (plant == null || !plant.equals(userSite)) return false;</b>
-&nbsp;
-&nbsp;                        // ✅ Vérifier que le projet est dans la liste des projets de l&#39;utilisateur
-<b class="fc">&nbsp;                        String project = chargeSheet.getProject();</b>
-<b class="pc">&nbsp;                        return project != null &amp;&amp; userProjects.contains(project);</b>
-&nbsp;                    })
-<b class="fc">&nbsp;                    .collect(Collectors.toList());</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans getAllClaims: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-<b class="nc">&nbsp;            return List.of();</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    @Transactional
-&nbsp;    public Claim updateClaimStatus(Long id, Claim.ClaimStatus status) {
-&nbsp;        try{
-<b class="fc">&nbsp;            Claim claim = repository.findById(id)</b>
-<b class="fc">&nbsp;                    .orElseThrow(() -&gt; new RuntimeException(&quot;Claim not found&quot;));</b>
-&nbsp;
-<b class="fc">&nbsp;            Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;            User currentUser = (User) auth.getPrincipal();</b>
-&nbsp;            // ✅ Récupérer les infos projet et site
-<b class="fc">&nbsp;            String projet = null;</b>
-<b class="fc">&nbsp;            String site = null;</b>
-<b class="fc">&nbsp;            ChargeSheet chargeSheet = chargeSheetRepository.findById(claim.getChargeSheetId()).orElse(null);</b>
-<b class="pc">&nbsp;            if (chargeSheet != null) {</b>
-<b class="fc">&nbsp;                projet = chargeSheet.getProject();</b>
-<b class="fc">&nbsp;                site = chargeSheet.getPlant();</b>
-&nbsp;            }
-<b class="fc">&nbsp;            claim.setStatus(status);</b>
-&nbsp;
-&nbsp;            // Mise à jour des dates selon le statut
-<b class="pc">&nbsp;            if (status == Claim.ClaimStatus.RESOLVED) {</b>
-<b class="nc">&nbsp;                claim.setResolvedBy(currentUser.getEmail());</b>
-<b class="nc">&nbsp;                claim.setResolvedDate(LocalDate.now());</b>
-<b class="pc">&nbsp;            } else if (status == Claim.ClaimStatus.CLOSED) {</b>
-<b class="nc">&nbsp;                claim.setClosedBy(currentUser.getEmail());</b>
-<b class="nc">&nbsp;                claim.setClosedDate(LocalDate.now());</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            claim.setUpdatedBy(currentUser.getEmail());</b>
-<b class="fc">&nbsp;            claim.setUpdatedAt(LocalDate.now());</b>
-&nbsp;
-<b class="fc">&nbsp;            Claim updated = repository.save(claim);</b>
-&nbsp;
-&nbsp;            // ✅ Notification modifiée
-<b class="fc">&nbsp;            notificationService.notifyClaimUpdatedToProjectAndSite(</b>
-<b class="fc">&nbsp;                    updated.getId(),</b>
-<b class="fc">&nbsp;                    updated.getTitle(),</b>
-<b class="fc">&nbsp;                    updated.getChargeSheetId(),</b>
-<b class="fc">&nbsp;                    currentUser.getEmail(),</b>
-&nbsp;                    &quot;STATUT MIS À JOUR&quot;,
-&nbsp;                    projet,
-&nbsp;                    site
-&nbsp;            );
-&nbsp;
-<b class="fc">&nbsp;            return updated;</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            System.err.println(&quot;❌ Erreur dans updateClaimStatus: &quot; + e.getMessage());</b>
-<b class="nc">&nbsp;            e.printStackTrace();</b>
-<b class="nc">&nbsp;            return null;</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    public List&lt;Claim&gt; searchClaims(String keyword) {
-<b class="fc">&nbsp;        return repository.findAll();</b>
-&nbsp;    }
-&nbsp;    /**
-&nbsp;     * Calcule la variation entre deux mois spécifiques pour les réclamations
-&nbsp;     */
-&nbsp;    /**
-&nbsp;     * Calcule la variation entre deux mois spécifiques pour les réclamations
-&nbsp;     */
-&nbsp;    public Map&lt;String, Object&gt; getVariationBetweenMonths(String project, String month1, String month2) {
-&nbsp;        List&lt;Object[]&gt; results;
-&nbsp;
-<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="fc">&nbsp;        boolean isAdmin = currentUser.getRole().name().equals(&quot;ADMIN&quot;);</b>
-&nbsp;
-&nbsp;        // ✅ Récupérer tous les projets de l&#39;utilisateur
-<b class="fc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();</b>
-<b class="pc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="fc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="fc">&nbsp;                List.of();</b>
-&nbsp;
-<b class="pc">&nbsp;        if (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) {</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForAllProjects();</b>
-&nbsp;        } else {
-&nbsp;            // ✅ Déterminer le projet cible
-<b class="fc">&nbsp;            String targetProject = project;</b>
-<b class="pc">&nbsp;            if (targetProject == null || targetProject.isEmpty() || targetProject.equals(&quot;ALL&quot;)) {</b>
-<b class="nc">&nbsp;                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);</b>
-&nbsp;            }
-&nbsp;
-<b class="pc">&nbsp;            if (targetProject == null) {</b>
-<b class="nc">&nbsp;                Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;message&quot;, &quot;Aucun projet disponible&quot;);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;month1Count&quot;, 0L);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;month2Count&quot;, 0L);</b>
-<b class="nc">&nbsp;                return emptyResult;</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            results = repository.countByMonthForProject(targetProject);</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        Map&lt;String, Long&gt; monthlyCounts = new HashMap&lt;&gt;();</b>
-<b class="fc">&nbsp;        for (Object[] result : results) {</b>
-<b class="fc">&nbsp;            String month = (String) result[0];</b>
-<b class="fc">&nbsp;            Long count = ((Number) result[1]).longValue();</b>
-<b class="fc">&nbsp;            monthlyCounts.put(month, count);</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        Long countMonth1 = monthlyCounts.getOrDefault(month1, 0L);</b>
-<b class="fc">&nbsp;        Long countMonth2 = monthlyCounts.getOrDefault(month2, 0L);</b>
-&nbsp;
-<b class="fc">&nbsp;        double variation = 0.0;</b>
-<b class="fc">&nbsp;        String trend = &quot;stable&quot;;</b>
-<b class="fc">&nbsp;        String formula = &quot;&quot;;</b>
-&nbsp;
-<b class="pc">&nbsp;        if (countMonth1 &gt; 0) {</b>
-<b class="fc">&nbsp;            variation = ((countMonth2 - countMonth1) * 100.0) / countMonth1;</b>
-<b class="fc">&nbsp;            variation = Math.round(variation * 10.0) / 10.0;</b>
-&nbsp;
-<b class="pc">&nbsp;            if (variation &gt; 0) {</b>
-<b class="fc">&nbsp;                trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            } else if (variation &lt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;baisse&quot;;</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            formula = String.format(&quot;((%d - %d) / %d) × 100 = %.1f%%&quot;,</b>
-<b class="fc">&nbsp;                    countMonth2, countMonth1, countMonth1, variation);</b>
-<b class="nc">&nbsp;        } else if (countMonth1 == 0 &amp;&amp; countMonth2 &gt; 0) {</b>
-<b class="nc">&nbsp;            variation = 100.0;</b>
-<b class="nc">&nbsp;            trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            formula = String.format(&quot;Création depuis zéro: %d réclamations&quot;, countMonth2);</b>
-<b class="nc">&nbsp;        } else if (countMonth1 == 0 &amp;&amp; countMonth2 == 0) {</b>
-<b class="nc">&nbsp;            formula = &quot;Aucune réclamation sur les deux mois&quot;;</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</b>
-<b class="pc">&nbsp;        result.put(&quot;project&quot;, (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) ? &quot;TOUS_PROJETS&quot; : project);</b>
-<b class="fc">&nbsp;        result.put(&quot;month1&quot;, month1);</b>
-<b class="fc">&nbsp;        result.put(&quot;month1Count&quot;, countMonth1);</b>
-<b class="fc">&nbsp;        result.put(&quot;month2&quot;, month2);</b>
-<b class="fc">&nbsp;        result.put(&quot;month2Count&quot;, countMonth2);</b>
-<b class="fc">&nbsp;        result.put(&quot;variation&quot;, variation);</b>
-<b class="fc">&nbsp;        result.put(&quot;trend&quot;, trend);</b>
-<b class="fc">&nbsp;        result.put(&quot;formula&quot;, formula);</b>
-<b class="fc">&nbsp;        result.put(&quot;interpretation&quot;, getClaimInterpretation(trend, variation, countMonth2, countMonth1));</b>
-&nbsp;
-<b class="fc">&nbsp;        return result;</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Version simplifiée pour le dashboard avec les deux derniers mois
-&nbsp;     */
-&nbsp;    /**
-&nbsp;     * Version simplifiée pour le dashboard avec les deux derniers mois
-&nbsp;     */
-&nbsp;    public Map&lt;String, Object&gt; getLastTwoMonthsVariation(String project) {
-<b class="fc">&nbsp;        Authentication auth = SecurityContextHolder.getContext().getAuthentication();</b>
-<b class="fc">&nbsp;        User currentUser = (User) auth.getPrincipal();</b>
-<b class="fc">&nbsp;        boolean isAdmin = currentUser.getRole().name().equals(&quot;ADMIN&quot;);</b>
-&nbsp;
-&nbsp;        // ✅ Récupérer tous les projets de l&#39;utilisateur
-<b class="fc">&nbsp;        String userProjectsString = currentUser.getProjetsNames();</b>
-<b class="pc">&nbsp;        List&lt;String&gt; userProjects = userProjectsString != null ?</b>
-<b class="fc">&nbsp;                Arrays.asList(userProjectsString.split(&quot;, &quot;)) :</b>
-<b class="fc">&nbsp;                List.of();</b>
-&nbsp;
-&nbsp;        List&lt;Object[]&gt; results;
-&nbsp;
-<b class="pc">&nbsp;        if (isAdmin &amp;&amp; (project == null || project.isEmpty() || project.equals(&quot;ALL&quot;))) {</b>
-<b class="nc">&nbsp;            results = repository.countByMonthForAllProjects();</b>
-&nbsp;        } else {
-<b class="fc">&nbsp;            String targetProject = project;</b>
-<b class="pc">&nbsp;            if (targetProject == null || targetProject.isEmpty() || targetProject.equals(&quot;ALL&quot;)) {</b>
-<b class="nc">&nbsp;                targetProject = userProjects.isEmpty() ? null : userProjects.get(0);</b>
-&nbsp;            }
-&nbsp;
-<b class="pc">&nbsp;            if (targetProject == null) {</b>
-<b class="nc">&nbsp;                Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;message&quot;, &quot;Aucun projet disponible&quot;);</b>
-<b class="nc">&nbsp;                emptyResult.put(&quot;availableMonths&quot;, 0);</b>
-<b class="nc">&nbsp;                return emptyResult;</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            results = repository.countByMonthForProject(targetProject);</b>
-&nbsp;        }
-&nbsp;
-<b class="pc">&nbsp;        if (results == null || results.size() &lt; 2) {</b>
-<b class="nc">&nbsp;            Map&lt;String, Object&gt; emptyResult = new HashMap&lt;&gt;();</b>
-<b class="nc">&nbsp;            emptyResult.put(&quot;message&quot;, &quot;Pas assez de données pour calculer la variation&quot;);</b>
-<b class="nc">&nbsp;            emptyResult.put(&quot;availableMonths&quot;, results != null ? results.size() : 0);</b>
-<b class="nc">&nbsp;            return emptyResult;</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        Object[] latestMonth = results.get(0);</b>
-<b class="fc">&nbsp;        Object[] previousMonth = results.get(1);</b>
-&nbsp;
-<b class="fc">&nbsp;        String monthLatest = (String) latestMonth[0];</b>
-<b class="fc">&nbsp;        Long countLatest = ((Number) latestMonth[1]).longValue();</b>
-<b class="fc">&nbsp;        String monthPrevious = (String) previousMonth[0];</b>
-<b class="fc">&nbsp;        Long countPrevious = ((Number) previousMonth[1]).longValue();</b>
-&nbsp;
-<b class="fc">&nbsp;        double variation = 0.0;</b>
-<b class="fc">&nbsp;        String trend = &quot;stable&quot;;</b>
-<b class="fc">&nbsp;        String formula = &quot;&quot;;</b>
-&nbsp;
-<b class="pc">&nbsp;        if (countPrevious &gt; 0) {</b>
-<b class="fc">&nbsp;            variation = ((countLatest - countPrevious) * 100.0) / countPrevious;</b>
-<b class="fc">&nbsp;            variation = Math.round(variation * 10.0) / 10.0;</b>
-&nbsp;
-<b class="pc">&nbsp;            if (variation &gt; 0) {</b>
-<b class="fc">&nbsp;                trend = &quot;hausse&quot;;</b>
-<b class="nc">&nbsp;            } else if (variation &lt; 0) {</b>
-<b class="nc">&nbsp;                trend = &quot;baisse&quot;;</b>
-&nbsp;            }
-&nbsp;
-<b class="fc">&nbsp;            formula = String.format(&quot;((%d - %d) / %d) × 100 = %.1f%%&quot;,</b>
-<b class="fc">&nbsp;                    countLatest, countPrevious, countPrevious, variation);</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        Map&lt;String, Object&gt; result = new HashMap&lt;&gt;();</b>
-<b class="fc">&nbsp;        result.put(&quot;currentMonth&quot;, monthLatest);</b>
-<b class="fc">&nbsp;        result.put(&quot;currentMonthCount&quot;, countLatest);</b>
-<b class="fc">&nbsp;        result.put(&quot;previousMonth&quot;, monthPrevious);</b>
-<b class="fc">&nbsp;        result.put(&quot;previousMonthCount&quot;, countPrevious);</b>
-<b class="fc">&nbsp;        result.put(&quot;variation&quot;, variation);</b>
-<b class="fc">&nbsp;        result.put(&quot;trend&quot;, trend);</b>
-<b class="fc">&nbsp;        result.put(&quot;formula&quot;, formula);</b>
-<b class="fc">&nbsp;        result.put(&quot;interpretation&quot;, getClaimInterpretation(trend, variation, countLatest, countPrevious));</b>
-&nbsp;
-<b class="fc">&nbsp;        return result;</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    private String getClaimInterpretation(String trend, double variation, long currentCount, long previousCount) {
-<b class="pc">&nbsp;        if (trend.equals(&quot;hausse&quot;)) {</b>
-<b class="pc">&nbsp;            if (variation &gt; 50) {</b>
-<b class="fc">&nbsp;                return String.format(&quot;📈 Forte augmentation de %.1f%% (%d vs %d réclamations)&quot;, variation, currentCount, previousCount);</b>
-&nbsp;            } else {
-<b class="nc">&nbsp;                return String.format(&quot;📈 Augmentation de %.1f%% (%d vs %d réclamations)&quot;, variation, currentCount, previousCount);</b>
-&nbsp;            }
-<b class="nc">&nbsp;        } else if (trend.equals(&quot;baisse&quot;)) {</b>
-<b class="nc">&nbsp;            if (variation &lt; -50) {</b>
-<b class="nc">&nbsp;                return String.format(&quot;📉 Forte baisse de %.1f%% (%d vs %d réclamations)&quot;, Math.abs(variation), currentCount, previousCount);</b>
-&nbsp;            } else {
-<b class="nc">&nbsp;                return String.format(&quot;📉 Baisse de %.1f%% (%d vs %d réclamations)&quot;, Math.abs(variation), currentCount, previousCount);</b>
-&nbsp;            }
-&nbsp;        } else {
-<b class="nc">&nbsp;            return String.format(&quot;➡️ Stable (%d réclamations pour les deux mois)&quot;, currentCount);</b>
-&nbsp;        }
+<b class="fc">&nbsp;        ReceptionStatisticsDto stats = chargeSheetService.getReceptionStatistics(project, site, months);</b>
+<b class="fc">&nbsp;        return ResponseEntity.ok(stats);</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -826,7 +123,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

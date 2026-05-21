@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+import static org.hamcrest.Matchers.*;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -84,6 +85,7 @@ class ChargeSheetControllerTest {
 
     private String ingToken;
     private String ptToken;
+    private String ppToken;
     private String adminToken;
     private User ingUser;
     private User ptUser;
@@ -134,6 +136,21 @@ class ChargeSheetControllerTest {
 
         projetsSet = new HashSet<>();
         projetsSet.add(testProjet);
+// Ajouter un utilisateur PP
+        User ppUser = User.builder()
+                .email("pp_" + uniqueId + "@test.com")
+                .password(passwordEncoder.encode("pp123"))
+                .firstname("Pp")
+                .lastname("User")
+                .matricule(10003)
+                .role(Role.PP)
+                .site(testSite)
+                .projets(projetsSet)
+                .build();
+        ppUser = userRepository.save(ppUser);
+        ppToken = jwtService.generateToken(ppUser);
+        saveToken(ppUser, ppToken);
+
 
         ptUser = User.builder()
                 .email("pt_" + uniqueId + "@test.com")
@@ -712,5 +729,216 @@ class ChargeSheetControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+    // ==================== TESTS POUR LES DIFFÉRENTS RÔLES ====================
+
+    @Test
+    void getAllChargeSheets_AsPt_ShouldReturnCorrectStatuses() throws Exception {
+        // Créer des cahiers avec différents statuts
+        ChargeSheet draftSheet = createSheetWithStatus(ChargeSheetStatus.DRAFT, "DRAFT_" + uniqueId);
+        ChargeSheet validatedIngSheet = createSheetWithStatus(ChargeSheetStatus.VALIDATED_ING, "VALIDATED_ING_" + uniqueId);
+        ChargeSheet techFilledSheet = createSheetWithStatus(ChargeSheetStatus.TECH_FILLED, "TECH_FILLED_" + uniqueId);
+        ChargeSheet validatedPtSheet = createSheetWithStatus(ChargeSheetStatus.VALIDATED_PT, "VALIDATED_PT_" + uniqueId);
+
+        mockMvc.perform(get("/api/v1/charge-sheets")
+                        .header("Authorization", "Bearer " + ptToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(3)) // TECH_FILLED, VALIDATED_PT uniquement
+                .andExpect(jsonPath("$.data[*].status").value(not(hasItem("DRAFT"))));
+    }
+
+    @Test
+    void getAllChargeSheets_AsPp_ShouldReturnOnlyValidatedPtAndAbove() throws Exception {
+        ChargeSheet validatedPtSheet = createSheetWithStatus(ChargeSheetStatus.VALIDATED_PT, "VALIDATED_PT_" + uniqueId);
+        ChargeSheet sentSheet = createSheetWithStatus(ChargeSheetStatus.SENT_TO_SUPPLIER, "SENT_" + uniqueId);
+        ChargeSheet completedSheet = createSheetWithStatus(ChargeSheetStatus.COMPLETED, "COMPLETED_" + uniqueId);
+
+        mockMvc.perform(get("/api/v1/charge-sheets")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(3));
+    }
+
+    // Helper method
+    private ChargeSheet createSheetWithStatus(ChargeSheetStatus status, String suffix) {
+        ChargeSheet sheet = ChargeSheet.builder()
+                .plant(testSite.getName())
+                .project(testProjet.getName())
+                .orderNumber("ORD-" + suffix)
+                .harnessRef("HARNESS-" + suffix)
+                .status(status)
+                .createdBy(ingUser.getEmail())
+                .createdAt(LocalDate.now())
+                .build();
+        return chargeSheetRepository.save(sheet);
+    }
+
+// ==================== TESTS POUR LES BRANCHES NULL ====================
+
+    @Test
+    void updateItemTech_WithNullFields_ShouldNotUpdateNullFields() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        chargeSheetRepository.save(testChargeSheet);
+
+        // DTO avec UNIQUEMENT outsideHousingExist, les autres null
+        String jsonBody = "{"
+                + "\"outsideHousingExist\": \"*\""
+                + "}";
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId()
+                        + "/items/" + testItem.getId() + "/tech")
+                        .header("Authorization", "Bearer " + ptToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+// ==================== TESTS POUR LES EXCEPTIONS ====================
+
+    @Test
+    void updateItemTech_WithWrongSheetId_ShouldThrowException() throws Exception {
+        ChargeSheetDto.UpdateTechDto dto = ChargeSheetDto.UpdateTechDto.builder()
+                .housingReferenceLeoni("REF-123")
+                .build();
+
+        mockMvc.perform(put("/api/v1/charge-sheets/99999/items/" + testItem.getId() + "/tech")
+                        .header("Authorization", "Bearer " + ptToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void updateItemTech_WithWrongItemId_ShouldThrowException() throws Exception {
+        ChargeSheetDto.UpdateTechDto dto = ChargeSheetDto.UpdateTechDto.builder()
+                .housingReferenceLeoni("REF-123")
+                .build();
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/items/99999/tech")
+                        .header("Authorization", "Bearer " + ptToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void validateByPt_WhenItemsNotFilled_ShouldThrowException() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        testItem.setItemStatus("DRAFT");
+        chargeSheetRepository.save(testChargeSheet);
+        itemRepository.save(testItem);
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/validate-pt")
+                        .header("Authorization", "Bearer " + ptToken))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void validateByIng_WhenNotDraft_ShouldThrowException() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        chargeSheetRepository.save(testChargeSheet);
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/validate-ing")
+                        .header("Authorization", "Bearer " + ingToken))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void sendToSupplier_WhenNotValidatedPt_ShouldThrowException() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.DRAFT);
+        chargeSheetRepository.save(testChargeSheet);
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/send-supplier")
+                        .header("Authorization", "Bearer " + ptToken))
+                .andExpect(status().is5xxServerError());
+    }
+
+// ==================== TESTS POUR LES ENDPOINTS STATS ====================
+
+
+
+
+
+// ==================== TESTS POUR COMPLETE ET REVERT ====================
+
+    @Test
+    void completeChargeSheet_WhenReceived_ShouldComplete() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.RECEIVED_FROM_SUPPLIER);
+        chargeSheetRepository.save(testChargeSheet);
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/complete")
+                        .header("Authorization", "Bearer " + ptToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+    }
+
+    @Test
+    void revertToIng_AsPt_ShouldRevertToDraft() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        chargeSheetRepository.save(testChargeSheet);
+
+        String body = "{\"reason\": \"Corrections nécessaires\"}";
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/revert-to-ing")
+                        .header("Authorization", "Bearer " + ptToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("DRAFT"));
+    }
+
+    @Test
+    void revertToIng_WithoutReason_ShouldThrowException() throws Exception {
+        testChargeSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        chargeSheetRepository.save(testChargeSheet);
+
+        mockMvc.perform(put("/api/v1/charge-sheets/" + testChargeSheet.getId() + "/revert-to-ing")
+                        .header("Authorization", "Bearer " + ptToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().is5xxServerError());
+    }
+
+// ==================== TESTS POUR CREATE AVEC DIFFÉRENTS SCÉNARIOS ====================
+
+    @Test
+    void createChargeSheet_WithNoItems_ShouldCreateDefaultItem() throws Exception {
+        ChargeSheetDto.CreateDto dto = ChargeSheetDto.CreateDto.builder()
+                .project(testProjet.getName())
+                .harnessRef("HARNESS-NOITEMS_" + uniqueId)
+                .issuedBy("John Doe")
+                .emailAddress("john@test.com")
+                .phoneNumber("123456789")
+                .orderNumber("ORD-NOITEMS_" + uniqueId)
+                .costCenterNumber("CC-001")
+                .date(LocalDate.now())
+                .preferredDeliveryDate(LocalDate.now().plusDays(30))
+                .items(null)  // Pas d'items
+                .build();
+
+        mockMvc.perform(post("/api/v1/charge-sheets")
+                        .header("Authorization", "Bearer " + ingToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void createChargeSheet_WithDifferentPlant_ShouldThrowException() throws Exception {
+        ChargeSheetDto.CreateDto dto = ChargeSheetDto.CreateDto.builder()
+                .plant("WRONG_PLANT")  // Plant différent du site de l'utilisateur
+                .project(testProjet.getName())
+                .harnessRef("HARNESS-WRONG")
+                .build();
+
+        mockMvc.perform(post("/api/v1/charge-sheets")
+                        .header("Authorization", "Bearer " + ingToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().is5xxServerError());
     }
 }

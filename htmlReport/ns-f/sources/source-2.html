@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > StockModuleController</title>
+  <title>Coverage Report > SiteController</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,10 +19,10 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.stock</a>
+    <a href="../index.html">com.example.security.site</a>
 </div>
 
-<h1>Coverage Summary for Class: StockModuleController (com.example.security.stock)</h1>
+<h1>Coverage Summary for Class: SiteController (com.example.security.site)</h1>
 
 <table class="coverageStats">
 
@@ -34,67 +34,47 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 <th class="coverageStat 
 ">
-  Branch, %
-</th>
-<th class="coverageStat 
-">
   Line, %
 </th>
 </tr>
 <tr>
-  <td class="name">StockModuleController</td>
+  <td class="name">SiteController</td>
 <td class="coverageStat">
   <span class="percent">
-    93,3%
+    100%
   </span>
   <span class="absValue">
-    (14/15)
+    (9/9)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    58,3%
+    100%
   </span>
   <span class="absValue">
-    (7/12)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    94,9%
-  </span>
-  <span class="absValue">
-    (93/98)
+    (27/27)
   </span>
 </td>
 </tr>
   <tr>
-    <td class="name">StockModuleController$$SpringCGLIB$$0</td>
+    <td class="name">SiteController$$SpringCGLIB$$0</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
 <td class="coverageStat">
   <span class="percent">
-    93,3%
+    100%
   </span>
   <span class="absValue">
-    (14/15)
+    (9/9)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    58,3%
+    100%
   </span>
   <span class="absValue">
-    (7/12)
-  </span>
-</td>
-<td class="coverageStat">
-  <span class="percent">
-    94,9%
-  </span>
-  <span class="absValue">
-    (93/98)
+    (27/27)
   </span>
 </td>
 </tr>
@@ -105,293 +85,124 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.stock;
+<code class="sourceCode" id="sourceCode">&nbsp;// SiteController.java
+&nbsp;package com.example.security.site;
 &nbsp;
 &nbsp;import com.example.security.common.ApiResponse;
-&nbsp;import io.swagger.v3.oas.annotations.Operation;
-&nbsp;import io.swagger.v3.oas.annotations.tags.Tag;
+&nbsp;import com.example.security.projet.ProjetDto;
 &nbsp;import lombok.RequiredArgsConstructor;
 &nbsp;import org.springframework.http.HttpStatus;
 &nbsp;import org.springframework.http.ResponseEntity;
 &nbsp;import org.springframework.security.access.prepost.PreAuthorize;
 &nbsp;import org.springframework.web.bind.annotation.*;
-&nbsp;
-&nbsp;import java.util.ArrayList;
-&nbsp;import java.util.HashMap;
 &nbsp;import java.util.List;
 &nbsp;import java.util.Map;
-&nbsp;import java.util.stream.Collectors;
 &nbsp;
 &nbsp;@RestController
-&nbsp;@RequestMapping(&quot;/api/v1/stock&quot;)
-&nbsp;@Tag(name = &quot;Stock&quot;, description = &quot;Gestion des modules en stock et suivi de leur statut&quot;)
+&nbsp;@RequestMapping(&quot;/api/v1/sites&quot;)
 <b class="fc">&nbsp;@RequiredArgsConstructor</b>
-&nbsp;public class StockModuleController {
+&nbsp;public class SiteController {
 &nbsp;
-&nbsp;    private final StockService stockService;
+&nbsp;    private final SiteService siteService;
 &nbsp;
-&nbsp;    // Déplacer un module en stock
-&nbsp;    @PostMapping(&quot;/move/{technicalFileId}&quot;)
-&nbsp;    @Operation(
-&nbsp;            summary = &quot;Ajouter au stock (dossier)&quot;,
-&nbsp;            description = &quot;Déplacer un dossier technique complet vers le stock&quot;
-&nbsp;    )
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:write&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; moveToStock(@PathVariable Long technicalFileId) {
-<b class="nc">&nbsp;        StockModule stock = stockService.moveToStock(technicalFileId);</b>
-&nbsp;
-<b class="nc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Dossier technique déplacé vers le stock avec succès&quot;,
-&nbsp;                stock,
-<b class="nc">&nbsp;                HttpStatus.CREATED.value()</b>
-&nbsp;        );
-<b class="nc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
-&nbsp;    }
-&nbsp;    // Dans StockModuleController.java
-&nbsp;    // StockController.java - Ajouter/modifier ces méthodes
-&nbsp;    @PostMapping(&quot;/move-item/{technicalFileItemId}&quot;)
-&nbsp;    @Operation(summary = &quot;Déplacer un item en stock&quot;, description = &quot;Déplace un item technique vers le stock avec ses dernières valeurs&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:write&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; moveItemToStock(
-&nbsp;            @PathVariable Long technicalFileItemId,
-&nbsp;            @RequestBody(required = false) StockModuleDto additionalInfo) {
-&nbsp;
-<b class="pc">&nbsp;        if (additionalInfo == null) {</b>
-<b class="nc">&nbsp;            additionalInfo = new StockModuleDto();</b>
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        StockModule stock = stockService.moveItemToStock(technicalFileItemId, additionalInfo);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Item technique déplacé vers le stock avec succès&quot;,
-&nbsp;                stock,
-<b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
-&nbsp;    }
-&nbsp;    // StockModuleController.java - Ajouter cet endpoint
-&nbsp;    @GetMapping(&quot;/sites&quot;)
-&nbsp;    @Operation(summary = &quot;Liste des sites avec stock&quot;, description = &quot;Récupère tous les sites qui ont des modules en stock&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt;&gt; getSitesWithStock() {
-<b class="fc">&nbsp;        List&lt;StockModule&gt; allStock = stockService.getAllStock();</b>
-&nbsp;
-<b class="fc">&nbsp;        Map&lt;String, Map&lt;String, Object&gt;&gt; siteMap = new HashMap&lt;&gt;();</b>
-&nbsp;
-<b class="fc">&nbsp;        for (StockModule stock : allStock) {</b>
-<b class="pc">&nbsp;            if (stock.getSite() != null) {</b>
-<b class="fc">&nbsp;                String siteName = stock.getSite().getName();</b>
-<b class="fc">&nbsp;                Long siteId = stock.getSite().getId();</b>
-&nbsp;
-<b class="pc">&nbsp;                if (!siteMap.containsKey(siteName)) {</b>
-<b class="fc">&nbsp;                    Map&lt;String, Object&gt; siteInfo = new HashMap&lt;&gt;();</b>
-<b class="fc">&nbsp;                    siteInfo.put(&quot;id&quot;, siteId);</b>
-<b class="fc">&nbsp;                    siteInfo.put(&quot;name&quot;, siteName);</b>
-<b class="fc">&nbsp;                    siteInfo.put(&quot;count&quot;, 0);</b>
-<b class="fc">&nbsp;                    siteMap.put(siteName, siteInfo);</b>
-&nbsp;                }
-&nbsp;
-<b class="fc">&nbsp;                Map&lt;String, Object&gt; siteInfo = siteMap.get(siteName);</b>
-<b class="fc">&nbsp;                siteInfo.put(&quot;count&quot;, (Integer) siteInfo.get(&quot;count&quot;) + 1);</b>
-&nbsp;            }
-&nbsp;        }
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste des sites avec stock récupérée avec succès&quot;,
-<b class="fc">&nbsp;                new ArrayList&lt;&gt;(siteMap.values())</b>
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @GetMapping(&quot;/item/{technicalFileItemId}/pre-stock-info&quot;)
-&nbsp;    @Operation(summary = &quot;Récupérer les infos d&#39;un item pour pré-remplir le stock&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getPreStockInfo(@PathVariable Long technicalFileItemId) {
-<b class="fc">&nbsp;        Map&lt;String, Object&gt; info = stockService.getPreStockInfo(technicalFileItemId);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Informations de pré-stock récupérées avec succès&quot;,
-&nbsp;                info
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;    // Lister tous les modules en stock
-&nbsp;    // StockController.java - Ajouter/modifier ces endpoints
 &nbsp;    @GetMapping
-&nbsp;    @Operation(summary = &quot;Lister tous les stocks&quot;, description = &quot;Liste des stocks filtrée par site&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;StockModuleDto&gt;&gt;&gt; getAllStock() {
-<b class="fc">&nbsp;        List&lt;StockModule&gt; stocks = stockService.getAllStock();</b>
-<b class="fc">&nbsp;        List&lt;StockModuleDto&gt; dtos = stocks.stream()</b>
-<b class="fc">&nbsp;                .map(this::convertToDto)</b>
-<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;SiteDto&gt;&gt;&gt; getAllSites() {
+<b class="fc">&nbsp;        List&lt;SiteDto&gt; sites = siteService.getAllSites();</b>
 &nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;StockModuleDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste des stocks récupérée avec succès&quot;,
-&nbsp;                dtos
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;SiteDto&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Liste des sites récupérée avec succès&quot;,
+&nbsp;                sites
 &nbsp;        );
 <b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    @GetMapping(&quot;/statistics&quot;)
-&nbsp;    @Operation(summary = &quot;Statistiques du stock&quot;, description = &quot;Statistiques du stock pour le site de l&#39;utilisateur&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getStockStatistics() {
-<b class="fc">&nbsp;        Map&lt;String, Object&gt; stats = stockService.getStockStatistics();</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;Map&lt;String, Object&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Statistiques du stock récupérées avec succès&quot;,
-&nbsp;                stats
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @GetMapping(&quot;/my-site&quot;)
-&nbsp;    @Operation(summary = &quot;Stock de mon site&quot;, description = &quot;Liste des stocks uniquement pour le site de l&#39;utilisateur connecté&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;StockModule&gt;&gt;&gt; getMySiteStock() {
-<b class="fc">&nbsp;        List&lt;StockModule&gt; stocks = stockService.getAllStock();</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;StockModule&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Stock de votre site récupéré avec succès&quot;,
-&nbsp;                stocks
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    // StockModuleController.java - Modifier l&#39;endpoint getStockBySite
-&nbsp;    @GetMapping(&quot;/site/{siteName}&quot;)
-&nbsp;    @Operation(summary = &quot;Stock par site&quot;, description = &quot;Liste des stocks pour un site spécifique&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;StockModuleDto&gt;&gt;&gt; getStockBySite(@PathVariable String siteName) {
-<b class="fc">&nbsp;        List&lt;StockModule&gt; stocks = stockService.getStockBySite(siteName);</b>
-<b class="fc">&nbsp;        List&lt;StockModuleDto&gt; dtos = stocks.stream()</b>
-<b class="fc">&nbsp;                .map(this::convertToDto)</b>
-<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;StockModuleDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Stock du site &quot; + siteName + &quot; récupéré avec succès&quot;,
-&nbsp;                dtos
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;    // Détail d’un module stocké
 &nbsp;    @GetMapping(&quot;/{id}&quot;)
-&nbsp;    @Operation(
-&nbsp;            summary = &quot;Détail d’un module&quot;,
-&nbsp;            description = &quot;Récupérer les informations détaillées d’un module stocké&quot;
-&nbsp;    )
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; getStockById(@PathVariable Long id) {
-<b class="fc">&nbsp;        StockModule stock = stockService.getStockById(id);</b>
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;SiteDto&gt;&gt; getSiteById(@PathVariable Long id) {
+<b class="fc">&nbsp;        SiteDto site = siteService.getSiteById(id);</b>
 &nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Module stocké récupéré avec succès&quot;,
-&nbsp;                stock
+<b class="fc">&nbsp;        ApiResponse&lt;SiteDto&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Site récupéré avec succès&quot;,
+&nbsp;                site
 &nbsp;        );
 <b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    // Changer le statut d’un module stocké
-&nbsp;    @PatchMapping(&quot;/{id}/status&quot;)
-&nbsp;    @Operation(
-&nbsp;            summary = &quot;Changer le statut&quot;,
-&nbsp;            description = &quot;Mettre à jour le statut d’un module en stock (ex: AVAILABLE, USED, DEFECTIVE)&quot;
-&nbsp;    )
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:write&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; updateStatus(
-&nbsp;            @PathVariable Long id,
-&nbsp;            @RequestParam(&quot;status&quot;) StockModule.StockStatus status) {
-<b class="fc">&nbsp;        StockModule module = stockService.changeStatus(id, status);</b>
-&nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Statut du module mis à jour avec succès&quot;,
-&nbsp;                module
-&nbsp;        );
-<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
-&nbsp;    }
-&nbsp;    // StockModuleController.java - Ajouter ces endpoints
-&nbsp;
-&nbsp;    // Créer un module avec formulaire complet
 &nbsp;    @PostMapping
-&nbsp;    @Operation(summary = &quot;Créer un module en stock&quot;, description = &quot;Crée un nouveau module avec tous les champs du formulaire&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:write&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; createStockModule(@RequestBody StockModuleDto dto) {
-<b class="fc">&nbsp;        StockModule created = stockService.createStockModule(dto);</b>
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;SiteDto&gt;&gt; createSite(@RequestBody SiteDto dto) {
+<b class="fc">&nbsp;        SiteDto created = siteService.createSite(dto);</b>
 &nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Module créé avec succès&quot;,
+<b class="fc">&nbsp;        ApiResponse&lt;SiteDto&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Site créé avec succès&quot;,
 &nbsp;                created,
 <b class="fc">&nbsp;                HttpStatus.CREATED.value()</b>
 &nbsp;        );
 <b class="fc">&nbsp;        return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    // Mettre à jour un module
 &nbsp;    @PutMapping(&quot;/{id}&quot;)
-&nbsp;    @Operation(summary = &quot;Mettre à jour un module&quot;, description = &quot;Met à jour tous les champs d&#39;un module existant&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:write&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;StockModule&gt;&gt; updateStockModule(
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;SiteDto&gt;&gt; updateSite(
 &nbsp;            @PathVariable Long id,
-&nbsp;            @RequestBody StockModuleDto dto) {
-<b class="fc">&nbsp;        StockModule updated = stockService.updateStockModule(id, dto);</b>
+&nbsp;            @RequestBody SiteDto dto) {
+<b class="fc">&nbsp;        SiteDto updated = siteService.updateSite(id, dto);</b>
 &nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;StockModule&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Module mis à jour avec succès&quot;,
+<b class="fc">&nbsp;        ApiResponse&lt;SiteDto&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Site mis à jour avec succès&quot;,
 &nbsp;                updated
 &nbsp;        );
 <b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
 &nbsp;
-&nbsp;    // Récupérer tous les modules (version avec DTO)
-&nbsp;    @GetMapping(&quot;/dto&quot;)
-&nbsp;    @Operation(summary = &quot;Lister le stock (DTO)&quot;, description = &quot;Afficher tous les modules avec tous les champs&quot;)
-&nbsp;    @PreAuthorize(&quot;hasAuthority(&#39;stock:read&#39;)&quot;)
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;StockModuleDto&gt;&gt;&gt; getAllStockDto() {
-<b class="fc">&nbsp;        List&lt;StockModule&gt; stocks = stockService.getAllStock();</b>
-<b class="fc">&nbsp;        List&lt;StockModuleDto&gt; dtos = stocks.stream()</b>
-<b class="fc">&nbsp;                .map(this::convertToDto)</b>
-<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteSite(@PathVariable Long id) {
+<b class="fc">&nbsp;        siteService.deleteSite(id);</b>
 &nbsp;
-<b class="fc">&nbsp;        ApiResponse&lt;List&lt;StockModuleDto&gt;&gt; response = ApiResponse.success(</b>
-&nbsp;                &quot;Liste complète des modules récupérée avec succès&quot;,
-&nbsp;                dtos
+<b class="fc">&nbsp;        ApiResponse&lt;Void&gt; response = ApiResponse.success(&quot;Site supprimé avec succès&quot;);</b>
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;    // SiteController.java - Ajouter
+&nbsp;    @GetMapping(&quot;/{siteId}/projets&quot;)
+&nbsp;    @PreAuthorize(&quot;isAuthenticated()&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;ProjetDto&gt;&gt;&gt; getProjetsBySite(@PathVariable Long siteId) {
+<b class="fc">&nbsp;        List&lt;ProjetDto&gt; projets = siteService.getProjetsBySite(siteId);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;List&lt;ProjetDto&gt;&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Liste des projets par site récupérée avec succès&quot;,
+&nbsp;                projets
 &nbsp;        );
 <b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
+&nbsp;    // SiteController.java - Ajouter
+&nbsp;    @PostMapping(&quot;/{siteId}/add-projet/{projetId}&quot;)
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;SiteDto&gt;&gt; addProjetToSite(
+&nbsp;            @PathVariable Long siteId,
+&nbsp;            @PathVariable Long projetId) {
+<b class="fc">&nbsp;        SiteDto updated = siteService.addProjetToSite(siteId, projetId);</b>
 &nbsp;
-&nbsp;    private StockModuleDto convertToDto(StockModule stock) {
-<b class="fc">&nbsp;        return StockModuleDto.builder()</b>
-<b class="fc">&nbsp;                .id(stock.getId())</b>
-<b class="fc">&nbsp;                .technicalFileId(stock.getTechnicalFileId())</b>
-<b class="fc">&nbsp;                .technicalFileItemId(stock.getTechnicalFileItemId())</b>
-<b class="fc">&nbsp;                .chargeSheetItemId(stock.getChargeSheetItemId())</b>
-<b class="fc">&nbsp;                .itemNumber(stock.getItemNumber())</b>
-<b class="fc">&nbsp;                .position(stock.getPosition())</b>
-<b class="fc">&nbsp;                .finalDisplacement(stock.getFinalDisplacement())</b>
-<b class="fc">&nbsp;                .finalProgrammedSealing(stock.getFinalProgrammedSealing())</b>
-<b class="fc">&nbsp;                .finalDetection(stock.getFinalDetection())</b>
-<b class="fc">&nbsp;                .movedBy(stock.getMovedBy())</b>
-<b class="fc">&nbsp;                .movedAt(stock.getMovedAt())</b>
-<b class="fc">&nbsp;                .status(stock.getStatus())</b>
-<b class="fc">&nbsp;                .casier(stock.getCasier())</b>
-<b class="fc">&nbsp;                .stuffNumr(stock.getStuffNumr())</b>
-<b class="fc">&nbsp;                .leoniNumr(stock.getLeoniNumr())</b>
-<b class="fc">&nbsp;                .indexValue(stock.getIndexValue())</b>
-<b class="fc">&nbsp;                .quantite(stock.getQuantite())</b>
-<b class="fc">&nbsp;                .fournisseur(stock.getFournisseur())</b>
-<b class="fc">&nbsp;                .etat(stock.getEtat())</b>
-<b class="fc">&nbsp;                .caisse(stock.getCaisse())</b>
-<b class="fc">&nbsp;                .specifications(stock.getSpecifications())</b>
-<b class="fc">&nbsp;                .dernierMaj(stock.getDernierMaj())</b>
-<b class="fc">&nbsp;                .infoSurModules(stock.getInfoSurModules())</b>
-<b class="fc">&nbsp;                .demandeurExplication(stock.getDemandeurExplication())</b>
-<b class="fc">&nbsp;                .dateDemande(stock.getDateDemande())</b>
-<b class="fc">&nbsp;                .newQuantite(stock.getNewQuantite())</b>
-&nbsp;                // Ajouter les infos du site
-<b class="pc">&nbsp;                .siteId(stock.getSite() != null ? stock.getSite().getId() : null)</b>
-<b class="pc">&nbsp;                .siteName(stock.getSite() != null ? stock.getSite().getName() : null)</b>
-<b class="fc">&nbsp;                .build();</b>
+<b class="fc">&nbsp;        ApiResponse&lt;SiteDto&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Projet ajouté au site avec succès&quot;,
+&nbsp;                updated
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
+&nbsp;    }
+&nbsp;    // SiteController.java - Ajouter
+&nbsp;    @PutMapping(&quot;/{siteId}/projets&quot;)
+&nbsp;    @PreAuthorize(&quot;hasRole(&#39;ADMIN&#39;)&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;SiteDto&gt;&gt; updateSiteProjets(
+&nbsp;            @PathVariable Long siteId,
+&nbsp;            @RequestBody Map&lt;String, List&lt;Long&gt;&gt; body) {
+<b class="fc">&nbsp;        List&lt;Long&gt; projetIds = body.get(&quot;projetIds&quot;);</b>
+<b class="fc">&nbsp;        SiteDto updated = siteService.updateSiteProjets(siteId, projetIds);</b>
+&nbsp;
+<b class="fc">&nbsp;        ApiResponse&lt;SiteDto&gt; response = ApiResponse.success(</b>
+&nbsp;                &quot;Projets du site mis à jour avec succès&quot;,
+&nbsp;                updated
+&nbsp;        );
+<b class="fc">&nbsp;        return ResponseEntity.ok(response);</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -417,7 +228,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

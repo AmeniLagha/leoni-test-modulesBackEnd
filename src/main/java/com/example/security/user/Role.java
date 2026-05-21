@@ -9,9 +9,31 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.example.security.user.Permission.*;
-
+/**
+ * Énumération des rôles utilisateurs dans le système LEONI.
+ *
+ * <p>Chaque rôle est associé à un ensemble de permissions spécifiques
+ * qui définissent les actions autorisées dans l'application.</p>
+ *
+ * <p>Les rôles disponibles sont :</p>
+ * <ul>
+ *   <li><b>ING</b> - Ingénieur : peut créer/modifier la partie basique du cahier des charges</li>
+ *   <li><b>PT</b> - Production Technique : valide la partie technique</li>
+ *   <li><b>PP</b> - Préparation Production : gère la conformité et le dossier technique</li>
+ *   <li><b>MC</b> - Maintenance Corrective : gère les interventions correctives</li>
+ *   <li><b>MP</b> - Maintenance Préventive : gère les interventions préventives</li>
+ *   <li><b>ADMIN</b> - Administrateur : toutes les permissions</li>
+ * </ul>
+ *
+ * @author LEONI Tunisia
+ * @version 1.0
+ * @see Permission
+ */
 @RequiredArgsConstructor
 public enum Role {
+    /**
+     * Rôle Ingénieur - Permet la gestion de la partie basique du cahier des charges.
+     */
     ING(
             Set.of(
                     // Peut créer la partie "basique" du cahier des charges
@@ -23,7 +45,9 @@ public enum Role {
 
             )
     ),
-
+    /**
+     * Rôle Production Technique - Validation technique du cahier des charges.
+     */
     PT(
             Set.of(
                     // Peut lire tout le cahier des charges
@@ -125,7 +149,9 @@ public enum Role {
                     STOCK_READ
             )
     ),
-
+    /**
+     * Rôle Administrateur - Accès complet à toutes les fonctionnalités.
+     */
     ADMIN(
             Set.of(
 
@@ -160,10 +186,17 @@ public enum Role {
                     RECEPTION_READ
             )
     );
-
+    /**
+     * Ensemble des permissions associées au rôle.
+     */
     @Getter
     private final Set<Permission> permissions;
-
+    /**
+     * Retourne la liste des autorités Spring Security pour ce rôle.
+     *
+     * @return une liste de {@link SimpleGrantedAuthority} incluant
+     *         les permissions et le préfixe "ROLE_{roleName}"
+     */
     public List<SimpleGrantedAuthority> getAuthorities() {
         var authorities = getPermissions()
                 .stream()

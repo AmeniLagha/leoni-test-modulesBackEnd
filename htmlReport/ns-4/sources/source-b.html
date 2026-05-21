@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ChargeSheetItemRepository</title>
+  <title>Coverage Report > ChargeSheetRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,7 +22,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">com.example.security.cahierdeCharge</a>
 </div>
 
-<h1>Coverage Summary for Class: ChargeSheetItemRepository (com.example.security.cahierdeCharge)</h1>
+<h1>Coverage Summary for Class: ChargeSheetRepository (com.example.security.cahierdeCharge)</h1>
 
 <table class="coverageStats">
 
@@ -30,13 +30,13 @@ Current scope:     <a href="../../index.html">all classes</a>
   <th class="name">Class</th>
 </tr>
   <tr>
-    <td class="name">ChargeSheetItemRepository$MockitoMock$smLqVLdw</td>
+    <td class="name">ChargeSheetRepository$MockitoMock$4j1eMTlq</td>
   </tr>
   <tr>
-    <td class="name">ChargeSheetItemRepository$MockitoMock$smLqVLdw$auxiliary$qrtuEb1h</td>
+    <td class="name">ChargeSheetRepository$MockitoMock$4j1eMTlq$auxiliary$Imr6P039</td>
   </tr>
   <tr>
-    <td class="name">ChargeSheetItemRepository$MockitoMock$smLqVLdw$auxiliary$rWToML8A</td>
+    <td class="name">ChargeSheetRepository$MockitoMock$4j1eMTlq$auxiliary$JhSUbs0M</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
@@ -51,12 +51,92 @@ Current scope:     <a href="../../index.html">all classes</a>
 <code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.cahierdeCharge;
 &nbsp;
 &nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.data.repository.query.Param;
 &nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
 &nbsp;import java.util.List;
 &nbsp;
 &nbsp;@Repository
-&nbsp;public interface ChargeSheetItemRepository extends JpaRepository&lt;ChargeSheetItem, Long&gt; {
-&nbsp;    List&lt;ChargeSheetItem&gt; findByChargeSheetId(Long chargeSheetId);
+&nbsp;public interface ChargeSheetRepository extends JpaRepository&lt;ChargeSheet, Long&gt; {
+&nbsp;
+&nbsp;    // ============ MÉTHODES EXISTANTES ============
+&nbsp;
+&nbsp;    @Query(&quot;SELECT cs FROM ChargeSheet cs WHERE cs.project = :project&quot;)
+&nbsp;    List&lt;ChargeSheet&gt; findByProject(String project);
+&nbsp;
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectAndStatus(String project, ChargeSheetStatus status);
+&nbsp;
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectAndStatusIn(String project, List&lt;ChargeSheetStatus&gt; statuses);
+&nbsp;
+&nbsp;    long countByProject(String project);
+&nbsp;
+&nbsp;    long countByProjectAndStatus(String project, ChargeSheetStatus status);
+&nbsp;
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) as month, COUNT(cs.id) as count &quot; +
+&nbsp;            &quot;FROM charge_sheet cs &quot; +
+&nbsp;            &quot;WHERE cs.project = :project &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForProject(@Param(&quot;project&quot;) String project);
+&nbsp;
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) as month, COUNT(cs.id) as count &quot; +
+&nbsp;            &quot;FROM charge_sheet cs &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForAllProjects();
+&nbsp;
+&nbsp;    // ============ NOUVELLES MÉTHODES AVEC FILTRAGE PAR PLANT (SITE) ============
+&nbsp;
+&nbsp;    // ✅ Filtrer par projet ET plant
+&nbsp;    @Query(&quot;SELECT cs FROM ChargeSheet cs WHERE cs.project = :project AND cs.plant = :plant&quot;)
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectAndPlant(@Param(&quot;project&quot;) String project, @Param(&quot;plant&quot;) String plant);
+&nbsp;
+&nbsp;    // ✅ Filtrer par projet, plant ET statut
+&nbsp;    @Query(&quot;SELECT cs FROM ChargeSheet cs WHERE cs.project = :project AND cs.plant = :plant AND cs.status = :status&quot;)
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectAndPlantAndStatus(@Param(&quot;project&quot;) String project,
+&nbsp;                                                     @Param(&quot;plant&quot;) String plant,
+&nbsp;                                                     @Param(&quot;status&quot;) ChargeSheetStatus status);
+&nbsp;
+&nbsp;    // ✅ Filtrer par projet, plant ET liste de statuts
+&nbsp;    @Query(&quot;SELECT cs FROM ChargeSheet cs WHERE cs.project = :project AND cs.plant = :plant AND cs.status IN :statuses&quot;)
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectAndPlantAndStatusIn(@Param(&quot;project&quot;) String project,
+&nbsp;                                                       @Param(&quot;plant&quot;) String plant,
+&nbsp;                                                       @Param(&quot;statuses&quot;) List&lt;ChargeSheetStatus&gt; statuses);
+&nbsp;
+&nbsp;    // ✅ Compter par projet ET plant
+&nbsp;    @Query(&quot;SELECT COUNT(cs) FROM ChargeSheet cs WHERE cs.project = :project AND cs.plant = :plant&quot;)
+&nbsp;    long countByProjectAndPlant(@Param(&quot;project&quot;) String project, @Param(&quot;plant&quot;) String plant);
+&nbsp;
+&nbsp;    // ✅ Compter par projet, plant ET statut
+&nbsp;    @Query(&quot;SELECT COUNT(cs) FROM ChargeSheet cs WHERE cs.project = :project AND cs.plant = :plant AND cs.status = :status&quot;)
+&nbsp;    long countByProjectAndPlantAndStatus(@Param(&quot;project&quot;) String project,
+&nbsp;                                         @Param(&quot;plant&quot;) String plant,
+&nbsp;                                         @Param(&quot;status&quot;) ChargeSheetStatus status);
+&nbsp;
+&nbsp;    // ✅ Statistiques mensuelles par projet ET plant
+&nbsp;    @Query(value = &quot;SELECT DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) as month, COUNT(cs.id) as count &quot; +
+&nbsp;            &quot;FROM charge_sheet cs &quot; +
+&nbsp;            &quot;WHERE cs.project = :project AND cs.plant = :plant &quot; +
+&nbsp;            &quot;GROUP BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) &quot; +
+&nbsp;            &quot;ORDER BY DATE_FORMAT(cs.created_at, &#39;%Y-%m&#39;) DESC&quot;,
+&nbsp;            nativeQuery = true)
+&nbsp;    List&lt;Object[]&gt; countByMonthForProjectAndPlant(@Param(&quot;project&quot;) String project, @Param(&quot;plant&quot;) String plant);
+&nbsp;
+&nbsp;    // ✅ Pour ADMIN : voir tous les cahiers (déjà existant avec findAll())
+&nbsp;    // findAll() fonctionne déjà
+&nbsp;
+&nbsp;    // ✅ Pour ADMIN : compter par statut global
+&nbsp;    @Query(&quot;SELECT COUNT(cs) FROM ChargeSheet cs WHERE cs.status = :status&quot;)
+&nbsp;    long countByStatus(@Param(&quot;status&quot;) ChargeSheetStatus status);
+&nbsp;
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectInAndPlant(List&lt;String&gt; projects, String plant);
+&nbsp;
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectInAndPlantAndStatusIn(List&lt;String&gt; projects, String plant, List&lt;ChargeSheetStatus&gt; statuses);
+&nbsp;
+&nbsp;    List&lt;ChargeSheet&gt; findByProjectInAndPlantAndStatus(List&lt;String&gt; projects, String plant, ChargeSheetStatus status);
 &nbsp;}
 </code>
 </pre>
@@ -81,7 +161,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

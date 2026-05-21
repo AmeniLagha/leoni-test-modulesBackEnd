@@ -13,6 +13,8 @@ public class ReceptionStatisticsController {
 
     private final ChargeSheetService chargeSheetService;
 
+
+
     @GetMapping("/receptions")
     public ResponseEntity<ReceptionStatisticsDto> getReceptionStatistics(
             @RequestParam(required = false) String project,

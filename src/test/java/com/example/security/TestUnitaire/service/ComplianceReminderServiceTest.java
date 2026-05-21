@@ -158,4 +158,43 @@ class ComplianceReminderServiceTest {
         // Pas d'exception = succès
         verify(notificationService, never()).sendNotificationToOneUser(anyString(), anyString(), anyString());
     }
+    @Test
+    void sendPendingComplianceReminders_WhenReceptionJustHappened_ShouldNotSendReminder() {
+        // Réception aujourd'hui
+        testReception.setReceptionDate(LocalDate.now());
+
+        List<ReceptionHistory> histories = new ArrayList<>();
+        histories.add(testReception);
+        when(receptionHistoryRepository.findAll()).thenReturn(histories);
+        when(receptionHistoryRepository.count()).thenReturn(1L);
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(complianceRepository.findByItemId(1L)).thenReturn(new ArrayList<>()); // pas de conformités
+        when(receptionHistoryRepository.findByItemIdOrderByReceptionDateDesc(1L))
+                .thenReturn(histories);
+
+        complianceReminderService.sendPendingComplianceReminders();
+
+        // daysSinceLastReception = 0 → pas de rappel
+        verify(notificationService, never()).sendNotificationToOneUser(anyString(), anyString(), anyString());
+    }
+    @Test
+    void sendPendingComplianceReminders_WhenMoreThan14Days_ShouldStopReminders() {
+        // Réception il y a 15 jours
+        testReception.setReceptionDate(LocalDate.now().minusDays(15));
+
+        List<ReceptionHistory> histories = new ArrayList<>();
+        histories.add(testReception);
+        when(receptionHistoryRepository.findAll()).thenReturn(histories);
+        when(receptionHistoryRepository.count()).thenReturn(1L);
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(complianceRepository.findByItemId(1L)).thenReturn(new ArrayList<>());
+        when(receptionHistoryRepository.findByItemIdOrderByReceptionDateDesc(1L))
+                .thenReturn(histories);
+
+        complianceReminderService.sendPendingComplianceReminders();
+
+        // > 14 jours → pas de rappel
+        verify(notificationService, never()).sendNotificationToOneUser(anyString(), anyString(), anyString());
+    }
+
 }

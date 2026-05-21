@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > TokenRepository</title>
+  <title>Coverage Report > StockModuleDto</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,27 +19,100 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.token</a>
+    <a href="../index.html">com.example.security.stock</a>
 </div>
 
-<h1>Coverage Summary for Class: TokenRepository (com.example.security.token)</h1>
+<h1>Coverage Summary for Class: StockModuleDto (com.example.security.stock)</h1>
 
 <table class="coverageStats">
 
 <tr>
   <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">StockModuleDto</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (32/32)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/230)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (32/32)
+  </span>
+</td>
 </tr>
   <tr>
-    <td class="name">TokenRepository$MockitoMock$ihIxjBI3</td>
-  </tr>
-  <tr>
-    <td class="name">TokenRepository$MockitoMock$ihIxjBI3$auxiliary$N7ahJpFy</td>
-  </tr>
-  <tr>
-    <td class="name">TokenRepository$MockitoMock$ihIxjBI3$auxiliary$TnolkuQs</td>
+    <td class="name">StockModuleDto$StockModuleDtoBuilder</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (33/33)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/230)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (33/33)
+  </span>
+</td>
 </tr>
 </table>
 
@@ -48,28 +121,51 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.token;
+<code class="sourceCode" id="sourceCode">&nbsp;// StockModuleDto.java
+&nbsp;package com.example.security.stock;
 &nbsp;
-&nbsp;import com.example.security.user.User;
-&nbsp;import jakarta.transaction.Transactional;
-&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
-&nbsp;import java.util.List;
-&nbsp;import java.util.Optional;
-&nbsp;import org.springframework.data.jpa.repository.Query;
-&nbsp;public interface TokenRepository  extends JpaRepository&lt;Token, Integer&gt; {
-&nbsp;    @Query(value = &quot;&quot;&quot;    
-&nbsp;      select t from Token t inner join User u\s
-&nbsp;      on t.user.id = u.id\s
-&nbsp;      where u.id = :id and (t.expired = false or t.revoked = false)\s
-&nbsp;      &quot;&quot;&quot;)
-&nbsp;    List&lt;Token&gt; findAllValidTokenByUser(Integer id);
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import java.time.LocalDate;
 &nbsp;
-&nbsp;    Optional&lt;Token&gt; findByToken(String token);
-&nbsp;    // Supprimer tous les tokens d&#39;un utilisateur
-&nbsp;    @Transactional
-&nbsp;    void deleteByUserId(Integer userId);
-&nbsp;    List&lt;Token&gt; findByUser(User user);
+<b class="pc">&nbsp;@Data</b>
+<b class="fc">&nbsp;@Builder</b>
+<b class="fc">&nbsp;@NoArgsConstructor</b>
+<b class="fc">&nbsp;@AllArgsConstructor</b>
+&nbsp;public class StockModuleDto {
 &nbsp;
+&nbsp;    // Champs existants
+<b class="fc">&nbsp;    private Long id;</b>
+<b class="fc">&nbsp;    private Long technicalFileId;</b>
+<b class="fc">&nbsp;    private Long technicalFileItemId;</b>
+<b class="fc">&nbsp;    private Long chargeSheetItemId;</b>
+<b class="fc">&nbsp;    private Long siteId;</b>
+<b class="fc">&nbsp;    private String itemNumber;</b>
+<b class="fc">&nbsp;    private String position;</b>
+<b class="fc">&nbsp;    private Double finalDisplacement;</b>
+<b class="fc">&nbsp;    private Double finalProgrammedSealing;</b>
+<b class="fc">&nbsp;    private String finalDetection;</b>
+<b class="fc">&nbsp;    private String movedBy;</b>
+<b class="fc">&nbsp;    private LocalDate movedAt;</b>
+<b class="fc">&nbsp;    private StockModule.StockStatus status;</b>
+<b class="fc">&nbsp;    private String siteName;</b>
+&nbsp;    // Nouveaux champs
+<b class="fc">&nbsp;    private String casier;</b>
+<b class="fc">&nbsp;    private String stuffNumr;</b>
+<b class="fc">&nbsp;    private String leoniNumr;</b>
+<b class="fc">&nbsp;    private String indexValue;</b>
+<b class="fc">&nbsp;    private Integer quantite;</b>
+<b class="fc">&nbsp;    private String fournisseur;</b>
+<b class="fc">&nbsp;    private String etat;</b>
+<b class="fc">&nbsp;    private String caisse;</b>
+<b class="fc">&nbsp;    private String specifications;</b>
+<b class="fc">&nbsp;    private LocalDate dernierMaj;</b>
+<b class="fc">&nbsp;    private String infoSurModules;</b>
+<b class="fc">&nbsp;    private String demandeurExplication;</b>
+<b class="fc">&nbsp;    private LocalDate dateDemande;  // ✅ Changé de dateCreation à dateDemande</b>
+<b class="fc">&nbsp;    private Integer newQuantite;</b>
 &nbsp;}
 </code>
 </pre>
@@ -94,7 +190,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

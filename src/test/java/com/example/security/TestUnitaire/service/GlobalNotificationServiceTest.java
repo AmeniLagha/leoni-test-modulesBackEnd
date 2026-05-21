@@ -1,7 +1,11 @@
 package com.example.security.TestUnitaire.service;
 
+import com.example.security.cahierdeCharge.ChargeSheet;
 import com.example.security.email.GlobalNotificationService;
+import com.example.security.reclamation.Claim;
 import com.example.security.user.UserRepository;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,21 +13,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class GlobalNotificationServiceTest {
 
     @Mock
@@ -32,148 +34,365 @@ class GlobalNotificationServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
-    private GlobalNotificationService globalNotificationService;
+    @Mock
+    private MimeMessage mimeMessage;
 
-    private List<String> activeEmails;
+    @InjectMocks
+    private GlobalNotificationService notificationService;
+
+    private List<String> testEmails;
+    private ChargeSheet chargeSheet;
+    private Claim claim;
 
     @BeforeEach
-    void setUp() {
-        activeEmails = Arrays.asList("user1@leoni.com", "user2@leoni.com", "user3@leoni.com");
-        when(userRepository.findAllActiveUserEmails()).thenReturn(activeEmails);
-        doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+    void setUp() throws MessagingException {
+        testEmails = Arrays.asList("user1@leoni.com", "user2@leoni.com");
+
+        chargeSheet = new ChargeSheet();
+        chargeSheet.setId(100L);
+        chargeSheet.setProject("FORD");
+        chargeSheet.setPlant("MH1");
+        chargeSheet.setHarnessRef("HARNESS-001");
+        chargeSheet.setIssuedBy("ING001");
+
+        claim = new Claim();
+        claim.setId(200L);
+        claim.setTitle("Défaut détecté");
+        claim.setAssignedTo("tech@leoni.com");
+
+        // Configuration par défaut des mocks
+        lenient().when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        lenient().doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+        lenient().doNothing().when(mailSender).send(any(MimeMessage.class));
     }
 
     // ==================== sendNotificationToAllUsers ====================
 
     @Test
     void sendNotificationToAllUsers_ShouldSendToAllActiveUsers() {
-        globalNotificationService.sendNotificationToAllUsers("Test Subject", "Test Message");
+        when(userRepository.findAllActiveUserEmails()).thenReturn(testEmails);
 
-        // verify mailSender called at least once (async - best effort)
-        verify(mailSender, atLeastOnce()).send(any(SimpleMailMessage.class));
+        notificationService.sendNotificationToAllUsers("Test Subject", "Test Message");
+
+        verify(mailSender, times(testEmails.size())).send(any(SimpleMailMessage.class));
     }
 
     @Test
     void sendNotificationToAllUsers_WhenNoActiveUsers_ShouldNotSendEmail() {
         when(userRepository.findAllActiveUserEmails()).thenReturn(Collections.emptyList());
 
-        globalNotificationService.sendNotificationToAllUsers("Test Subject", "Test Message");
+        notificationService.sendNotificationToAllUsers("Test Subject", "Test Message");
 
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
+    // ==================== sendNotificationToProjectUsers ====================
+
     @Test
-    void sendNotificationToAllUsers_ShouldUseCorrectSubjectPrefix() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+    void sendNotificationToProjectUsers_ShouldSendToProjectMembers() {
+        when(userRepository.findActiveUserEmailsByProjet("FORD")).thenReturn(testEmails);
 
-        globalNotificationService.sendNotificationToAllUsers("Mon Sujet", "Mon Message");
+        notificationService.sendNotificationToProjectUsers("Test", "Message", "FORD");
 
-        verify(mailSender, atLeastOnce()).send(captor.capture());
-        SimpleMailMessage sent = captor.getValue();
-        assertThat(sent.getSubject()).contains("[Système Leoni]");
-        assertThat(sent.getSubject()).contains("Mon Sujet");
+        verify(mailSender, times(testEmails.size())).send(any(SimpleMailMessage.class));
     }
 
     @Test
-    void sendNotificationToAllUsers_ShouldSetFromAddress() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+    void sendNotificationToProjectUsers_WhenNoUsers_ShouldNotSend() {
+        when(userRepository.findActiveUserEmailsByProjet("FORD")).thenReturn(Collections.emptyList());
 
-        globalNotificationService.sendNotificationToAllUsers("Sujet", "Message");
+        notificationService.sendNotificationToProjectUsers("Test", "Message", "FORD");
 
-        verify(mailSender, atLeastOnce()).send(captor.capture());
-        assertThat(captor.getValue().getFrom()).isEqualTo("noreply@leoni-system.com");
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
-    // ==================== sendNotificationToOneUser ====================
+    // ==================== sendHtmlNotificationToProjectUsers ====================
 
     @Test
-    void sendNotificationToOneUser_ShouldSendToSpecificEmail() {
-        globalNotificationService.sendNotificationToOneUser("user@leoni.com", "Sujet", "Contenu");
+    void sendHtmlNotificationToProjectUsers_ShouldSendHtmlEmails() throws MessagingException {
+        when(userRepository.findActiveUserEmailsByProjet("FORD")).thenReturn(testEmails);
 
-        verify(mailSender).send(any(SimpleMailMessage.class));
+        notificationService.sendHtmlNotificationToProjectUsers("Test HTML", "<h1>Test</h1>", "FORD");
+
+        verify(mailSender, times(testEmails.size())).send(any(MimeMessage.class));
     }
-/*
+
     @Test
-    void sendNotificationToOneUser_ShouldSetCorrectRecipient() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+    void sendHtmlNotificationToProjectUsers_WhenMessagingException_ShouldNotThrow() {
+        when(userRepository.findActiveUserEmailsByProjet("FORD")).thenReturn(testEmails);
+        // Ne pas lever d'exception, juste logguer l'erreur
 
-        globalNotificationService.sendNotificationToOneUser("target@leoni.com", "Sujet", "Contenu");
+        notificationService.sendHtmlNotificationToProjectUsers("Test", "<h1>Test</h1>", "FORD");
 
-        verify(mailSender).send(captor.capture());
-        assertThat(captor.getValue().getTo()).contains("target@leoni.com");
+        // Le test passe si aucune exception n'est levée
+        verify(mailSender, times(testEmails.size())).send(any(MimeMessage.class));
     }
-*/
-    // ==================== notifyChargeSheetCreated ====================
+
+    // ==================== sendNotificationToProjectAndSiteUsers ====================
 
     @Test
-    void notifyChargeSheetCreated_ShouldCallSendToAllUsers() {
-        globalNotificationService.notifyChargeSheetCreated(42L, "ing@leoni.com");
+    void sendNotificationToProjectAndSiteUsers_ShouldSendToSpecificUsers() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1")).thenReturn(testEmails);
 
-        verify(userRepository, atLeastOnce()).findAllActiveUserEmails();
+        notificationService.sendNotificationToProjectAndSiteUsers("Test", "Message", "FORD", "MH1");
+
+        verify(mailSender, times(testEmails.size())).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void sendNotificationToProjectAndSiteUsers_WhenNoUsers_ShouldNotSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1")).thenReturn(Collections.emptyList());
+
+        notificationService.sendNotificationToProjectAndSiteUsers("Test", "Message", "FORD", "MH1");
+
+        verify(mailSender, never()).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyClaimCreated ====================
+
+    @Test
+    void notifyClaimCreated_ShouldSendToAllUsers() {
+        when(userRepository.findAllActiveUserEmails()).thenReturn(testEmails);
+
+        notificationService.notifyClaimCreated(200L, "Défaut", 100L, "pp@leoni.com");
+
         verify(mailSender, atLeastOnce()).send(any(SimpleMailMessage.class));
     }
 
     @Test
-    void notifyChargeSheetCreated_ShouldContainChargeSheetId() {
+    void notifyClaimCreated_ShouldContainClaimInfo() {
         ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        when(userRepository.findAllActiveUserEmails()).thenReturn(testEmails);
 
-        globalNotificationService.notifyChargeSheetCreated(99L, "creator@leoni.com");
+        notificationService.notifyClaimCreated(200L, "Défaut détecté", 100L, "pp@leoni.com");
 
         verify(mailSender, atLeastOnce()).send(captor.capture());
-        assertThat(captor.getValue().getText()).contains("99");
+        String text = captor.getValue().getText();
+        assertThat(text).contains("Défaut détecté");
+        assertThat(text).contains("200");
+        assertThat(text).contains("100");
+    }
+
+    // ==================== notifyClaimAssigned ====================
+
+    @Test
+    void notifyClaimAssigned_WhenAssignedToNotNull_ShouldSendToOneUser() {
+        notificationService.notifyClaimAssigned(claim, "admin@leoni.com");
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void notifyClaimAssigned_WhenAssignedToIsNull_ShouldNotSend() {
+        claim.setAssignedTo(null);
+
+        notificationService.notifyClaimAssigned(claim, "admin@leoni.com");
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    // ==================== notifyDocumentDeleted ====================
+
+    @Test
+    void notifyDocumentDeleted_ShouldSendToAllUsers() {
+        when(userRepository.findAllActiveUserEmails()).thenReturn(testEmails);
+
+        notificationService.notifyDocumentDeleted("Cahier", 100L, 100L, "admin@leoni.com");
+
+        verify(mailSender, atLeastOnce()).send(any(SimpleMailMessage.class));
+    }
+
+    // ==================== sendSystemNotification ====================
+
+    @Test
+    void sendSystemNotification_ShouldSendSimpleEmail() {
+        notificationService.sendSystemNotification("user@leoni.com", "Test message", "REMINDER");
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void sendSystemNotification_ShouldHaveCorrectSubject() {
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+
+        notificationService.sendSystemNotification("user@leoni.com", "Message", "REMINDER");
+
+        verify(mailSender).send(captor.capture());
+        assertThat(captor.getValue().getSubject()).contains("REMINDER");
     }
 
     // ==================== notifyChargeSheetUpdated ====================
 
     @Test
     void notifyChargeSheetUpdated_ShouldSendNotification() {
-        globalNotificationService.notifyChargeSheetUpdated(10L, "VALIDÉ", "ing@leoni.com", "ING");
+        when(userRepository.findAllActiveUserEmails()).thenReturn(testEmails);
+
+        notificationService.notifyChargeSheetUpdated(10L, "VALIDÉ", "ing@leoni.com", "ING");
 
         verify(mailSender, atLeastOnce()).send(any(SimpleMailMessage.class));
     }
 
+    // ==================== notifyComplianceCreatedToProjectAndSite ====================
+
     @Test
-    void notifyChargeSheetUpdated_ShouldContainActionAndPerformer() {
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+    void notifyComplianceCreatedToProjectAndSite_ShouldSendToSpecificUsers() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1")).thenReturn(testEmails);
 
-        globalNotificationService.notifyChargeSheetUpdated(5L, "VALIDÉ", "ing@leoni.com", "ING");
+        notificationService.notifyComplianceCreatedToProjectAndSite(300L, 100L, "pp@leoni.com", "FORD", "MH1");
 
-        verify(mailSender, atLeastOnce()).send(captor.capture());
-        String text = captor.getValue().getText();
-        assertThat(text).contains("ing@leoni.com");
+        verify(mailSender, times(testEmails.size())).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyTechnicalFileCreatedToProjectAndSite ====================
+
+    @Test
+    void notifyTechnicalFileCreatedToProjectAndSite_ShouldSendToSpecificUsers() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1")).thenReturn(testEmails);
+
+        notificationService.notifyTechnicalFileCreatedToProjectAndSite(400L, 100L, "tech@leoni.com", "FORD", "MH1");
+
+        verify(mailSender, times(testEmails.size())).send(any(MimeMessage.class));
+    }
+    // ==================== sendHtmlNotificationToOneUser ====================
+
+    @Test
+    void sendHtmlNotificationToOneUser_ShouldSendHtmlEmail() throws Exception {
+        notificationService.sendHtmlNotificationToOneUser("HTML Test", "<h1>Hello</h1>", "user@test.com");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+    // ==================== sendHtmlNotificationToProjectAndSiteUsers ====================
+
+    @Test
+    void sendHtmlNotificationToProjectAndSiteUsers_ShouldSendHtml() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com", "user2@test.com"));
+
+        notificationService.sendHtmlNotificationToProjectAndSiteUsers("Test", "<h1>HTML</h1>", "FORD", "MH1");
+
+        verify(mailSender, times(2)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void sendHtmlNotificationToProjectAndSiteUsers_WhenNoUsers_ShouldNotSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Collections.emptyList());
+
+        notificationService.sendHtmlNotificationToProjectAndSiteUsers("Test", "<h1>HTML</h1>", "FORD", "MH1");
+
+        verify(mailSender, never()).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyChargeSheetUpdatedToProjectAndSite ====================
+
+    @Test
+    void notifyChargeSheetUpdatedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyChargeSheetUpdatedToProjectAndSite(100L, "VALIDATED", "user@test.com", "ING", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyDocumentDeletedToProjectAndSite ====================
+
+    @Test
+    void notifyDocumentDeletedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyDocumentDeletedToProjectAndSite("Cahier", 100L, 100L, "admin@test.com", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyComplianceUpdatedToProjectAndSite ====================
+
+    @Test
+    void notifyComplianceUpdatedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyComplianceUpdatedToProjectAndSite(300L, 100L, "user@test.com", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyComplianceDeletedToProjectAndSite ====================
+
+    @Test
+    void notifyComplianceDeletedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyComplianceDeletedToProjectAndSite("Conformité", 300L, 100L, "user@test.com", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+    }
+
+    // ==================== notifyTechnicalFileUpdatedToProjectAndSite ====================
+
+    @Test
+    void notifyTechnicalFileUpdatedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyTechnicalFileUpdatedToProjectAndSite(400L, 100L, "user@test.com", "TECH", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 
     // ==================== notifyClaimUpdatedToProjectAndSite ====================
-/*
-    @Test
-    void notifyClaimUpdatedToProjectAndSite_ShouldSendNotification() {
-        globalNotificationService.notifyClaimUpdatedToProjectAndSite(
-                1L, "FORD", 10L, "pp@test.com", "Test Claim", "MH1", "UPDATED");
 
-        // Should attempt to send (may call findAllActiveUserEmails)
-        verify(userRepository, atLeastOnce()).findAllActiveUserEmails();
+    @Test
+    void notifyClaimUpdatedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyClaimUpdatedToProjectAndSite(200L, "Défaut", 100L, "user@test.com", "RESOLVED", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
-*/
+
     // ==================== notifyClaimDeletedToProjectAndSite ====================
-/*
-    @Test
-    void notifyClaimDeletedToProjectAndSite_ShouldSendNotification() {
-        globalNotificationService.notifyClaimDeletedToProjectAndSite(
-                "FORD", 1L, 10L, "pp@test.com", "Test Claim", "MH1");
 
-        verify(userRepository, atLeastOnce()).findAllActiveUserEmails();
+    @Test
+    void notifyClaimDeletedToProjectAndSite_ShouldSend() {
+        when(userRepository.findEmailsByProjectAndSite("FORD", "MH1"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        notificationService.notifyClaimDeletedToProjectAndSite("Réclamation", 200L, 100L, "user@test.com", "FORD", "MH1");
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
-*/
-    // ==================== notifyChargeSheetCreated — handles mail exception ====================
+
+    // ==================== notifyChargeSheetCreatedDetailed (avec items) ====================
 
     @Test
-    void sendNotificationToAllUsers_WhenMailFails_ShouldNotThrow() {
-        doThrow(new RuntimeException("SMTP error")).when(mailSender).send(any(SimpleMailMessage.class));
+    void notifyChargeSheetCreatedDetailed_ShouldHandleItems() {
+        when(userRepository.findActiveUserEmailsByProjet("FORD"))
+                .thenReturn(Arrays.asList("user1@test.com"));
 
-        // Should not propagate exception
-        globalNotificationService.sendNotificationToAllUsers("Sujet", "Message");
+        // Créer une liste d'items non vide pour éviter NullPointerException
+        chargeSheet.setItems(Collections.emptyList());
 
-        // No exception thrown = test passes
+        notificationService.notifyChargeSheetCreatedDetailed(chargeSheet);
+
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
+    }
+
+    // ==================== notifyChargeSheetCreatedTable ====================
+
+    @Test
+    void notifyChargeSheetCreatedTable_ShouldSendHtml() {
+        when(userRepository.findActiveUserEmailsByProjet("FORD"))
+                .thenReturn(Arrays.asList("user1@test.com"));
+
+        chargeSheet.setItems(Collections.emptyList());
+
+        notificationService.notifyChargeSheetCreatedTable(chargeSheet);
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 }

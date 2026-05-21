@@ -270,4 +270,24 @@ class ChargeSheetImageControllerTest extends BaseIntegrationTest {
                         + "/items/" + itemWithImage.getId() + "/image"))
                 .andExpect(status().isForbidden());
     }
+    @Test
+    void uploadItemImage_WithValidToken_ShouldReturnOk() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", "image/jpeg", "data".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/charge-sheets/" + testSheet.getId()
+                        + "/items/" + testItem.getId() + "/upload-image")
+                        .file(file)
+                        .header("Authorization", "Bearer " + ingToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.path").exists());
+    }
+    @Test
+    void deleteItemImage_WithExistingImage_ShouldReturnOk() throws Exception {
+        mockMvc.perform(delete("/api/v1/charge-sheets/" + testSheet.getId()
+                        + "/items/" + itemWithImage.getId() + "/image")
+                        .header("Authorization", "Bearer " + ingToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Image deleted successfully"));
+    }
 }

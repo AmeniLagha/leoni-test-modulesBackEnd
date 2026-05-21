@@ -56,6 +56,8 @@ class ChargeSheetServiceTest {
     @InjectMocks
     private ChargeSheetService chargeSheetService;
 
+
+
     private User ingUser;
     private User ptUser;
     private User adminUser;
@@ -193,7 +195,7 @@ class ChargeSheetServiceTest {
         setAuthUser(ingUser);
         when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
 
-        ChargeSheetDto.CompleteDto result = chargeSheetService.getChargeSheetComplete(1L);
+        ChargeSheetDto.CompleteDto result =chargeSheetService.getChargeSheetComplete(1L);
 
         assertThat(result).isNotNull();
         assertThat(result.getOrderNumber()).isEqualTo("ORD-001");
@@ -732,5 +734,99 @@ class ChargeSheetServiceTest {
         assertThatThrownBy(() -> chargeSheetService.revertToIng(1L, "Raison valide"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("VALIDATED_ING ou TECH_FILLED");
+    }
+    // ==================== TESTS POUR LES BRANCHES NULL DANS UPDATEITEMFROMDTO ====================
+
+    @Test
+    void updateTechnicalFields_WithNullFields_ShouldOnlyUpdateNonNullFields() {
+        setAuthUser(ptUser);
+        testSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+
+        ChargeSheetDto.UpdateTechDto dto = ChargeSheetDto.UpdateTechDto.builder()
+                .housingReferenceLeoni(null)
+                .quantityOfTestModules(null)
+                .outsideHousingExist("*")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(itemRepository.save(any(ChargeSheetItem.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.save(any(ChargeSheet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ChargeSheetItem result = chargeSheetService.updateTechnicalFields(1L, 1L, dto);
+
+        assertThat(result.getOutsideHousingExist()).isEqualTo("*");
+        // Les champs null ne doivent pas écraser les valeurs existantes
+    }
+
+// ==================== TESTS POUR LES BRANCHES D'EXCEPTION ====================
+
+    @Test
+    void updateTechnicalFields_WithItemNotBelongingToSheet_ShouldThrowException() {
+        setAuthUser(ptUser);
+
+        ChargeSheet otherSheet = ChargeSheet.builder()
+                .id(2L)
+                .plant("OTHER")
+                .project("OTHER")
+                .status(ChargeSheetStatus.DRAFT)
+                .build();
+
+        ChargeSheetItem otherItem = ChargeSheetItem.builder()
+                .id(2L)
+                .chargeSheet(otherSheet)
+                .build();
+
+        ChargeSheetDto.UpdateTechDto dto = ChargeSheetDto.UpdateTechDto.builder()
+                .housingReferenceLeoni("REF")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(2L)).thenReturn(Optional.of(otherItem));
+
+        assertThatThrownBy(() -> chargeSheetService.updateTechnicalFields(1L, 2L, dto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("does not belong");
+    }
+
+    @Test
+    void addItem_WhenSheetNotFound_ShouldThrowException() {
+        setAuthUser(ingUser);
+        ChargeSheetDto.ItemDto itemDto = ChargeSheetDto.ItemDto.builder().build();
+
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chargeSheetService.addItem(99L, itemDto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("not found");
+    }
+
+// ==================== TESTS POUR LA MISE À JOUR DU STATUT GLOBAL ====================
+
+    @Test
+    void updateTechnicalFields_WhenAllItemsFilled_ShouldUpdateGlobalStatusToTechFilled() {
+        setAuthUser(ptUser);
+        testSheet.setStatus(ChargeSheetStatus.VALIDATED_ING);
+        testItem.setItemStatus("DRAFT");
+
+        ChargeSheetDto.UpdateTechDto dto = ChargeSheetDto.UpdateTechDto.builder()
+                .outsideHousingExist("*")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(itemRepository.findById(1L)).thenReturn(Optional.of(testItem));
+        when(itemRepository.save(any(ChargeSheetItem.class))).thenAnswer(inv -> {
+            ChargeSheetItem saved = inv.getArgument(0);
+            saved.setItemStatus("TECH_FILLED");
+            return saved;
+        });
+        when(repository.save(any(ChargeSheet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ChargeSheetItem result = chargeSheetService.updateTechnicalFields(1L, 1L, dto);
+
+        // Vérifier que le statut global a changé
+        verify(repository).save(argThat(sheet ->
+                sheet.getStatus() == ChargeSheetStatus.TECH_FILLED
+        ));
     }
 }

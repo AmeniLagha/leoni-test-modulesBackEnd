@@ -409,4 +409,28 @@ class ClaimControllerTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + ingToken))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void getClaimSummary_WithInvalidChargeSheetId_ShouldReturnEmptyStats() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/summary/99999")
+                        .header("Authorization", "Bearer " + ppToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void getClaimsByRelatedItem_ShouldReturnList() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/related/CHARGE_SHEET/" + testChargeSheet.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+    @Test
+    void getMyAssignedClaims_ShouldReturnClaims() throws Exception {
+        mockMvc.perform(get("/api/v1/claims/my-assigned")
+                        .header("Authorization", "Bearer " + mcToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
 }

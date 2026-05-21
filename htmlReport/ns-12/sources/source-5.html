@@ -1,0 +1,312 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > Role</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.user</a>
+</div>
+
+<h1>Coverage Summary for Class: Role (com.example.security.user)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">Role</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (4/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (20/20)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.user;
+&nbsp;
+&nbsp;import lombok.Getter;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.security.core.authority.SimpleGrantedAuthority;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Set;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;import static com.example.security.user.Permission.*;
+&nbsp;/**
+&nbsp; * Énumération des rôles utilisateurs dans le système LEONI.
+&nbsp; *
+&nbsp; * &lt;p&gt;Chaque rôle est associé à un ensemble de permissions spécifiques
+&nbsp; * qui définissent les actions autorisées dans l&#39;application.&lt;/p&gt;
+&nbsp; *
+&nbsp; * &lt;p&gt;Les rôles disponibles sont :&lt;/p&gt;
+&nbsp; * &lt;ul&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;ING&lt;/b&gt; - Ingénieur : peut créer/modifier la partie basique du cahier des charges&lt;/li&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;PT&lt;/b&gt; - Production Technique : valide la partie technique&lt;/li&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;PP&lt;/b&gt; - Préparation Production : gère la conformité et le dossier technique&lt;/li&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;MC&lt;/b&gt; - Maintenance Corrective : gère les interventions correctives&lt;/li&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;MP&lt;/b&gt; - Maintenance Préventive : gère les interventions préventives&lt;/li&gt;
+&nbsp; *   &lt;li&gt;&lt;b&gt;ADMIN&lt;/b&gt; - Administrateur : toutes les permissions&lt;/li&gt;
+&nbsp; * &lt;/ul&gt;
+&nbsp; *
+&nbsp; * @author LEONI Tunisia
+&nbsp; * @version 1.0
+&nbsp; * @see Permission
+&nbsp; */
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public enum Role {
+&nbsp;    /**
+&nbsp;     * Rôle Ingénieur - Permet la gestion de la partie basique du cahier des charges.
+&nbsp;     */
+<b class="fc">&nbsp;    ING(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;                    // Peut créer la partie &quot;basique&quot; du cahier des charges
+&nbsp;                    CHARGE_SHEET_BASIC_CREATE,
+&nbsp;                    CHARGE_SHEET_BASIC_READ,
+&nbsp;                    CHARGE_SHEET_BASIC_WRITE,
+&nbsp;                    CHARGE_SHEET_ALL_READ
+&nbsp;
+&nbsp;
+&nbsp;            )
+&nbsp;    ),
+&nbsp;    /**
+&nbsp;     * Rôle Production Technique - Validation technique du cahier des charges.
+&nbsp;     */
+<b class="fc">&nbsp;    PT(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;                    // Peut lire tout le cahier des charges
+&nbsp;                    CHARGE_SHEET_ALL_READ,
+&nbsp;
+&nbsp;                    // Peut écrire la partie technique du cahier des charges
+&nbsp;                    CHARGE_SHEET_TECH_WRITE,
+&nbsp;                    CHARGE_SHEET_TECH_READ,
+&nbsp;
+&nbsp;                    CHARGE_SHEET_BASIC_READ,
+&nbsp;
+&nbsp;                    // Réclamations
+&nbsp;                    CLAIM_CREATE,
+&nbsp;                    CLAIM_READ,
+&nbsp;                    CLAIM_WRITE,
+&nbsp;                    RECEPTION_READ
+&nbsp;            )
+&nbsp;    ),
+&nbsp;
+<b class="fc">&nbsp;    PP(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;                    // Peut lire tout le cahier des charges
+&nbsp;                    CHARGE_SHEET_ALL_READ,
+&nbsp;
+&nbsp;                    // Peut gérer la conformité
+&nbsp;                    COMPLIANCE_CREATE,
+&nbsp;                    COMPLIANCE_READ,
+&nbsp;                    COMPLIANCE_WRITE,
+&nbsp;
+&nbsp;                    // Peut gérer le dossier technique
+&nbsp;                    TECHNICAL_FILE_READ,
+&nbsp;                    TECHNICAL_FILE_WRITE,
+&nbsp;                    TECHNICAL_FILE_CREATE,
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;                    // Peut gérer le stock
+&nbsp;                    STOCK_READ,
+&nbsp;                    STOCK_WRITE,
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;                    // Réclamations
+&nbsp;                    CLAIM_CREATE,
+&nbsp;                    CLAIM_READ,
+&nbsp;                    CLAIM_WRITE,
+&nbsp;                    RECEPTION_READ
+&nbsp;            )
+&nbsp;    ),
+&nbsp;
+<b class="fc">&nbsp;    MC(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;                    // Peut lire tout le cahier des charges
+&nbsp;                    CHARGE_SHEET_ALL_READ,
+&nbsp;
+&nbsp;                    // Peut lire et écrire le dossier technique
+&nbsp;                    TECHNICAL_FILE_READ,
+&nbsp;                    TECHNICAL_FILE_WRITE,
+&nbsp;                    TECHNICAL_FILE_CREATE,
+&nbsp;
+&nbsp;                    // Maintenance corrective
+&nbsp;                    MAINTENANCE_CORRECTIVE_READ,
+&nbsp;                    MAINTENANCE_CORRECTIVE_WRITE,
+&nbsp;
+&nbsp;                    // Permissions de lecture
+&nbsp;                    COMPLIANCE_READ,
+&nbsp;
+&nbsp;                    // Réclamations
+&nbsp;                    CLAIM_CREATE,
+&nbsp;                    CLAIM_READ,
+&nbsp;                    CLAIM_WRITE
+&nbsp;            )
+&nbsp;    ),
+&nbsp;
+<b class="fc">&nbsp;    MP(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;                    // Peut lire tout le cahier des charges
+&nbsp;                    CHARGE_SHEET_ALL_READ,
+&nbsp;
+&nbsp;                    // Peut lire et écrire le dossier technique
+&nbsp;                    TECHNICAL_FILE_READ,
+&nbsp;                    TECHNICAL_FILE_WRITE,
+&nbsp;                    TECHNICAL_FILE_CREATE,
+&nbsp;                    // Maintenance préventive
+&nbsp;                    MAINTENANCE_PREVENTIVE_READ,
+&nbsp;                    MAINTENANCE_PREVENTIVE_WRITE,
+&nbsp;
+&nbsp;                    // Permissions de lecture seule pour tout le reste
+&nbsp;
+&nbsp;                    COMPLIANCE_READ,
+&nbsp;                    MAINTENANCE_CORRECTIVE_READ,
+&nbsp;
+&nbsp;                    // Réclamations
+&nbsp;                    CLAIM_CREATE,
+&nbsp;                    CLAIM_READ,
+&nbsp;                    CLAIM_WRITE,
+&nbsp;
+&nbsp;                    // Stock
+&nbsp;                    STOCK_READ
+&nbsp;            )
+&nbsp;    ),
+&nbsp;    /**
+&nbsp;     * Rôle Administrateur - Accès complet à toutes les fonctionnalités.
+&nbsp;     */
+<b class="fc">&nbsp;    ADMIN(</b>
+<b class="fc">&nbsp;            Set.of(</b>
+&nbsp;
+&nbsp;                    ADMIN_READ,
+&nbsp;                    ADMIN_UPDATE,
+&nbsp;                    ADMIN_DELETE,
+&nbsp;                    ADMIN_CREATE,
+&nbsp;                    CHARGE_SHEET_BASIC_CREATE,
+&nbsp;                    CHARGE_SHEET_BASIC_READ,
+&nbsp;                    CHARGE_SHEET_BASIC_WRITE,
+&nbsp;                    CHARGE_SHEET_TECH_READ,
+&nbsp;                    CHARGE_SHEET_TECH_WRITE,
+&nbsp;                    CHARGE_SHEET_ALL_READ,
+&nbsp;                    COMPLIANCE_CREATE,
+&nbsp;                    COMPLIANCE_READ,
+&nbsp;                    COMPLIANCE_WRITE,
+&nbsp;                    TECHNICAL_FILE_READ,
+&nbsp;                    TECHNICAL_FILE_WRITE,
+&nbsp;                    TECHNICAL_FILE_CREATE,
+&nbsp;                    MAINTENANCE_CORRECTIVE_READ,
+&nbsp;                    MAINTENANCE_CORRECTIVE_WRITE,
+&nbsp;                    MAINTENANCE_PREVENTIVE_READ,
+&nbsp;                    MAINTENANCE_PREVENTIVE_WRITE,
+&nbsp;                    CLAIM_CREATE,
+&nbsp;                    CLAIM_READ,
+&nbsp;                    CLAIM_WRITE,
+&nbsp;                    STOCK_READ,
+&nbsp;                    STOCK_WRITE,
+&nbsp;                    SEARCH,
+&nbsp;                    AJOUTE_USER,
+&nbsp;                    AJOUTE_USER_LISTE,
+&nbsp;                    RECEPTION_READ
+&nbsp;            )
+&nbsp;    );
+&nbsp;    /**
+&nbsp;     * Ensemble des permissions associées au rôle.
+&nbsp;     */
+<b class="fc">&nbsp;    @Getter</b>
+&nbsp;    private final Set&lt;Permission&gt; permissions;
+&nbsp;    /**
+&nbsp;     * Retourne la liste des autorités Spring Security pour ce rôle.
+&nbsp;     *
+&nbsp;     * @return une liste de {@link SimpleGrantedAuthority} incluant
+&nbsp;     *         les permissions et le préfixe &quot;ROLE_{roleName}&quot;
+&nbsp;     */
+&nbsp;    public List&lt;SimpleGrantedAuthority&gt; getAuthorities() {
+<b class="fc">&nbsp;        var authorities = getPermissions()</b>
+<b class="fc">&nbsp;                .stream()</b>
+<b class="fc">&nbsp;                .map(permission -&gt; new SimpleGrantedAuthority(permission.getPermission()))</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+<b class="fc">&nbsp;        authorities.add(new SimpleGrantedAuthority(&quot;ROLE_&quot; + this.name()));</b>
+<b class="fc">&nbsp;        return authorities;</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
+</div>
+</body>
+</html>

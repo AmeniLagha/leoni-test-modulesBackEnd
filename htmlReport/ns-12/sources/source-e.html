@@ -1,0 +1,102 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > VerificationCodeRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">com.example.security.user</a>
+</div>
+
+<h1>Coverage Summary for Class: VerificationCodeRepository (com.example.security.user)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">VerificationCodeRepository$MockitoMock$EHhPU8YJ</td>
+  </tr>
+  <tr>
+    <td class="name">VerificationCodeRepository$MockitoMock$EHhPU8YJ$auxiliary$CC7pi7KV</td>
+  </tr>
+  <tr>
+    <td class="name">VerificationCodeRepository$MockitoMock$EHhPU8YJ$auxiliary$EYiDvhBh</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.user;
+&nbsp;
+&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
+&nbsp;import org.springframework.data.jpa.repository.Modifying;
+&nbsp;import org.springframework.data.jpa.repository.Query;
+&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;@Repository
+&nbsp;public interface VerificationCodeRepository extends JpaRepository&lt;VerificationCode, Long&gt; {
+&nbsp;
+&nbsp;    Optional&lt;VerificationCode&gt; findByEmailAndCodeAndUsedFalse(String email, String code);
+&nbsp;
+&nbsp;    @Modifying
+&nbsp;    @Transactional
+&nbsp;    @Query(&quot;DELETE FROM VerificationCode v WHERE v.email = :email&quot;)
+&nbsp;    void deleteByEmail(String email);
+&nbsp;
+&nbsp;    @Modifying
+&nbsp;    @Transactional
+&nbsp;    @Query(&quot;UPDATE VerificationCode v SET v.used = true WHERE v.email = :email AND v.code = :code&quot;)
+&nbsp;    void markAsUsed(String email, String code);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
+</div>
+</body>
+</html>

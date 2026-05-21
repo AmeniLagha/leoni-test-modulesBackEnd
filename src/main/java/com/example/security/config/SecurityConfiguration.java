@@ -7,7 +7,6 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -20,13 +19,71 @@ import java.util.Arrays;
 import static com.example.security.user.Permission.*;
 import static org.springframework.http.HttpMethod.*;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
-
+/**
+ * Configuration principale de la sécurité de l'application.
+ * <p>
+ * Cette classe configure l'ensemble des règles de sécurité pour l'application,
+ * incluant la gestion des autorisations d'accès (endpoints publics vs protégés),
+ * la configuration CORS, la politique de session (stateless), l'authentification
+ * par token JWT et la déconnexion.
+ * </p>
+ *
+ * <p><strong>Fonctionnalités principales :</strong></p>
+ * <ul>
+ *     <li><strong>Liste blanche (WHITE_LIST_URL)</strong> : Endpoints accessibles sans authentification</li>
+ *     <li><strong>Configuration CORS</strong> : Autorisation des requêtes depuis les frontends Angular</li>
+ *     <li><strong>Protection CSRF</strong> : Désactivée (API REST stateless)</li>
+ *     <li><strong>Session management</strong> : Stateless (aucune session HTTP)</li>
+ *     <li><strong>Filtre JWT</strong> : Interception et validation des tokens avant authentification</li>
+ *     <li><strong>Autorisations par endpoint</strong> : Contrôle d'accès basé sur les permissions</li>
+ *     <li><strong>Déconnexion</strong> : Révocation des tokens JWT</li>
+ * </ul>
+ *
+ * <p><strong>Endpoints publics (WHITE_LIST_URL) :</strong></p>
+ * <ul>
+ *     <li>Authentification : /api/v1/auth/**</li>
+ *     <li>Swagger/OpenAPI : /v3/api-docs/**, /swagger-ui/**</li>
+ *     <li>Réinitialisation mot de passe : forgot-password, reset-password, validate-reset-token</li>
+ *     <li>Vérification email : check-email, check-matricule</li>
+ *     <li>Codes de vérification : send-verification-code, verify-code, send-reset-link</li>
+ *     <li>Ressources statiques : /uploads/**</li>
+ *     <li>Santé et debug : /actuator/**, /api/v1/health</li>
+ * </ul>
+ *
+ * <p><strong>Permissions utilisées :</strong></p>
+ * <ul>
+ *     <li>CHARGE_SHEET_BASIC_* : Gestion basique des cahiers des charges (ING)</li>
+ *     <li>CHARGE_SHEET_TECH_* : Saisie technique (PT)</li>
+ *     <li>CHARGE_SHEET_ALL_READ : Consultation (tous rôles)</li>
+ *     <li>COMPLIANCE_* : Gestion des fiches de conformité (PP)</li>
+ *     <li>TECHNICAL_FILE_* : Gestion des dossiers techniques (PP)</li>
+ *     <li>MAINTENANCE_CORRECTIVE_* : Maintenance corrective (MC)</li>
+ *     <li>MAINTENANCE_PREVENTIVE_* : Maintenance préventive (MP)</li>
+ *     <li>CLAIM_* : Gestion des réclamations (PP, PT)</li>
+ *     <li>STOCK_* : Gestion du stock (PP, MC, MP)</li>
+ *     <li>SEARCH : Recherche globale</li>
+ *     <li>AJOUTE_USER, ADMIN_* : Administration (ADMIN)</li>
+ * </ul>
+ *
+ * @author LAGHA AMENI
+ * @version 1.0
+ * @see JwtAuthenticationFilter
+ * @see AuthenticationProvider
+ * @see LogoutHandler
+ * @since Sprint 2
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 @EnableMethodSecurity
 public class SecurityConfiguration {
-
+    /**
+     * Liste des URLs accessibles sans authentification (public).
+     * <p>
+     * Ces endpoints sont exclus du filtre JWT et de toute vérification
+     * d'authentification.
+     * </p>
+     */
     private static final String[] WHITE_LIST_URL = {
             "/api/v1/auth/**",
 
@@ -62,11 +119,34 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
     private final LogoutHandler logoutHandler;
-
+    /**
+     * Configure la chaîne de filtres de sécurité Spring Security.
+     * <p>
+     * Cette méthode définit l'ensemble des règles de sécurité :
+     * <ul>
+     *     <li>Désactivation de CSRF (API REST stateless)</li>
+     *     <li>Configuration CORS pour autoriser les frontends Angular</li>
+     *     <li>Définition des autorisations par endpoint (liste blanche / permissions)</li>
+     *     <li>Politique de session sans état (STATELESS)</li>
+     *     <li>Ajout du filtre JWT avant le filtre d'authentification standard</li>
+     *     <li>Configuration de la déconnexion (logout)</li>
+     * </ul>
+     * </p>
+     *
+     * @param http L'objet {@link HttpSecurity} pour configurer la sécurité
+     * @return La chaîne de filtres {@link SecurityFilterChain} configurée
+     * @throws Exception En cas d'erreur de configuration
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // ============================================================
+                // DÉSACTIVATION CSRF (API REST stateless)
+                // ============================================================
                 .csrf(AbstractHttpConfigurer::disable)
+                // ============================================================
+                // CONFIGURATION CORS (autoriser les frontends)
+                // ============================================================
                 .cors(cors -> cors.configurationSource(request -> {
                     var corsConfig = new CorsConfiguration();
                     corsConfig.setAllowedOrigins(Arrays.asList("http://localhost",
@@ -81,6 +161,9 @@ public class SecurityConfiguration {
                     corsConfig.setAllowCredentials(true);
                     return corsConfig;
                 }))
+                // ============================================================
+                // CONFIGURATION DES AUTORISATIONS PAR ENDPOINT
+                // ============================================================
                 .authorizeHttpRequests(auth -> auth
                         // ================= WHITE LIST =================
                         .requestMatchers(WHITE_LIST_URL).permitAll()
@@ -152,9 +235,21 @@ public class SecurityConfiguration {
                         // Toute autre requête doit être authentifiée
                         .anyRequest().authenticated()
                 )
+                // ============================================================
+                // POLITIQUE DE SESSION (STATELESS)
+                // ============================================================
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
+                // ============================================================
+                // FOURNISSEUR D'AUTHENTIFICATION
+                // ============================================================
                 .authenticationProvider(authenticationProvider)
+                // ============================================================
+                // AJOUT DU FILTRE JWT
+                // ============================================================
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // ============================================================
+                // CONFIGURATION DE LA DÉCONNEXION
+                // ============================================================
                 .logout(logout -> logout
                         .logoutUrl("/api/v1/auth/logout")
                         .addLogoutHandler(logoutHandler)

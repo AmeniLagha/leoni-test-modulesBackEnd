@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > StockModuleDto</title>
+  <title>Coverage Report > SiteDto</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,10 +19,10 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.stock</a>
+    <a href="../index.html">com.example.security.site</a>
 </div>
 
-<h1>Coverage Summary for Class: StockModuleDto (com.example.security.stock)</h1>
+<h1>Coverage Summary for Class: SiteDto (com.example.security.site)</h1>
 
 <table class="coverageStats">
 
@@ -42,13 +42,13 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 </tr>
 <tr>
-  <td class="name">StockModuleDto</td>
+  <td class="name">SiteDto</td>
 <td class="coverageStat">
   <span class="percent">
     100%
   </span>
   <span class="absValue">
-    (32/32)
+    (10/10)
   </span>
 </td>
 <td class="coverageStat">
@@ -56,7 +56,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     0%
   </span>
   <span class="absValue">
-    (0/230)
+    (0/50)
   </span>
 </td>
 <td class="coverageStat">
@@ -64,12 +64,12 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (32/32)
+    (10/10)
   </span>
 </td>
 </tr>
   <tr>
-    <td class="name">StockModuleDto$StockModuleDtoBuilder</td>
+    <td class="name">SiteDto$SiteDtoBuilder</td>
 <td class="coverageStat">
   <span class="percent">
     100%
@@ -94,7 +94,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (33/33)
+    (11/11)
   </span>
 </td>
 <td class="coverageStat">
@@ -102,7 +102,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     0%
   </span>
   <span class="absValue">
-    (0/230)
+    (0/50)
   </span>
 </td>
 <td class="coverageStat">
@@ -110,7 +110,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (33/33)
+    (11/11)
   </span>
 </td>
 </tr>
@@ -121,51 +121,27 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;// StockModuleDto.java
-&nbsp;package com.example.security.stock;
+<code class="sourceCode" id="sourceCode">&nbsp;// SiteDto.java
+&nbsp;package com.example.security.site;
 &nbsp;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
-&nbsp;import java.time.LocalDate;
+&nbsp;
+&nbsp;import java.util.List;
 &nbsp;
 <b class="pc">&nbsp;@Data</b>
 <b class="fc">&nbsp;@Builder</b>
 <b class="fc">&nbsp;@NoArgsConstructor</b>
 <b class="fc">&nbsp;@AllArgsConstructor</b>
-&nbsp;public class StockModuleDto {
-&nbsp;
-&nbsp;    // Champs existants
+&nbsp;public class SiteDto {
 <b class="fc">&nbsp;    private Long id;</b>
-<b class="fc">&nbsp;    private Long technicalFileId;</b>
-<b class="fc">&nbsp;    private Long technicalFileItemId;</b>
-<b class="fc">&nbsp;    private Long chargeSheetItemId;</b>
-<b class="fc">&nbsp;    private Long siteId;</b>
-<b class="fc">&nbsp;    private String itemNumber;</b>
-<b class="fc">&nbsp;    private String position;</b>
-<b class="fc">&nbsp;    private Double finalDisplacement;</b>
-<b class="fc">&nbsp;    private Double finalProgrammedSealing;</b>
-<b class="fc">&nbsp;    private String finalDetection;</b>
-<b class="fc">&nbsp;    private String movedBy;</b>
-<b class="fc">&nbsp;    private LocalDate movedAt;</b>
-<b class="fc">&nbsp;    private StockModule.StockStatus status;</b>
-<b class="fc">&nbsp;    private String siteName;</b>
-&nbsp;    // Nouveaux champs
-<b class="fc">&nbsp;    private String casier;</b>
-<b class="fc">&nbsp;    private String stuffNumr;</b>
-<b class="fc">&nbsp;    private String leoniNumr;</b>
-<b class="fc">&nbsp;    private String indexValue;</b>
-<b class="fc">&nbsp;    private Integer quantite;</b>
-<b class="fc">&nbsp;    private String fournisseur;</b>
-<b class="fc">&nbsp;    private String etat;</b>
-<b class="fc">&nbsp;    private String caisse;</b>
-<b class="fc">&nbsp;    private String specifications;</b>
-<b class="fc">&nbsp;    private LocalDate dernierMaj;</b>
-<b class="fc">&nbsp;    private String infoSurModules;</b>
-<b class="fc">&nbsp;    private String demandeurExplication;</b>
-<b class="fc">&nbsp;    private LocalDate dateDemande;  // ✅ Changé de dateCreation à dateDemande</b>
-<b class="fc">&nbsp;    private Integer newQuantite;</b>
+<b class="fc">&nbsp;    private String name;</b>
+<b class="fc">&nbsp;    private String description;</b>
+<b class="fc">&nbsp;    private boolean active;</b>
+<b class="fc">&nbsp;    private List&lt;String&gt; projetNames;  // ✅ Noms des projets associés</b>
+<b class="fc">&nbsp;    private List&lt;Long&gt; projetIds;</b>
 &nbsp;}
 </code>
 </pre>
@@ -190,7 +166,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

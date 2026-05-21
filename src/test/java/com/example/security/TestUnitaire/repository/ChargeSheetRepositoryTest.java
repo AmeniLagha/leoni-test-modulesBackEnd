@@ -170,4 +170,26 @@ class ChargeSheetRepositoryTest {
 
         assertThat(result).isNotEmpty();
     }
+
+    @Test
+    void findByProjectInAndPlantAndStatusIn_ShouldReturnFiltered() {
+        List<ChargeSheet> result = chargeSheetRepository.findByProjectInAndPlantAndStatusIn(
+                List.of("FORD"), "MH1",
+                List.of(ChargeSheetStatus.DRAFT, ChargeSheetStatus.VALIDATED_ING));
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    void findByProjectInAndPlantAndStatus_ShouldReturnFiltered() {
+        List<ChargeSheet> result = chargeSheetRepository.findByProjectInAndPlantAndStatus(
+                List.of("FORD"), "MH1", ChargeSheetStatus.DRAFT);
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    void countByProjectAndPlantAndStatus_ShouldReturnCount() {
+        long count = chargeSheetRepository.countByProjectAndPlantAndStatus(
+                "FORD", "MH1", ChargeSheetStatus.DRAFT);
+        assertThat(count).isEqualTo(1);
+    }
 }

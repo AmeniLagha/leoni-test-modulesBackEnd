@@ -63,25 +63,6 @@ public class GlobalNotificationService {
         }
     }
 
-    public void notifyChargeSheetCreated(Long chargeSheetId, String performedBy) {
-        String subject = "Nouveau Cahier des Charges";
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "📋 **NOUVEAU CAHIER DES CHARGES CRÉÉ**\n\n" +
-                        "Un nouveau cahier des charges a été créé dans le système.\n\n" +
-                        "🔢 **ID du Cahier:** %d\n" +
-                        "👤 **Créé par:** %s\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous au système pour consulter le nouveau cahier des charges.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToAllUsers(subject, message);
-    }
-
     public void notifyChargeSheetUpdated(Long chargeSheetId, String actionType, String performedBy, String role) {
         String subject = "Cahier des Charges " + actionType;
         String message = String.format(
@@ -102,87 +83,8 @@ public class GlobalNotificationService {
         sendNotificationToAllUsers(subject, message);
     }
 
-    public void notifyComplianceCreated(Long complianceId, Long chargeSheetId, String performedBy) {
-        String subject = "Nouvelle Fiche de Conformité";
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "✅ **NOUVELLE FICHE DE CONFORMITÉ CRÉÉE**\n\n" +
-                        "Une nouvelle fiche de conformité a été créée dans le système.\n\n" +
-                        "🔢 **ID de la Conformité:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Créé par:** %s (PP)\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour consulter la fiche de conformité.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
 
-        sendNotificationToAllUsers(subject, message);
-    }
 
-    public void notifyComplianceUpdated(Long complianceId, Long chargeSheetId, String performedBy) {
-        String subject = "Fiche de Conformité Modifiée";
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "✅ **FICHE DE CONFORMITÉ MODIFIÉE**\n\n" +
-                        "Une fiche de conformité a été modifiée dans le système.\n\n" +
-                        "🔢 **ID de la Conformité:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Modifié par:** %s (PP)\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour voir les modifications.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                complianceId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToAllUsers(subject, message);
-    }
-
-    public void notifyTechnicalFileCreated(Long technicalFileId, Long chargeSheetId, String performedBy) {
-        String subject = "Nouveau Dossier Technique";
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "🔧 **NOUVEAU DOSSIER TECHNIQUE CRÉÉ**\n\n" +
-                        "Un nouveau dossier technique a été créé dans le système.\n\n" +
-                        "🔢 **ID du Dossier:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Créé par:** %s (PP)\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour consulter le dossier technique.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                technicalFileId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToAllUsers(subject, message);
-    }
-
-    public void notifyTechnicalFileUpdated(Long technicalFileId, Long chargeSheetId, String performedBy, String role) {
-        String subject = "Dossier Technique Modifié";
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "🔧 **DOSSIER TECHNIQUE MODIFIÉ**\n\n" +
-                        "Un dossier technique a été modifié dans le système.\n\n" +
-                        "🔢 **ID du Dossier:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Modifié par:** %s (%s)\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "⚠️ **Note importante:**\n" +
-                        "Cette modification peut affecter les opérations de maintenance.\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour voir les modifications.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                technicalFileId, chargeSheetId, performedBy, role, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToAllUsers(subject, message);
-    }
 
     public void notifyClaimCreated(Long claimId, String claimTitle, Long chargeSheetId, String performedBy) {
         String subject = "Nouvelle Réclamation: " + claimTitle;
@@ -207,26 +109,6 @@ public class GlobalNotificationService {
         sendNotificationToAllUsers(subject, message);
     }
 
-    public void notifyClaimUpdated(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String action) {
-        String subject = "Réclamation " + action + ": " + claimTitle;
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "🚨 **RÉCLAMATION %s**\n\n" +
-                        "Une réclamation a été %s dans le système.\n\n" +
-                        "📌 **Titre:** %s\n" +
-                        "🔢 **ID de la Réclamation:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Traité par:** %s\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour voir les détails.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                action, action.toLowerCase(), claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToAllUsers(subject, message);
-    }
 
     public void notifyDocumentDeleted(String documentType, Long documentId, Long chargeSheetId, String performedBy) {
         String subject = documentType + " Supprimé(e)";
@@ -735,33 +617,7 @@ public class GlobalNotificationService {
 
         sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
     }
-    // Dans GlobalNotificationService.java - Ajoutez ces méthodes
 
-    /**
-     * Notification de création de réclamation - uniquement projet + site
-     */
-    public void notifyClaimCreatedToProjectAndSite(Long claimId, String claimTitle, Long chargeSheetId, String performedBy, String projet, String site) {
-        String subject = "Nouvelle Réclamation: " + claimTitle;
-        String message = String.format(
-                "Bonjour,\n\n" +
-                        "🚨 **NOUVELLE RÉCLAMATION CRÉÉE**\n\n" +
-                        "Une nouvelle réclamation a été créée dans le système.\n\n" +
-                        "📌 **Titre:** %s\n" +
-                        "🔢 **ID de la Réclamation:** %d\n" +
-                        "📋 **ID du Cahier associé:** %d\n" +
-                        "👤 **Signalé par:** %s\n" +
-                        "🕐 **Date:** %s\n\n" +
-                        "⚠️ **Action requise:**\n" +
-                        "Veuillez examiner cette réclamation dans les plus brefs délais.\n\n" +
-                        "🔗 **Accès rapide:**\n" +
-                        "Connectez-vous pour traiter la réclamation.\n\n" +
-                        "Cordialement,\n" +
-                        "Système de Gestion Leoni",
-                claimTitle, claimId, chargeSheetId, performedBy, java.time.LocalDateTime.now()
-        );
-
-        sendNotificationToProjectAndSiteUsers(subject, message, projet, site);
-    }
 
     /**
      * Notification de mise à jour de réclamation - uniquement projet + site

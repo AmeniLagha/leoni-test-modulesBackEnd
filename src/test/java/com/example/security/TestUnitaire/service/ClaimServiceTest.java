@@ -334,4 +334,330 @@ class ClaimServiceTest {
         assertThat(result.get("currentMonthCount")).isEqualTo(20L);
         assertThat(result.get("previousMonthCount")).isEqualTo(10L);
     }
+    @Test
+    void getAllClaims_AsMc_ShouldFilterBySiteAndProject() {
+        // ✅ CRÉER LE SITE LOCALEMENT
+        Site localSite = new Site();
+        localSite.setId(10L);
+        localSite.setName("MH1");
+        localSite.setActive(true);
+
+        // ✅ CRÉER LE PROJET LOCALEMENT
+        Projet localProjet = new Projet();
+        localProjet.setId(10L);
+        localProjet.setName("FORD");
+        localProjet.setActive(true);
+
+        User mcUser = User.builder()
+                .id(10)
+                .email("mc2@test.com")
+                .role(Role.MC)
+                .site(localSite)           // ✅ Utiliser localSite
+                .projets(Set.of(localProjet)) // ✅ Utiliser localProjet
+                .build();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(mcUser);
+        when(auth.getName()).thenReturn(mcUser.getEmail());
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
+
+        when(repository.findAll()).thenReturn(List.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+
+        List<Claim> result = claimService.getAllClaims();
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getAllClaims_WhenChargeSheetNotFound_ShouldFilterOut() {
+        when(repository.findAll()).thenReturn(List.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.empty());
+
+        List<Claim> result = claimService.getAllClaims();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAllClaims_WhenPlantDoesNotMatch_ShouldFilterOut() {
+        testSheet.setPlant("DIFFERENT_SITE");
+
+        when(repository.findAll()).thenReturn(List.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+
+        List<Claim> result = claimService.getAllClaims();
+
+        assertThat(result).isEmpty();
+    }
+    @Test
+    void updateClaim_WithStatusAssignment_ShouldUpdateAssignedTo() {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .status(Claim.ClaimStatus.ASSIGNED)
+                .assignedTo("new-assignee@test.com")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.updateClaim(1L, dto);
+
+        assertThat(result.getStatus()).isEqualTo(Claim.ClaimStatus.ASSIGNED);
+        assertThat(result.getAssignedTo()).isEqualTo("new-assignee@test.com");
+        assertThat(result.getAssignedDate()).isNotNull();
+    }
+
+    @Test
+    void updateClaim_WithStatusResolved_ShouldSetResolvedBy() {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .status(Claim.ClaimStatus.RESOLVED)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.updateClaim(1L, dto);
+
+        assertThat(result.getStatus()).isEqualTo(Claim.ClaimStatus.RESOLVED);
+        assertThat(result.getResolvedBy()).isEqualTo("pp@test.com");
+        assertThat(result.getResolvedDate()).isNotNull();
+    }
+
+    @Test
+    void updateClaim_WithStatusClosed_ShouldSetClosedBy() {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .status(Claim.ClaimStatus.CLOSED)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.updateClaim(1L, dto);
+
+        assertThat(result.getStatus()).isEqualTo(Claim.ClaimStatus.CLOSED);
+        assertThat(result.getClosedBy()).isEqualTo("pp@test.com");
+        assertThat(result.getClosedDate()).isNotNull();
+    }
+
+    @Test
+    void updateClaim_WithDifferentAssignee_ShouldUpdateAssignment() {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .assignedTo("different@test.com")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.updateClaim(1L, dto);
+
+        assertThat(result.getAssignedTo()).isEqualTo("different@test.com");
+        assertThat(result.getStatus()).isEqualTo(Claim.ClaimStatus.ASSIGNED);
+    }
+    @Test
+    void assignClaim_WhenAlreadyAssigned_ShouldNotifyChange() {
+        ClaimDto.AssignmentDto dto = ClaimDto.AssignmentDto.builder()
+                .assignedTo("new-assignee@test.com")
+                .estimatedResolutionDate(LocalDate.now().plusDays(7))
+                .build();
+
+        testClaim.setAssignedTo("old-assignee@test.com");
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.assignClaim(1L, dto);
+
+        assertThat(result.getAssignedTo()).isEqualTo("new-assignee@test.com");
+        verify(notificationService).notifyClaimUpdatedToProjectAndSite(
+                anyLong(), anyString(), anyLong(), anyString(),
+                contains("de old-assignee@test.com à new-assignee@test.com"),
+                anyString(), anyString()
+        );
+    }
+    @Test
+    void resolveClaim_WithCustomResolutionDate_ShouldUseProvidedDate() {
+        LocalDate customDate = LocalDate.now().minusDays(5);
+        ClaimDto.ResolutionDto dto = ClaimDto.ResolutionDto.builder()
+                .actionTaken("Fixed")
+                .resolution("Resolved")
+                .actualResolutionDate(customDate)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.resolveClaim(1L, dto);
+
+        assertThat(result.getActualResolutionDate()).isEqualTo(customDate);
+    }
+
+    @Test
+    void resolveClaim_WithoutCustomDate_ShouldUseCurrentDate() {
+        ClaimDto.ResolutionDto dto = ClaimDto.ResolutionDto.builder()
+                .actionTaken("Fixed")
+                .resolution("Resolved")
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.resolveClaim(1L, dto);
+
+        assertThat(result.getActualResolutionDate()).isEqualTo(LocalDate.now());
+    }
+    @Test
+    void createClaim_WithoutAssignment_ShouldNotSendNotification() {
+        ClaimDto.CreateDto dto = ClaimDto.CreateDto.builder()
+                .chargeSheetId(1L)
+                .title("New Claim")
+                .description("Description")
+                .priority(Claim.Priority.MEDIUM)
+                .category("HARDWARE")
+                .assignedTo(null)  // Pas d'assignation
+                .plant("MH1")
+                .build();
+
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.createClaim(dto);
+
+        assertThat(result).isNotNull();
+        // Vérifier que sendNotificationToOneUser n'est PAS appelé
+        verify(notificationService, never()).sendNotificationToOneUser(anyString(), anyString(), anyString());
+    }
+    @Test
+    void getAllClaims_AsAdmin_ShouldReturnAllClaims() {
+        User adminUser = User.builder()
+                .id(99)
+                .email("admin@test.com")
+                .role(Role.ADMIN)
+                .build();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(adminUser);
+        when(auth.getName()).thenReturn(adminUser.getEmail());
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
+
+        when(repository.findAll()).thenReturn(List.of(testClaim));
+
+        List<Claim> result = claimService.getAllClaims();
+
+        assertThat(result).hasSize(1);
+    }
+    @Test
+    void getAllClaims_WhenExceptionOccurs_ShouldReturnEmptyList() {
+        when(repository.findAll()).thenThrow(new RuntimeException("DB error"));
+
+        List<Claim> result = claimService.getAllClaims();
+
+        assertThat(result).isEmpty();
+    }
+    @Test
+    void getVariationBetweenMonths_AsAdminWithAllProjects_ShouldReturnAll() {
+        User adminUser = User.builder()
+                .id(99)
+                .email("admin@test.com")
+                .role(Role.ADMIN)
+                .build();
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(adminUser);
+        SecurityContextHolder.setContext(new SecurityContextImpl(auth));
+
+        List<Object[]> mockResults = new ArrayList<>();
+        mockResults.add(new Object[]{"2024-02", 20L});
+        mockResults.add(new Object[]{"2024-01", 10L});
+
+        when(repository.countByMonthForAllProjects()).thenReturn(mockResults);
+
+        Map<String, Object> result = claimService.getVariationBetweenMonths("ALL", "2024-01", "2024-02");
+
+        assertThat(result.get("project")).isEqualTo("TOUS_PROJETS");
+    }
+    @Test
+    void getVariationBetweenMonths_WhenProjectNull_ShouldUseFirstUserProject() {
+        when(repository.countByMonthForProject("FORD")).thenReturn(new ArrayList<>());
+
+        Map<String, Object> result = claimService.getVariationBetweenMonths(null, "2024-01", "2024-02");
+
+        assertThat(result.get("project")).isEqualTo(null);
+    }
+    @Test
+    void assignClaim_WithNullAssignedTo_ShouldNotSendNotification() {
+        ClaimDto.AssignmentDto dto = ClaimDto.AssignmentDto.builder()
+                .assignedTo(null)
+                .estimatedResolutionDate(LocalDate.now().plusDays(7))
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testClaim));
+        when(chargeSheetRepository.findById(1L)).thenReturn(Optional.of(testSheet));
+        when(repository.save(any(Claim.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Claim result = claimService.assignClaim(1L, dto);
+
+        assertThat(result).isNotNull();
+        verify(notificationService, never()).sendNotificationToOneUser(anyString(), anyString(), anyString());
+    }
+    @Test
+    void updateClaim_WhenExceptionOccurs_ShouldReturnNull() {
+        ClaimDto.UpdateDto dto = ClaimDto.UpdateDto.builder()
+                .title("Updated Title")
+                .build();
+
+        when(repository.findById(1L)).thenThrow(new RuntimeException("DB error"));
+
+        Claim result = claimService.updateClaim(1L, dto);
+
+        assertThat(result).isNull();
+    }
+    @Test
+    void resolveClaim_WhenExceptionOccurs_ShouldReturnNull() {
+        ClaimDto.ResolutionDto dto = ClaimDto.ResolutionDto.builder()
+                .actionTaken("Fixed")
+                .resolution("Resolved")
+                .build();
+
+        when(repository.findById(1L)).thenThrow(new RuntimeException("DB error"));
+
+        Claim result = claimService.resolveClaim(1L, dto);
+
+        assertThat(result).isNull();
+    }
+    @Test
+    void assignClaim_WhenExceptionOccurs_ShouldReturnNull() {
+        ClaimDto.AssignmentDto dto = ClaimDto.AssignmentDto.builder()
+                .assignedTo(mcUser.getEmail())
+                .build();
+
+        when(repository.findById(1L)).thenThrow(new RuntimeException("DB error"));
+
+        Claim result = claimService.assignClaim(1L, dto);
+
+        assertThat(result).isNull();
+    }
+    @Test
+    void updateClaimStatus_WhenExceptionOccurs_ShouldReturnNull() {
+        when(repository.findById(1L)).thenThrow(new RuntimeException("DB error"));
+
+        Claim result = claimService.updateClaimStatus(1L, Claim.ClaimStatus.IN_PROGRESS);
+
+        assertThat(result).isNull();
+    }
+    @Test
+    void deleteClaim_WhenExceptionOccurs_ShouldNotThrow() {
+        when(repository.findById(1L)).thenThrow(new RuntimeException("DB error"));
+
+        // Ne doit pas lever d'exception
+        claimService.deleteClaim(1L);
+
+        verify(repository, never()).deleteById(anyLong());
+    }
 }

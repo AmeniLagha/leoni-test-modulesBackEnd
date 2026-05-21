@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > StockModuleRepository</title>
+  <title>Coverage Report > SiteService</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -19,27 +19,84 @@
 <div class="breadCrumbs">
 Current scope:     <a href="../../index.html">all classes</a>
     <span class="separator">|</span>
-    <a href="../index.html">com.example.security.stock</a>
+    <a href="../index.html">com.example.security.site</a>
 </div>
 
-<h1>Coverage Summary for Class: StockModuleRepository (com.example.security.stock)</h1>
+<h1>Coverage Summary for Class: SiteService (com.example.security.site)</h1>
 
 <table class="coverageStats">
 
 <tr>
   <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SiteService</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (11/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    72,7%
+  </span>
+  <span class="absValue">
+    (16/22)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (71/71)
+  </span>
+</td>
 </tr>
   <tr>
-    <td class="name">StockModuleRepository$MockitoMock$L4fVbjWZ</td>
-  </tr>
-  <tr>
-    <td class="name">StockModuleRepository$MockitoMock$L4fVbjWZ$auxiliary$OVB6PTvu</td>
-  </tr>
-  <tr>
-    <td class="name">StockModuleRepository$MockitoMock$L4fVbjWZ$auxiliary$YWwfH2xd</td>
+    <td class="name">SiteService$$SpringCGLIB$$0</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (11/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    72,7%
+  </span>
+  <span class="absValue">
+    (16/22)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (71/71)
+  </span>
+</td>
 </tr>
 </table>
 
@@ -48,23 +105,161 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 
 <pre>
-<code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.stock;
+<code class="sourceCode" id="sourceCode">&nbsp;// SiteService.java
+&nbsp;package com.example.security.site;
 &nbsp;
-&nbsp;import jakarta.transaction.Transactional;
-&nbsp;import org.springframework.data.jpa.repository.JpaRepository;
-&nbsp;import org.springframework.data.jpa.repository.Modifying;
-&nbsp;import org.springframework.data.jpa.repository.Query;
-&nbsp;import org.springframework.data.repository.query.Param;
-&nbsp;import org.springframework.stereotype.Repository;
+&nbsp;import com.example.security.projet.Projet;
+&nbsp;import com.example.security.projet.ProjetDto;
+&nbsp;import com.example.security.projet.ProjetRepository;
+&nbsp;import jakarta.persistence.EntityManager;
+&nbsp;import jakarta.persistence.PersistenceContext;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;import org.springframework.web.server.ResponseStatusException;
 &nbsp;
 &nbsp;import java.util.List;
-&nbsp;import java.util.Optional;
+&nbsp;import java.util.stream.Collectors;
 &nbsp;
-&nbsp;@Repository
-&nbsp;public interface StockModuleRepository extends JpaRepository&lt;StockModule, Long&gt; {
-&nbsp;    @Query(&quot;SELECT s FROM StockModule s WHERE s.technicalFileItem.id = :itemId&quot;)
-&nbsp;    Optional&lt;StockModule&gt; findByTechnicalFileItemId(@Param(&quot;itemId&quot;) Long technicalFileItemId);
+&nbsp;@Service
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;public class SiteService {
 &nbsp;
+&nbsp;    private final SiteRepository siteRepository;
+&nbsp;    private final ProjetRepository projetRepository;
+&nbsp;
+&nbsp;    public List&lt;SiteDto&gt; getAllSites() {
+<b class="fc">&nbsp;        return siteRepository.findAllByOrderByNameAsc().stream()</b>
+<b class="fc">&nbsp;                .map(this::convertToDto)</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public SiteDto getSiteById(Long id) {
+<b class="fc">&nbsp;        Site site = siteRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+<b class="fc">&nbsp;        return convertToDto(site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public SiteDto createSite(SiteDto dto) {
+<b class="fc">&nbsp;        if (siteRepository.findByName(dto.getName()).isPresent()) {</b>
+<b class="fc">&nbsp;            throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;Un site avec ce nom existe déjà&quot;);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        Site site = Site.builder()</b>
+<b class="fc">&nbsp;                .name(dto.getName())</b>
+<b class="fc">&nbsp;                .description(dto.getDescription())</b>
+<b class="fc">&nbsp;                .active(dto.isActive())</b>
+<b class="fc">&nbsp;                .build();</b>
+&nbsp;
+&nbsp;        // ✅ Ajouter les projets associés
+<b class="pc">&nbsp;        if (dto.getProjetIds() != null &amp;&amp; !dto.getProjetIds().isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;Projet&gt; projets = projetRepository.findAllById(dto.getProjetIds());</b>
+<b class="fc">&nbsp;            site.setProjets(projets);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return convertToDto(siteRepository.save(site));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public SiteDto updateSite(Long id, SiteDto dto) {
+<b class="fc">&nbsp;        Site site = siteRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+&nbsp;
+<b class="pc">&nbsp;        if (dto.getName() != null &amp;&amp; !dto.getName().equals(site.getName())) {</b>
+<b class="fc">&nbsp;            if (siteRepository.findByName(dto.getName()).isPresent()) {</b>
+<b class="fc">&nbsp;                throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;Un site avec ce nom existe déjà&quot;);</b>
+&nbsp;            }
+<b class="fc">&nbsp;            site.setName(dto.getName());</b>
+&nbsp;        }
+&nbsp;
+<b class="pc">&nbsp;        if (dto.getDescription() != null) {</b>
+<b class="fc">&nbsp;            site.setDescription(dto.getDescription());</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        site.setActive(dto.isActive());</b>
+&nbsp;
+&nbsp;        // ✅ Mettre à jour les projets associés
+<b class="pc">&nbsp;        if (dto.getProjetIds() != null) {</b>
+<b class="fc">&nbsp;            List&lt;Projet&gt; projets = projetRepository.findAllById(dto.getProjetIds());</b>
+<b class="fc">&nbsp;            site.setProjets(projets);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return convertToDto(siteRepository.save(site));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public void deleteSite(Long id) {
+<b class="fc">&nbsp;        Site site = siteRepository.findById(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+<b class="fc">&nbsp;        siteRepository.delete(site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private SiteDto convertToDto(Site site) {
+<b class="fc">&nbsp;        return SiteDto.builder()</b>
+<b class="fc">&nbsp;                .id(site.getId())</b>
+<b class="fc">&nbsp;                .name(site.getName())</b>
+<b class="fc">&nbsp;                .description(site.getDescription())</b>
+<b class="fc">&nbsp;                .active(site.isActive())</b>
+<b class="fc">&nbsp;                .projetNames(site.getProjets().stream().map(Projet::getName).collect(Collectors.toList()))</b>
+<b class="fc">&nbsp;                .projetIds(site.getProjets().stream().map(Projet::getId).collect(Collectors.toList()))</b>
+<b class="fc">&nbsp;                .build();</b>
+&nbsp;    }
+&nbsp;    // SiteService.java - Ajouter
+&nbsp;    public List&lt;ProjetDto&gt; getProjetsBySite(Long siteId) {
+&nbsp;        // ✅ Utiliser la méthode avec FETCH pour charger les projets
+<b class="fc">&nbsp;        Site site = siteRepository.findByIdWithProjets(siteId)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;        return site.getProjets().stream()</b>
+<b class="fc">&nbsp;                .map(projet -&gt; ProjetDto.builder()</b>
+<b class="fc">&nbsp;                        .id(projet.getId())</b>
+<b class="fc">&nbsp;                        .name(projet.getName())</b>
+<b class="fc">&nbsp;                        .description(projet.getDescription())</b>
+<b class="fc">&nbsp;                        .active(projet.isActive())</b>
+<b class="fc">&nbsp;                        .build())</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;    @Transactional
+&nbsp;    public SiteDto addProjetToSite(Long siteId, Long projetId) {
+<b class="fc">&nbsp;        System.out.println(&quot;🔍 addProjetToSite - siteId: &quot; + siteId + &quot;, projetId: &quot; + projetId);</b>
+&nbsp;
+&nbsp;        // ✅ Récupérer le site avec un JOIN FETCH pour charger les projets
+<b class="fc">&nbsp;        Site site = siteRepository.findByIdWithProjets(siteId)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;        Projet projet = projetRepository.findById(projetId)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Projet non trouvé&quot;));</b>
+&nbsp;
+<b class="fc">&nbsp;        if (!site.getProjets().contains(projet)) {</b>
+<b class="fc">&nbsp;            site.getProjets().add(projet);</b>
+<b class="fc">&nbsp;            site = siteRepository.save(site);</b>
+<b class="fc">&nbsp;            System.out.println(&quot;✅ Projet &quot; + projetId + &quot; ajouté au site &quot; + siteId);</b>
+&nbsp;        } else {
+<b class="fc">&nbsp;            System.out.println(&quot;⚠️ Le projet &quot; + projetId + &quot; est déjà associé au site &quot; + siteId);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        return convertToDto(site);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public SiteDto updateSiteProjets(Long siteId, List&lt;Long&gt; projetIds) {
+<b class="fc">&nbsp;        Site site = siteRepository.findById(siteId)</b>
+<b class="fc">&nbsp;                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Site non trouvé&quot;));</b>
+&nbsp;
+&nbsp;        // Vider les associations existantes
+<b class="fc">&nbsp;        site.getProjets().clear();</b>
+&nbsp;
+&nbsp;        // Créer les nouvelles associations
+<b class="fc">&nbsp;        if (projetIds != null &amp;&amp; !projetIds.isEmpty()) {</b>
+<b class="fc">&nbsp;            List&lt;Projet&gt; projets = projetRepository.findAllById(projetIds);</b>
+<b class="fc">&nbsp;            site.getProjets().addAll(projets);</b>
+&nbsp;        }
+&nbsp;
+<b class="fc">&nbsp;        site = siteRepository.save(site);</b>
+<b class="fc">&nbsp;        return convertToDto(site);</b>
+&nbsp;    }
 &nbsp;}
 </code>
 </pre>
@@ -89,7 +284,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > TechnicalFileRepository</title>
+  <title>Coverage Report > TechnicalFileItemRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,7 +22,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">com.example.security.fichierTechnique</a>
 </div>
 
-<h1>Coverage Summary for Class: TechnicalFileRepository (com.example.security.fichierTechnique)</h1>
+<h1>Coverage Summary for Class: TechnicalFileItemRepository (com.example.security.fichierTechnique)</h1>
 
 <table class="coverageStats">
 
@@ -30,13 +30,13 @@ Current scope:     <a href="../../index.html">all classes</a>
   <th class="name">Class</th>
 </tr>
   <tr>
-    <td class="name">TechnicalFileRepository$MockitoMock$4GiBdadJ</td>
+    <td class="name">TechnicalFileItemRepository$MockitoMock$pBenXI2a</td>
   </tr>
   <tr>
-    <td class="name">TechnicalFileRepository$MockitoMock$4GiBdadJ$auxiliary$1r1OFSAR</td>
+    <td class="name">TechnicalFileItemRepository$MockitoMock$pBenXI2a$auxiliary$Oo0ZbJbt</td>
   </tr>
   <tr>
-    <td class="name">TechnicalFileRepository$MockitoMock$4GiBdadJ$auxiliary$UYtZvC8f</td>
+    <td class="name">TechnicalFileItemRepository$MockitoMock$pBenXI2a$auxiliary$UVqNB6CK</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
@@ -50,47 +50,15 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package com.example.security.fichierTechnique;
 &nbsp;
-&nbsp;import com.example.security.cahierdeCharge.ChargeSheetStatus;
-&nbsp;import com.example.security.fichierTechnique.TechnicalFileHistory.TechnicalFileHistory;
 &nbsp;import org.springframework.data.jpa.repository.JpaRepository;
 &nbsp;import org.springframework.data.jpa.repository.Query;
 &nbsp;import org.springframework.data.repository.query.Param;
 &nbsp;import org.springframework.stereotype.Repository;
+&nbsp;
 &nbsp;import java.util.List;
 &nbsp;
 &nbsp;@Repository
-&nbsp;public interface TechnicalFileRepository extends JpaRepository&lt;TechnicalFile, Long&gt; {
-&nbsp;
-&nbsp;    @Query(&quot;&quot;&quot;
-&nbsp;SELECT DISTINCT tf
-&nbsp;FROM TechnicalFile tf
-&nbsp;JOIN tf.technicalFileItems tfi
-&nbsp;JOIN tfi.chargeSheetItem csi
-&nbsp;JOIN csi.chargeSheet cs
-&nbsp;WHERE cs.project = :project
-&nbsp;AND cs.status IN :statuses
-&nbsp;&quot;&quot;&quot;)
-&nbsp;    List&lt;TechnicalFile&gt; findByProjectAndChargeSheetStatusIn(
-&nbsp;            String project,
-&nbsp;            List&lt;ChargeSheetStatus&gt; statuses
-&nbsp;    );
-&nbsp;    @Query(&quot;&quot;&quot;
-&nbsp;SELECT DISTINCT tf
-&nbsp;FROM TechnicalFile tf
-&nbsp;JOIN tf.technicalFileItems tfi
-&nbsp;JOIN tfi.chargeSheetItem csi
-&nbsp;JOIN csi.chargeSheet cs
-&nbsp;WHERE cs.project = :project
-&nbsp;&quot;&quot;&quot;)
-&nbsp;    List&lt;TechnicalFile&gt; findByProject(String project);
-&nbsp;    // ✅ NOUVELLE MÉTHODE : Compter les dossiers techniques par projet et site
-&nbsp;    @Query(&quot;SELECT COUNT(DISTINCT tf) FROM TechnicalFile tf &quot; +
-&nbsp;            &quot;JOIN tf.technicalFileItems tfi &quot; +
-&nbsp;            &quot;JOIN tfi.chargeSheetItem csi &quot; +
-&nbsp;            &quot;JOIN csi.chargeSheet cs &quot; +
-&nbsp;            &quot;WHERE cs.project = :project AND cs.plant = :siteName&quot;)
-&nbsp;    long countByProjectAndSite(@Param(&quot;project&quot;) String project, @Param(&quot;siteName&quot;) String siteName);
-&nbsp;
+&nbsp;public interface TechnicalFileItemRepository extends JpaRepository&lt;TechnicalFileItem, Long&gt; {
 &nbsp;
 &nbsp;}
 </code>
@@ -116,7 +84,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2026-05-08 13:30</div>
+    <div style="float:right;">generated on 2026-05-18 14:55</div>
 </div>
 </body>
 </html>
