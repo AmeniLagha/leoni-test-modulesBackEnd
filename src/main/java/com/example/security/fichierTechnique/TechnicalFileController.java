@@ -307,4 +307,18 @@ public class TechnicalFileController {
         );
         return ResponseEntity.ok(response);
     }
+    // Dans TechnicalFileController.java - Ajouter cet endpoint
+
+    @GetMapping("/items/{itemId}/all-versions")
+    @Operation(summary = "Toutes les versions", description = "Afficher toutes les versions historiques d'un item")
+    @PreAuthorize("hasAuthority('technical_file:read')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAllVersions(@PathVariable Long itemId) {
+        List<Map<String, Object>> versions = service.getAllVersionsAudited(itemId);
+
+        ApiResponse<List<Map<String, Object>>> response = ApiResponse.success(
+                "Toutes les versions récupérées avec succès (" + versions.size() + " versions)",
+                versions
+        );
+        return ResponseEntity.ok(response);
+    }
 }

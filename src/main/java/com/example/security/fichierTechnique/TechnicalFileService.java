@@ -1014,5 +1014,37 @@ public class TechnicalFileService {
 
         return differences;
     }
+// Dans TechnicalFileService.java - Ajouter cette méthode
 
+    public List<Map<String, Object>> getAllVersionsAudited(Long itemId) {
+        AuditReader reader = AuditReaderFactory.get(entityManager);
+
+        // Récupérer toutes les révisions dans l'ordre chronologique
+        List<Object[]> revisions = reader.createQuery()
+                .forRevisionsOfEntity(TechnicalFileItem.class, false, true)
+                .add(AuditEntity.id().eq(itemId))
+                .addOrder(AuditEntity.revisionNumber().asc())
+                .getResultList();
+
+        List<Map<String, Object>> allVersions = new ArrayList<>();
+
+        int versionNumber = 1;
+        for (Object[] revision : revisions) {
+            TechnicalFileItem entity = (TechnicalFileItem) revision[0];
+            CustomRevisionEntity rev = (CustomRevisionEntity) revision[1];
+            RevisionType type = (RevisionType) revision[2];
+
+            Map<String, Object> versionMap = new HashMap<>();
+            versionMap.put("versionNumber", versionNumber++);
+            versionMap.put("revisionNumber", rev.getRevisionNumber());
+            versionMap.put("modifiedBy", rev.getUsername());
+            versionMap.put("modifiedAt", new Date(rev.getTimestamp()));
+            versionMap.put("revisionType", type.name());
+            versionMap.put("entity", entity);
+
+            allVersions.add(versionMap);
+        }
+
+        return allVersions;
+    }
 }
