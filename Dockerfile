@@ -27,7 +27,10 @@ ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/release
 COPY --from=build /app/target/security-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
-
+# Ajouter après EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8080/api/v1/health || exit 1
+  
 ENV SPRING_PROFILES_ACTIVE=docker
 # ✅ Le token vient des variables d'environnement Clever Cloud au runtime
 ENTRYPOINT ["sh", "-c", "java -Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.service.name=leoni-backend -Dotel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443 -Dotel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN} -Dotel.exporter.otlp.protocol=http/protobuf -Dotel.traces.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.logs.exporter=otlp -jar app.jar"]
