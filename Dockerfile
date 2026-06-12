@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   
 ENV SPRING_PROFILES_ACTIVE=docker
 # ✅ Le token vient des variables d'environnement Clever Cloud au runtime
-ENTRYPOINT ["sh", "-c", "java -Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.service.name=leoni-backend -Dotel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443 -Dotel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN} -Dotel.exporter.otlp.protocol=http/protobuf -Dotel.traces.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.logs.exporter=otlp -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java -Dfile.encoding=UTF-8 -Duser.timezone=UTC -javaagent:/app/opentelemetry-javaagent.jar -Dotel.service.name=leoni-backendv2 -Dotel.exporter.otlp.endpoint=https://ingest.us2.signoz.cloud:443 -Dotel.exporter.otlp.headers=signoz-access-token=${SIGNOZ_ACCESS_TOKEN} -Dotel.exporter.otlp.protocol=http/protobuf -Dotel.traces.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.logs.exporter=otlp -jar app.jar"]
