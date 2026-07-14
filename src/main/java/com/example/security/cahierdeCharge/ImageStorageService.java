@@ -227,7 +227,52 @@ public String saveImage(MultipartFile file, String subFolder) throws IOException
 
         return Files.readAllBytes(filePath);
     }*/
+// Dans ImageStorageService.java
+public byte[] getImage(String storedPath) throws IOException {
+    if (storedPath == null || storedPath.isEmpty()) {
+        throw new IOException("Chemin d'image vide");
+    }
 
+    // Nettoyer le chemin
+    String cleanPath = storedPath;
+    if (cleanPath.startsWith("/app/uploads/")) {
+        cleanPath = cleanPath.substring(12);
+    }
+    if (cleanPath.startsWith("uploads/")) {
+        cleanPath = cleanPath.substring(8);
+    }
+    if (cleanPath.startsWith("./")) {
+        cleanPath = cleanPath.substring(2);
+    }
+
+    // ✅ Utiliser bucketHost si disponible
+    if (bucketHost != null && !bucketHost.isEmpty()) {
+        String url = "https://" + bucketHost + "/" + cleanPath;
+        try {
+            return new URL(url).openStream().readAllBytes();
+        } catch (FileNotFoundException e) {
+            throw new IOException("Image non trouvée sur le bucket: " + cleanPath);
+        }
+    }
+
+    // Sinon, chercher localement
+    Path filePath = Paths.get(uploadDir, cleanPath);
+    if (!Files.exists(filePath)) {
+        throw new IOException("Image non trouvée: " + filePath.toAbsolutePath());
+    }
+    return Files.readAllBytes(filePath);
+}
+    // Dans ImageStorageService.java
+private String getExtension(MultipartFile file) {
+    String originalFilename = file.getOriginalFilename();
+    if (originalFilename != null && originalFilename.contains(".")) {
+        return originalFilename.substring(originalFilename.lastIndexOf("."));
+    }
+    return ".jpg";
+}
+    // Dans ImageStorageService.java
+@Value("${BUCKET_HOST:}")
+private String bucketHost;
     /**
      * Supprime une image du disque.
      * <p>
