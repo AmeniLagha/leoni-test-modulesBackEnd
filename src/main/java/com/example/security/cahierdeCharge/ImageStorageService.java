@@ -122,7 +122,7 @@ public class ImageStorageService {
      * @return Le chemin relatif de l'image sauvegardée (ex: "charge-sheets/uuid.jpg")
      * @throws IOException En cas d'erreur d'écriture du fichier ou de création du dossier
      */
-  /*  public String saveImage(MultipartFile file, String subFolder) throws IOException {
+  public String saveImage(MultipartFile file, String subFolder) throws IOException {
         // Créer le dossier spécifique
         Path uploadPath = Paths.get(uploadDir, subFolder);
         if (!Files.exists(uploadPath)) {
@@ -141,27 +141,7 @@ public class ImageStorageService {
 
         // ✅ Retourner le chemin RELATIF (sans uploadDir) - fonctionne partout
         return subFolder + "/" + filename;
-    }*/
-    // ✅ Sauvegarder sur le bucket aussi
-public String saveImage(MultipartFile file, String subFolder) throws IOException {
-    String filename = UUID.randomUUID().toString() + getExtension(file);
-    String relativePath = subFolder + "/" + filename;
-    
-    if (bucketHost != null && !bucketHost.isEmpty()) {
-        // ✅ Sauvegarder sur le bucket
-        String bucketUrl = "https://" + bucketHost + "/" + relativePath;
-        // Upload via HTTP PUT ou FTP
-        // ...
-    } else {
-        // Sauvegarde locale
-        Path uploadPath = Paths.get(uploadDir, subFolder);
-        Files.createDirectories(uploadPath);
-        Path filePath = uploadPath.resolve(filename);
-        Files.copy(file.getInputStream(), filePath);
     }
-    
-    return relativePath;
-}
 
     /**
      * Récupère une image à partir de son chemin stocké.
@@ -175,7 +155,7 @@ public String saveImage(MultipartFile file, String subFolder) throws IOException
      * @return Les données binaires de l'image (byte array)
      * @throws IOException Si l'image n'existe pas ou ne peut pas être lue
      */
-  /*  public byte[] getImage(String storedPath) throws IOException {
+   public byte[] getImage(String storedPath) throws IOException {
         if (storedPath == null || storedPath.isEmpty()) {
             throw new IOException("Chemin d'image vide");
         }
@@ -226,53 +206,8 @@ public String saveImage(MultipartFile file, String subFolder) throws IOException
         }
 
         return Files.readAllBytes(filePath);
-    }*/
-// Dans ImageStorageService.java
-public byte[] getImage(String storedPath) throws IOException {
-    if (storedPath == null || storedPath.isEmpty()) {
-        throw new IOException("Chemin d'image vide");
     }
 
-    // Nettoyer le chemin
-    String cleanPath = storedPath;
-    if (cleanPath.startsWith("/app/uploads/")) {
-        cleanPath = cleanPath.substring(12);
-    }
-    if (cleanPath.startsWith("uploads/")) {
-        cleanPath = cleanPath.substring(8);
-    }
-    if (cleanPath.startsWith("./")) {
-        cleanPath = cleanPath.substring(2);
-    }
-
-    // ✅ Utiliser bucketHost si disponible
-    if (bucketHost != null && !bucketHost.isEmpty()) {
-        String url = "https://" + bucketHost + "/" + cleanPath;
-        try {
-            return new URL(url).openStream().readAllBytes();
-        } catch (FileNotFoundException e) {
-            throw new IOException("Image non trouvée sur le bucket: " + cleanPath);
-        }
-    }
-
-    // Sinon, chercher localement
-    Path filePath = Paths.get(uploadDir, cleanPath);
-    if (!Files.exists(filePath)) {
-        throw new IOException("Image non trouvée: " + filePath.toAbsolutePath());
-    }
-    return Files.readAllBytes(filePath);
-}
-    // Dans ImageStorageService.java
-private String getExtension(MultipartFile file) {
-    String originalFilename = file.getOriginalFilename();
-    if (originalFilename != null && originalFilename.contains(".")) {
-        return originalFilename.substring(originalFilename.lastIndexOf("."));
-    }
-    return ".jpg";
-}
-    // Dans ImageStorageService.java
-@Value("${BUCKET_HOST:}")
-private String bucketHost;
     /**
      * Supprime une image du disque.
      * <p>
